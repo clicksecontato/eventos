@@ -274,7 +274,7 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
     };
 
     carregarTiposEvento();
-  }, [userId, evento, formData.tipoEventoId]);
+  }, [userId, evento]);
 
   useEffect(() => {
     const carregarTiposServico = async () => {
