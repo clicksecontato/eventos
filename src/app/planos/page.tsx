@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/Layout';
 import { Plano, Funcionalidade } from '@/types/funcionalidades';
-import { CheckIcon, XMarkIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { usePlano } from '@/lib/hooks/usePlano';
 import LimiteUso from '@/components/LimiteUso';
 import { useToast } from '@/components/ui/toast';
@@ -138,33 +138,12 @@ export default function PlanosPage() {
     }).format(preco);
   };
 
-  // Mapeamento de códigos de planos para links de pagamento da Hotmart
-  const linksPagamentoHotmart: Record<string, string> = {
-    'BASICO_MENSAL': 'https://pay.hotmart.com/E102958850J?off=8i552qn2',
-    'PROFISSIONAL_MENSAL': 'https://pay.hotmart.com/E102958850J?off=muk2aovg',
-    'PREMIUM_MENSAL': 'https://pay.hotmart.com/E102958850J?off=edavff1s',
-  };
-
-  const handleAssinar = (plano: Plano) => {
-    // Verificar se o plano tem código Hotmart e link de pagamento configurado
-    if (!plano.codigoHotmart) {
-      showToast('Plano não possui código Hotmart configurado', 'error');
-      return;
-    }
-
-    const linkPagamento = linksPagamentoHotmart[plano.codigoHotmart];
-    
-    if (!linkPagamento) {
-      showToast(
-        `Link de pagamento não configurado para o plano ${plano.nome}. Código: ${plano.codigoHotmart}`,
-        'error',
-        8000
-      );
-      return;
-    }
-
-    // Redirecionar para a página de pagamento da Hotmart
-    window.location.href = linkPagamento;
+  const handleSolicitarPlano = (plano: Plano) => {
+    showToast(
+      `Solicitação do plano ${plano.nome} registrada. Entre em contato com o administrador para ativação.`,
+      'info',
+      7000
+    );
   };
 
   if (loading) {
@@ -337,9 +316,9 @@ export default function PlanosPage() {
                     ) : (
                       <Button
                         className="w-full bg-primary hover:bg-accent hover:text-white cursor-pointer"
-                        onClick={() => handleAssinar(plano)}
+                        onClick={() => handleSolicitarPlano(plano)}
                       >
-                        {plano.destaque ? 'Assinar Agora' : 'Escolher Plano'}
+                        {plano.destaque ? 'Solicitar Plano' : 'Selecionar Plano'}
                       </Button>
                     )}
                   </div>

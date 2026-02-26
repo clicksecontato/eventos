@@ -246,7 +246,7 @@ export default function AdminPlanosPage() {
                 </div>
 
                 <Input
-                  label="Código Hotmart"
+                  label="Código do Plano"
                   value={formData.codigoHotmart}
                   onChange={(e) => setFormData({ ...formData, codigoHotmart: e.target.value.toUpperCase() })}
                   placeholder="BASICO_MENSAL"
@@ -440,7 +440,7 @@ export default function AdminPlanosPage() {
                       <div className="text-sm text-text-secondary mt-2">
                         <span className="font-medium">R$ {plano.preco.toFixed(2)}</span> / {plano.intervalo}
                         {' • '}
-                        Código Hotmart: <code className="bg-surface px-1 rounded text-text-primary">{plano.codigoHotmart}</code>
+                        Código: <code className="bg-surface px-1 rounded text-text-primary">{plano.codigoHotmart}</code>
                       </div>
                       <div className="text-xs text-text-muted mt-1">
                         {plano.funcionalidades.length} funcionalidade(s) • 

@@ -11,8 +11,19 @@ import { AdminPlanoRepository } from '@/lib/repositories/admin-plano-repository'
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { PlanoService } from '@/lib/services/plano-service';
 
+function isHotmartEnabled(): boolean {
+  return process.env.HOTMART_ENABLED === 'true';
+}
+
 export async function POST(request: NextRequest) {
   try {
+    if (!isHotmartEnabled()) {
+      return createErrorResponse(
+        'Integração Hotmart desativada neste ambiente. A gestão de planos é feita internamente pelo CRM.',
+        410
+      );
+    }
+
     // Obter o body como texto primeiro (para validação HMAC)
     const bodyText = await request.text();
     let payload: any;
@@ -85,6 +96,13 @@ export async function POST(request: NextRequest) {
 // GET para testar webhook mockado
 export async function GET(request: NextRequest) {
   try {
+    if (!isHotmartEnabled()) {
+      return createErrorResponse(
+        'Integração Hotmart desativada neste ambiente.',
+        410
+      );
+    }
+
     const queryParams = new URL(request.url).searchParams;
     const email = queryParams.get('email');
     const planoCodigo = queryParams.get('plano') || 'BASICO_MENSAL';

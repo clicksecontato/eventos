@@ -460,10 +460,12 @@ export default function AssinaturaPage() {
                   </div>
                 )}
 
-                <div>
-                  <label className="text-sm font-medium text-text-primary">ID Hotmart</label>
-                  <p className="mt-1 text-sm font-mono text-text-muted">{assinatura.hotmartSubscriptionId}</p>
-                </div>
+                {assinatura.hotmartSubscriptionId && (
+                  <div>
+                    <label className="text-sm font-medium text-text-primary">ID da Assinatura</label>
+                    <p className="mt-1 text-sm font-mono text-text-muted">{assinatura.hotmartSubscriptionId}</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -701,12 +703,12 @@ export default function AssinaturaPage() {
                   open={showCancelDialog}
                   onOpenChange={setShowCancelDialog}
                   title="Cancelar Assinatura"
-                  description="Tem certeza que deseja cancelar sua assinatura? Para cancelar sua assinatura, acesse sua conta na Hotmart ou entre em contato com o suporte."
+                  description="Tem certeza que deseja cancelar sua assinatura? A alteração é realizada internamente pelo administrador do sistema."
                   confirmText="Entendi"
                   cancelText="Fechar"
                   variant="destructive"
                   onConfirm={() => {
-                    showToast('Para cancelar sua assinatura, acesse sua conta na Hotmart ou entre em contato com o suporte.', 'info', 8000);
+                    showToast('Solicite ao administrador a alteração do status da sua assinatura.', 'info', 7000);
                   }}
                 />
               </>

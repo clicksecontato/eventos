@@ -6,6 +6,10 @@ import { AdminPlanoRepository } from '@/lib/repositories/admin-plano-repository'
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { PlanoService } from '@/lib/services/plano-service';
 
+function isHotmartEnabled(): boolean {
+  return process.env.HOTMART_ENABLED === 'true';
+}
+
 /**
  * Endpoint de Webhook Sandbox do Hotmart
  * 
@@ -25,6 +29,13 @@ import { PlanoService } from '@/lib/services/plano-service';
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!isHotmartEnabled()) {
+      return NextResponse.json(
+        { error: 'Integração Hotmart desativada neste ambiente.' },
+        { status: 410 }
+      );
+    }
+
     // Obter o body como texto primeiro (para validação HMAC)
     const bodyText = await request.text();
     let payload: any;
@@ -122,6 +133,13 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    if (!isHotmartEnabled()) {
+      return NextResponse.json(
+        { error: 'Integração Hotmart desativada neste ambiente.' },
+        { status: 410 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const email = searchParams.get('email');
     const planoCodigo = searchParams.get('plano') || 'BASICO_MENSAL';

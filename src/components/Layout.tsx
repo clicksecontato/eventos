@@ -54,6 +54,7 @@ const navigation = [
 ];
 
 const adminNavigation = [
+  { name: 'Usuários', href: '/admin/users', icon: UserIcon },
   { name: 'Funcionalidades', href: '/admin/funcionalidades', icon: CogIcon },
   { name: 'Planos', href: '/admin/planos', icon: CogIcon },
   { name: 'Atividades', href: '/admin/atividades', icon: BellIcon },

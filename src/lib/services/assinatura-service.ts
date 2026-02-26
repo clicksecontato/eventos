@@ -305,5 +305,144 @@ export class AssinaturaService {
 
     return assinatura;
   }
+
+  /**
+   * Define ou troca o plano de um usuário via operação administrativa interna.
+   * Não depende de webhooks externos (Hotmart).
+   */
+  async definirPlanoUsuario(
+    userId: string,
+    planoId: string,
+    status: StatusAssinatura = 'active',
+    detalhesHistorico?: Record<string, any>
+  ): Promise<{ assinatura: Assinatura; user: User }> {
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw new Error('Usuário não encontrado');
+    }
+
+    const plano = await this.planoRepo.findById(planoId);
+    if (!plano) {
+      throw new Error('Plano não encontrado');
+    }
+
+    const agora = new Date();
+    let assinatura = await this.assinaturaRepo.findByUserId(userId);
+    if (!assinatura) {
+      const historico = [{
+        data: agora,
+        acao: `Assinatura criada via painel admin - Plano: ${plano.nome}`,
+        detalhes: {
+          planoId: plano.id,
+          planoNome: plano.nome,
+          status,
+          ...detalhesHistorico
+        }
+      }];
+
+      assinatura = await this.assinaturaRepo.create({
+        userId,
+        planoId: plano.id,
+        hotmartSubscriptionId: `CRM_${userId}_${agora.getTime()}`,
+        status,
+        dataInicio: agora,
+        dataFim: status === 'trial' ? new Date(agora.getTime() + 7 * 24 * 60 * 60 * 1000) : undefined,
+        dataRenovacao: status === 'active' ? new Date(agora.getTime() + 30 * 24 * 60 * 60 * 1000) : undefined,
+        funcionalidadesHabilitadas: plano.funcionalidades || [],
+        historico,
+        dataCadastro: agora,
+        dataAtualizacao: agora
+      });
+    } else {
+      await this.assinaturaRepo.addHistorico(assinatura.id, {
+        data: agora,
+        acao: `Plano alterado via painel admin para ${plano.nome}`,
+        detalhes: {
+          planoAnteriorId: assinatura.planoId || null,
+          planoNovoId: plano.id,
+          planoNovoNome: plano.nome,
+          statusNovo: status,
+          ...detalhesHistorico
+        }
+      });
+
+      assinatura = await this.assinaturaRepo.update(assinatura.id, {
+        ...assinatura,
+        planoId: plano.id,
+        status,
+        funcionalidadesHabilitadas: plano.funcionalidades || [],
+        dataAtualizacao: agora,
+        ...(status === 'trial'
+          ? { dataFim: new Date(agora.getTime() + 7 * 24 * 60 * 60 * 1000), dataRenovacao: undefined }
+          : status === 'active'
+            ? { dataFim: undefined, dataRenovacao: new Date(agora.getTime() + 30 * 24 * 60 * 60 * 1000) }
+            : {})
+      });
+    }
+
+    const userAtualizado = await this.sincronizarPlanoUsuario(userId);
+    return { assinatura, user: userAtualizado };
+  }
+
+  /**
+   * Atualiza somente o status da assinatura atual do usuário.
+   */
+  async atualizarStatusAssinaturaUsuario(
+    userId: string,
+    status: StatusAssinatura,
+    detalhesHistorico?: Record<string, any>
+  ): Promise<{ assinatura: Assinatura; user: User }> {
+    const user = await this.userRepo.findById(userId);
+    if (!user) {
+      throw new Error('Usuário não encontrado');
+    }
+
+    let assinatura = await this.assinaturaRepo.findByUserId(userId);
+    if (!assinatura) {
+      const todas = await this.assinaturaRepo.findAllByUserId(userId);
+      assinatura = todas.length > 0 ? todas[0] : null;
+    }
+
+    if (!assinatura) {
+      throw new Error('Usuário não possui assinatura para atualizar status');
+    }
+
+    const agora = new Date();
+    const dadosAdicionais: Partial<Assinatura> = {
+      dataAtualizacao: agora
+    };
+
+    // Ativar novamente deve restaurar funcionalidades do plano atual, se existir.
+    if (status === 'active' || status === 'trial') {
+      const plano = assinatura.planoId ? await this.planoRepo.findById(assinatura.planoId) : null;
+      if (plano) {
+        dadosAdicionais.funcionalidadesHabilitadas = plano.funcionalidades || [];
+      }
+      if (status === 'trial') {
+        dadosAdicionais.dataFim = new Date(agora.getTime() + 7 * 24 * 60 * 60 * 1000);
+        dadosAdicionais.dataRenovacao = undefined;
+      } else {
+        dadosAdicionais.dataFim = undefined;
+        dadosAdicionais.dataRenovacao = new Date(agora.getTime() + 30 * 24 * 60 * 60 * 1000);
+      }
+    }
+
+    if (status === 'suspended' || status === 'expired') {
+      dadosAdicionais.funcionalidadesHabilitadas = [];
+    }
+
+    assinatura = await this.assinaturaRepo.atualizarStatus(assinatura.id, status, dadosAdicionais);
+
+    if (detalhesHistorico) {
+      await this.assinaturaRepo.addHistorico(assinatura.id, {
+        data: agora,
+        acao: `Status atualizado via painel admin para ${status}`,
+        detalhes: detalhesHistorico
+      });
+    }
+
+    const userAtualizado = await this.sincronizarPlanoUsuario(userId);
+    return { assinatura, user: userAtualizado };
+  }
 }
 

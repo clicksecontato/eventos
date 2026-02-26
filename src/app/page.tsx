@@ -149,28 +149,12 @@ export default function LandingPage() {
     }).format(preco);
   };
 
-  // Mapeamento de códigos de planos para links de pagamento da Hotmart (igual /planos)
-  const linksPagamentoHotmart: Record<string, string> = {
-    'BASICO_MENSAL': 'https://pay.hotmart.com/E102958850J?off=8i552qn2',
-    'PROFISSIONAL_MENSAL': 'https://pay.hotmart.com/E102958850J?off=muk2aovg',
-    'PREMIUM_MENSAL': 'https://pay.hotmart.com/E102958850J?off=edavff1s',
-  };
-
-  const handleAssinar = (plano: Plano) => {
-    if (!plano.codigoHotmart) {
-      showToast('Plano não possui código Hotmart configurado', 'error');
-      return;
-    }
-    const linkPagamento = linksPagamentoHotmart[plano.codigoHotmart];
-    if (!linkPagamento) {
-      showToast(
-        `Link de pagamento não configurado para o plano ${plano.nome}. Código: ${plano.codigoHotmart}`,
-        'error',
-        8000
-      );
-      return;
-    }
-    window.location.href = linkPagamento;
+  const handleSolicitarPlano = (plano: Plano) => {
+    showToast(
+      `Para ativar o plano ${plano.nome}, solicite ao administrador da conta.`,
+      'info',
+      7000
+    );
   };
 
   if (!mounted || status === 'loading') {
@@ -355,9 +339,9 @@ export default function LandingPage() {
               <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
                 <span className="text-2xl font-bold text-primary">2</span>
               </div>
-              <h4 className="text-xl font-semibold text-text-primary">Escolha seu Plano</h4>
+              <h4 className="text-xl font-semibold text-text-primary">Definição de Plano</h4>
               <p className="text-text-secondary">
-                Selecione o plano ideal para o tamanho do seu negócio
+                O plano é definido internamente pelo administrador do sistema
               </p>
             </div>
             <div className="space-y-4">
@@ -507,14 +491,14 @@ export default function LandingPage() {
                         </div>
                       )}
 
-                      {/* Botão CTA - redireciona para aquisição (Hotmart) igual /planos */}
+                      {/* Botão CTA - solicitação interna para o administrador */}
                       <div className="pt-4 mt-auto">
                         <Button
                           className={plano.nome.toLowerCase().includes('profissional') ? 'btn-add w-full' : 'w-full'}
-                          onClick={() => handleAssinar(plano)}
+                          onClick={() => handleSolicitarPlano(plano)}
                           size="lg"
                         >
-                          {plano.nome.toLowerCase().includes('profissional') ? 'Assinar Agora' : 'Escolher Plano'}
+                          {plano.nome.toLowerCase().includes('profissional') ? 'Solicitar Plano' : 'Selecionar Plano'}
                         </Button>
                       </div>
                     </CardContent>

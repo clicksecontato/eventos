@@ -6,6 +6,10 @@ import { AdminPlanoRepository } from '@/lib/repositories/admin-plano-repository'
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { PlanoService } from '@/lib/services/plano-service';
 
+function isHotmartEnabled(): boolean {
+  return process.env.HOTMART_ENABLED === 'true';
+}
+
 /**
  * Endpoint Mock para Webhooks Hotmart
  * 
@@ -31,6 +35,13 @@ import { PlanoService } from '@/lib/services/plano-service';
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!isHotmartEnabled()) {
+      return NextResponse.json(
+        { error: 'Integração Hotmart desativada neste ambiente.' },
+        { status: 410 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const eventType = searchParams.get('event') || 'PURCHASE_APPROVED';
     const email = searchParams.get('email');
@@ -581,6 +592,13 @@ export async function POST(request: NextRequest) {
 
 // GET para listar eventos disponíveis
 export async function GET() {
+  if (!isHotmartEnabled()) {
+    return NextResponse.json(
+      { error: 'Integração Hotmart desativada neste ambiente.' },
+      { status: 410 }
+    );
+  }
+
   return NextResponse.json({
     message: 'Endpoint Mock para Webhooks Hotmart',
     usage: 'POST /api/webhooks/hotmart/mock?event=EVENT_TYPE&email=usuario@exemplo.com',

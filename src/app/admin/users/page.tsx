@@ -1,98 +1,180 @@
 'use client';
 
-/*
-
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import Layout from '@/components/Layout';
-import { authService } from '@/lib/auth-service';
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { useToast } from '@/components/ui/toast';
+import { Plano, StatusAssinatura } from '@/types/funcionalidades';
+import { User } from '@/types';
+
+type StatusOption = StatusAssinatura | '';
+
+interface UserLinha extends User {
+  planoSelecionado?: string;
+  statusSelecionado?: StatusOption;
+}
+
+const statusDisponiveis: Array<{ value: StatusAssinatura; label: string }> = [
+  { value: 'active', label: 'Ativa' },
+  { value: 'trial', label: 'Trial' },
+  { value: 'suspended', label: 'Suspensa' },
+  { value: 'cancelled', label: 'Cancelada' },
+  { value: 'expired', label: 'Expirada' }
+];
 
 export default function AdminUsersPage() {
-  const [formData, setFormData] = useState({
-    nome: '',
-    email: '',
-    password: '',
-    role: 'user' as 'admin' | 'user'
-  });
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const { showToast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState<UserLinha[]>([]);
+  const [planos, setPlanos] = useState<Plano[]>([]);
+  const [salvandoPlano, setSalvandoPlano] = useState<Record<string, boolean>>({});
+  const [salvandoStatus, setSalvandoStatus] = useState<Record<string, boolean>>({});
+  const [sincronizando, setSincronizando] = useState<Record<string, boolean>>({});
 
-  // Validação de senha
-  const passwordValidation = {
-    minLength: formData.password.length >= 6,
-    hasUpperCase: /[A-Z]/.test(formData.password),
-    hasLowerCase: /[a-z]/.test(formData.password),
-    hasNumber: /\d/.test(formData.password),
-    hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(formData.password)
-  };
+  const usuariosNaoAdmin = useMemo(
+    () => users.filter(user => user.role !== 'admin'),
+    [users]
+  );
 
-  const passwordStrength = Object.values(passwordValidation).filter(Boolean).length;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const carregarDados = async () => {
     setLoading(true);
-    setMessage('');
-
     try {
-      const result = await authService.register(
-        formData.email,
-        formData.password,
-        formData.nome,
-        formData.role
-      );
+      const [usersRes, planosRes] = await Promise.all([
+        fetch('/api/admin/users'),
+        fetch('/api/planos?ativos=false')
+      ]);
 
-      if (result.success) {
-        setMessage('✅ Usuário criado com sucesso!');
-        setFormData({
-          nome: '',
-          email: '',
-          password: '',
-          role: 'user'
-        });
-      } else {
-        setMessage(`❌ Erro: ${result.error}`);
+      const usersJson = await usersRes.json();
+      const planosJson = await planosRes.json();
+
+      if (!usersRes.ok) {
+        throw new Error(usersJson.error || 'Erro ao carregar usuários');
       }
-    } catch (error) {
-      setMessage('❌ Erro inesperado ao criar usuário');
+
+      if (!planosRes.ok) {
+        throw new Error(planosJson.error || 'Erro ao carregar planos');
+      }
+
+      const usersData: User[] = usersJson?.data?.users || [];
+      const planosData: Plano[] = planosJson?.data?.planos || [];
+
+      setPlanos(planosData);
+      setUsers(
+        usersData.map(user => ({
+          ...user,
+          planoSelecionado: user.assinatura?.planoId || '',
+          statusSelecionado: (() => {
+            if (user.assinatura?.status === 'ATIVA') return 'active';
+            if (user.assinatura?.status === 'TRIAL') return 'trial';
+            if (user.assinatura?.status === 'SUSPENSA') return 'suspended';
+            if (user.assinatura?.status === 'CANCELADA') return 'cancelled';
+            if (user.assinatura?.status === 'EXPIRADA') return 'expired';
+            return '';
+          })()
+        }))
+      );
+    } catch (error: any) {
+      showToast(error?.message || 'Erro ao carregar dados', 'error');
     } finally {
       setLoading(false);
     }
   };
 
-  const createDefaultUsers = async () => {
-    setLoading(true);
-    setMessage('');
+  useEffect(() => {
+    carregarDados();
+  }, []);
 
+  const atualizarCampoUsuario = (userId: string, campo: 'planoSelecionado' | 'statusSelecionado', valor: string) => {
+    setUsers(prev =>
+      prev.map(user =>
+        user.id === userId
+          ? { ...user, [campo]: valor }
+          : user
+      )
+    );
+  };
+
+  const aplicarPlano = async (user: UserLinha) => {
+    if (!user.planoSelecionado) {
+      showToast('Selecione um plano antes de aplicar', 'warning');
+      return;
+    }
+
+    setSalvandoPlano(prev => ({ ...prev, [user.id]: true }));
     try {
-      // Criar usuário admin
-      const adminResult = await authService.register(
-        'admin@clickse.com',
-        'admin123',
-        'Administrador',
-        'admin'
-      );
+      const res = await fetch(`/api/admin/users/${user.id}/plano`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          planoId: user.planoSelecionado,
+          status: (user.statusSelecionado || 'active') as StatusAssinatura
+        })
+      });
 
-      // Criar usuário comum
-      const userResult = await authService.register(
-        'user@clickse.com',
-        'user123',
-        'Usuário Teste',
-        'user'
-      );
-
-      if (adminResult.success && userResult.success) {
-        setMessage('✅ Usuários padrão criados com sucesso!');
-      } else {
-        setMessage('⚠️ Alguns usuários podem já existir ou houve erro na criação');
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Erro ao aplicar plano');
       }
-    } catch (error) {
-      setMessage('❌ Erro ao criar usuários padrão');
+
+      showToast('Plano atualizado com sucesso', 'success');
+      await carregarDados();
+    } catch (error: any) {
+      showToast(error?.message || 'Erro ao aplicar plano', 'error');
     } finally {
-      setLoading(false);
+      setSalvandoPlano(prev => ({ ...prev, [user.id]: false }));
+    }
+  };
+
+  const aplicarStatus = async (user: UserLinha) => {
+    if (!user.statusSelecionado) {
+      showToast('Selecione um status antes de atualizar', 'warning');
+      return;
+    }
+
+    setSalvandoStatus(prev => ({ ...prev, [user.id]: true }));
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}/assinatura-status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: user.statusSelecionado,
+          motivo: 'Atualização manual pelo admin'
+        })
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Erro ao atualizar status');
+      }
+
+      showToast('Status da assinatura atualizado com sucesso', 'success');
+      await carregarDados();
+    } catch (error: any) {
+      showToast(error?.message || 'Erro ao atualizar status', 'error');
+    } finally {
+      setSalvandoStatus(prev => ({ ...prev, [user.id]: false }));
+    }
+  };
+
+  const sincronizarUsuario = async (userId: string) => {
+    setSincronizando(prev => ({ ...prev, [userId]: true }));
+    try {
+      const res = await fetch(`/api/users/${userId}/assinatura`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sincronizar: true })
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || 'Erro ao sincronizar usuário');
+      }
+      showToast('Sincronização concluída', 'success');
+      await carregarDados();
+    } catch (error: any) {
+      showToast(error?.message || 'Erro ao sincronizar usuário', 'error');
+    } finally {
+      setSincronizando(prev => ({ ...prev, [userId]: false }));
     }
   };
 
@@ -101,227 +183,104 @@ export default function AdminUsersPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-text-primary mb-2">Administração de Usuários</h1>
-          <p className="text-gray-600">Gerencie usuários do sistema</p>
+          <p className="text-text-secondary">
+            Defina plano e status da assinatura diretamente pelo CRM.
+          </p>
         </div>
 
-        {message && (
-          <div className={`p-4 rounded-md ${
-            message.startsWith('✅') ? 'bg-green-100 text-green-700' : 
-            message.startsWith('⚠️') ? 'bg-yellow-100 text-yellow-700' : 
-            'bg-red-100 text-red-700'
-          }`}>
-            {message}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Criar Novo Usuário * /}
-          <Card>
-            <CardHeader>
-              <CardTitle>Criar Novo Usuário</CardTitle>
-              <CardDescription>
-                Cadastre um novo usuário no sistema
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <Input
-                  label="Nome Completo"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  required
-                />
-                
-                <Input
-                  label="Email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                />
-                
-                {/* Campo de Senha * /}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Senha
-                  </label>
-                  <div className="relative">
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      required
-                      className="pr-10"
-                    />
-                    <button
-                      type="button"
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? (
-                        <EyeSlashIcon className="h-5 w-5 text-gray-400" />
-                      ) : (
-                        <EyeIcon className="h-5 w-5 text-gray-400" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Validação de Senha * /}
-                {formData.password && (
-                  <div className="bg-gray-50 p-3 rounded-md">
-                    <p className="text-sm font-medium text-gray-700 mb-2">Critérios da senha:</p>
-                    <div className="space-y-1">
-                      <div className={`flex items-center text-xs ${passwordValidation.minLength ? 'text-green-600' : 'text-red-600'}`}>
-                        <span className="mr-2">{passwordValidation.minLength ? '✓' : '✗'}</span>
-                        Mínimo 6 caracteres
-                      </div>
-                      <div className={`flex items-center text-xs ${passwordValidation.hasUpperCase ? 'text-green-600' : 'text-red-600'}`}>
-                        <span className="mr-2">{passwordValidation.hasUpperCase ? '✓' : '✗'}</span>
-                        Uma letra maiúscula
-                      </div>
-                      <div className={`flex items-center text-xs ${passwordValidation.hasLowerCase ? 'text-green-600' : 'text-red-600'}`}>
-                        <span className="mr-2">{passwordValidation.hasLowerCase ? '✓' : '✗'}</span>
-                        Uma letra minúscula
-                      </div>
-                      <div className={`flex items-center text-xs ${passwordValidation.hasNumber ? 'text-green-600' : 'text-red-600'}`}>
-                        <span className="mr-2">{passwordValidation.hasNumber ? '✓' : '✗'}</span>
-                        Um número
-                      </div>
-                      <div className={`flex items-center text-xs ${passwordValidation.hasSpecialChar ? 'text-green-600' : 'text-red-600'}`}>
-                        <span className="mr-2">{passwordValidation.hasSpecialChar ? '✓' : '✗'}</span>
-                        Um caractere especial
-                      </div>
-                    </div>
-                    
-                    {/* Indicador de força da senha * /}
-                    <div className="mt-3">
-                      <div className="flex justify-between text-xs text-gray-600 mb-1">
-                        <span>Força da senha:</span>
-                        <span className={`font-medium ${
-                          passwordStrength < 2 ? 'text-red-600' :
-                          passwordStrength < 4 ? 'text-yellow-600' :
-                          'text-green-600'
-                        }`}>
-                          {passwordStrength < 2 ? 'Fraca' :
-                           passwordStrength < 4 ? 'Média' :
-                           'Forte'}
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full transition-all duration-300 ${
-                            passwordStrength < 2 ? 'bg-red-500' :
-                            passwordStrength < 4 ? 'bg-yellow-500' :
-                            'bg-green-500'
-                          }`}
-                          style={{ width: `${(passwordStrength / 5) * 100}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Função
-                  </label>
-                  <select
-                    value={formData.role}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value as 'admin' | 'user' })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                  >
-                    <option value="user">Usuário</option>
-                    <option value="admin">Administrador</option>
-                  </select>
-                </div>
-
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full"
-                >
-                  {loading ? 'Criando...' : 'Criar Usuário'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* Usuários Padrão * /}
-          <Card>
-            <CardHeader>
-              <CardTitle>Usuários Padrão</CardTitle>
-              <CardDescription>
-                Crie usuários padrão para desenvolvimento e teste
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="p-4 bg-blue-50 rounded-md">
-                  <h3 className="font-medium text-blue-800 mb-2">Usuários que serão criados:</h3>
-                  <div className="text-sm text-blue-700 space-y-1">
-                    <p><strong>Admin:</strong> admin@clickse.com / admin123</p>
-                    <p><strong>Usuário:</strong> user@clickse.com / user123</p>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={createDefaultUsers}
-                  disabled={loading}
-                  variant="outline"
-                  className="w-full"
-                >
-                  {loading ? 'Criando...' : 'Criar Usuários Padrão'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Instruções * /}
         <Card>
           <CardHeader>
-            <CardTitle>Como Funciona o Sistema de Autenticação</CardTitle>
+            <CardTitle>Usuários</CardTitle>
+            <CardDescription>
+              {loading ? 'Carregando...' : `${usuariosNaoAdmin.length} usuário(s) gerenciável(is)`}
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4 text-sm text-gray-700">
-              <div>
-                <h4 className="font-medium mb-2">🔐 Firebase Authentication:</h4>
-                <ul className="list-disc list-inside space-y-1 ml-4">
-                  <li>Usuários são criados no Firebase Authentication</li>
-                  <li>Dados adicionais são salvos na collection <code>controle_users</code></li>
-                  <li>Autenticação real com email e senha</li>
-                  <li>Sistema de roles (admin/user)</li>
-                </ul>
-              </div>
-              
-              <div>
-                <h4 className="font-medium mb-2">🔄 Fallback para Desenvolvimento:</h4>
-                <ul className="list-disc list-inside space-y-1 ml-4">
-                  <li>Se Firebase não estiver configurado, usa usuários mockados</li>
-                  <li>Credenciais de teste: admin@clickse.com / user@clickse.com</li>
-                  <li>Qualquer senha com 3+ caracteres funciona</li>
-                </ul>
-              </div>
+            {loading ? (
+              <div className="py-8 text-center text-text-secondary">Carregando usuários...</div>
+            ) : usuariosNaoAdmin.length === 0 ? (
+              <div className="py-8 text-center text-text-secondary">Nenhum usuário encontrado.</div>
+            ) : (
+              <div className="space-y-4">
+                {usuariosNaoAdmin.map(user => (
+                  <div
+                    key={user.id}
+                    className="border border-border rounded-lg p-4 bg-surface/50 space-y-4"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-text-primary">{user.nome}</p>
+                        <p className="text-sm text-text-secondary">{user.email}</p>
+                        <p className="text-xs text-text-muted">
+                          Plano atual: {user.assinatura?.planoNome || 'Sem plano'} • Status: {user.assinatura?.status || 'Sem assinatura'}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => sincronizarUsuario(user.id)}
+                        disabled={!!sincronizando[user.id]}
+                      >
+                        {sincronizando[user.id] ? 'Sincronizando...' : 'Sincronizar cache'}
+                      </Button>
+                    </div>
 
-              <div>
-                <h4 className="font-medium mb-2">📝 Para Usar em Produção:</h4>
-                <ol className="list-decimal list-inside space-y-1 ml-4">
-                  <li>Configure as variáveis do Firebase no <code>.env.local</code></li>
-                  <li>Crie usuários através desta página ou da página de registro</li>
-                  <li>Usuários poderão fazer login com email e senha reais</li>
-                </ol>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-text-primary">Plano</label>
+                        <div className="flex gap-2">
+                          <select
+                            value={user.planoSelecionado || ''}
+                            onChange={e => atualizarCampoUsuario(user.id, 'planoSelecionado', e.target.value)}
+                            className="w-full px-3 py-2 border border-border bg-background text-text-primary rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                          >
+                            <option value="">Selecione um plano</option>
+                            {planos.map(plano => (
+                              <option key={plano.id} value={plano.id}>
+                                {plano.nome} ({plano.codigoHotmart})
+                              </option>
+                            ))}
+                          </select>
+                          <Button
+                            onClick={() => aplicarPlano(user)}
+                            disabled={!!salvandoPlano[user.id]}
+                          >
+                            {salvandoPlano[user.id] ? 'Aplicando...' : 'Aplicar'}
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-text-primary">Status da assinatura</label>
+                        <div className="flex gap-2">
+                          <select
+                            value={user.statusSelecionado || ''}
+                            onChange={e => atualizarCampoUsuario(user.id, 'statusSelecionado', e.target.value)}
+                            className="w-full px-3 py-2 border border-border bg-background text-text-primary rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                          >
+                            <option value="">Selecione um status</option>
+                            {statusDisponiveis.map(status => (
+                              <option key={status.value} value={status.value}>
+                                {status.label}
+                              </option>
+                            ))}
+                          </select>
+                          <Button
+                            variant="outline"
+                            onClick={() => aplicarStatus(user)}
+                            disabled={!!salvandoStatus[user.id]}
+                          >
+                            {salvandoStatus[user.id] ? 'Salvando...' : 'Salvar'}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>
     </Layout>
   );
-}
-
-*/
-
-export default function AdminUsersPage() {
-  return null;
 }
