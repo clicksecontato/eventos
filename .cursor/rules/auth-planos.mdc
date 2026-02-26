@@ -1,0 +1,65 @@
+---
+description: Autenticação (NextAuth + Firebase) e sistema de planos/assinaturas
+globs: src/lib/auth*.ts,src/lib/middleware/**/*.ts,src/lib/services/plano-service.ts,src/lib/services/assinatura-service.ts,src/lib/services/funcionalidade-service.ts,src/lib/hooks/usePlano.ts
+alwaysApply: false
+---
+
+# Autenticação & Planos
+
+## Fluxo de autenticação
+1. **NextAuth 4** com JWT strategy + CredentialsProvider (`src/lib/auth-config.ts`)
+2. Se Firebase configurado: `signInWithEmailAndPassword` → busca role/nome no Firestore `controle_users`
+3. Se não (dev): fallback com admin@clickse.com / user@clickse.com
+4. Session inclui: `user.id`, `user.role` ('admin'|'user'), `user.email`, `user.name`
+5. No login, sincroniza user para Supabase via `syncFirebaseUserToSupabase`
+
+## Proteção de rotas
+- **API (server):** `getAuthenticatedUser()` → throw ApiError 401 se não autenticado
+- **API admin:** `requireAdmin()` → throw 403 se não admin
+- **Client:** `useSession()` + `<Layout>` redireciona para `/painel` se não logado
+- **Não há middleware.ts global** — proteção é por rota
+
+## Sistema de planos e assinaturas
+```
+Plano (Firestore) → Funcionalidades (Firestore) → Assinatura do usuário (Firestore)
+```
+
+### Hierarquia
+- **Plano**: define nome, preço, funcionalidades e limites
+- **Funcionalidade**: feature flag com código (ex: 'CONTRATOS', 'RELATORIOS', 'GOOGLE_CALENDAR')
+- **Assinatura**: vínculo user ↔ plano com status e datas
+- **Limites**: eventos/mês, clientes total, usuários, armazenamento
+
+### Verificação server-side (API routes)
+```typescript
+// Verificar funcionalidade + limite em uma route
+return withPlanoValidation(request, handler, {
+  funcionalidade: 'CONTRATOS',
+  limite: 'eventos'
+});
+
+// Ou verificação direta
+const { autorizado, error } = await validateFuncionalidade('CODIGO', userId);
+const { autorizado, detalhes } = await validateLimite('eventos', userId);
+```
+
+### Verificação client-side (React)
+```tsx
+const { temPermissao, podeCriar, statusPlano, limites } = usePlano();
+
+// Verificar feature
+const pode = await temPermissao('CONTRATOS');
+
+// Verificar limite
+const { pode, motivo, limite, usado, restante } = await podeCriar('eventos');
+```
+
+### Componentes de bloqueio
+- `<PlanOverlay>` — blur total se sem plano ativo
+- `<PlanoBloqueio funcionalidade="CODIGO">` — bloqueia seção específica
+- `<LimiteUso tipo="eventos" usado={5} limite={10}>` — indicador visual
+
+## Integração Hotmart
+- Webhook em `/api/webhooks/hotmart` → `HotmartWebhookService`
+- Eventos: purchase, activated, renewed, cancelled, expired, suspended, switch_plan, chargeback
+- Fluxo: webhook → valida HMAC → processa evento → cria/atualiza user + assinatura + envia email

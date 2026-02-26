@@ -1,0 +1,13 @@
+# Conta principal
+Host github-pessoal
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_github
+    IdentitiesOnly yes
+
+# Conta clicksecontato
+Host github-clicksecontato
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_clicksecontato
+    IdentitiesOnly yes

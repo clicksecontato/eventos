@@ -1,0 +1,75 @@
+---
+description: Padrões da camada de serviços e repositórios
+globs: src/lib/services/**/*.ts,src/lib/repositories/**/*.ts
+alwaysApply: false
+---
+
+# Services & Repositories — Padrões
+
+## Criando um novo repositório Supabase
+
+1. Criar interface em `src/lib/repositories/xxx-repository.ts`
+2. Implementar em `src/lib/repositories/supabase/xxx-supabase-repository.ts`
+3. Herdar de `BaseSupabaseRepository<T>` com nome da tabela
+4. Registrar no `RepositoryFactory`
+
+```typescript
+// xxx-supabase-repository.ts
+import { BaseSupabaseRepository } from './base-supabase-repository';
+import { XxxRepository } from '../xxx-repository';
+
+export class XxxSupabaseRepository extends BaseSupabaseRepository<Xxx> implements XxxRepository {
+  constructor() {
+    super('nome_tabela');
+  }
+
+  protected convertFromSupabase(row: any): Xxx {
+    return { /* mapear campos */ };
+  }
+
+  protected convertToSupabase(entity: Partial<Xxx>): any {
+    return { /* mapear campos */ };
+  }
+}
+```
+
+## Criando um novo serviço
+
+1. Criar em `src/lib/services/xxx-service.ts`
+2. Receber repositórios via construtor (dependency injection)
+3. Registrar no `ServiceFactory` com getter lazy
+
+```typescript
+export class XxxService {
+  constructor(
+    private xxxRepo: XxxRepository = repositoryFactory.getXxxRepository()
+  ) {}
+
+  async metodoDeNegocio(userId: string, dados: any): Promise<Resultado> {
+    // lógica de negócio
+  }
+}
+```
+
+## Serviços existentes (referência)
+| Serviço | Responsabilidade |
+|---------|------------------|
+| PlanoService | CRUD planos, aplicar plano a usuário |
+| AssinaturaService | Lifecycle de assinaturas, status pagamento |
+| FuncionalidadeService | Feature flags e limites por plano |
+| HotmartWebhookService | Webhooks Hotmart (compra, cancelamento, etc.) |
+| ContratoService | Contratos, templates, variáveis |
+| PDFService | Geração de PDF com Puppeteer |
+| TemplateService | Processamento de placeholders {{var}} em templates |
+| GoogleCalendarService | OAuth e operações no Google Calendar |
+| DashboardReportService | Métricas do dashboard (singleton) |
+| RelatoriosReportService | Geração e cache de relatórios (singleton) |
+| PreCadastroEventoService | Links de pré-cadastro público |
+| S3Service | Upload/download de arquivos no S3 |
+
+## Regras importantes
+1. **Nunca** acessar Supabase/Firestore diretamente — sempre via repositório
+2. Serviços singleton usam `getInstance()` (DashboardReport, RelatoriosReport, RelatorioCache)
+3. Serviços normais são criados via ServiceFactory
+4. `DataService` é a fachada principal — para CRUD simples, usar `dataService.xxx()`
+5. Filtrar **sempre** por `userId` para isolamento multi-tenant

@@ -1,0 +1,72 @@
+---
+description: Padrões de componentes React e páginas Next.js
+globs: src/**/*.tsx
+alwaysApply: false
+---
+
+# Componentes React — Padrões
+
+## Estrutura de uma página autenticada
+
+```tsx
+'use client';
+
+import { useState, useEffect } from 'react';
+import Layout from '@/components/Layout';
+import { useSession } from 'next-auth/react';
+import { usePlano } from '@/lib/hooks/usePlano';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+
+export default function MinhaPage() {
+  const { data: session } = useSession();
+  const { statusPlano, limites, temPermissao, podeCriar, loading } = usePlano();
+  const [dados, setDados] = useState([]);
+
+  useEffect(() => {
+    if (session?.user?.id) carregarDados();
+  }, [session?.user?.id]);
+
+  return (
+    <Layout>
+      {/* conteúdo */}
+    </Layout>
+  );
+}
+```
+
+## Componentes UI (shadcn-style)
+Primitivos em `src/components/ui/` — sempre importar de lá:
+- `Button` (variantes: default, destructive, outline, ghost, action-primary, action-danger)
+- `Input` (com label, error, helperText)
+- `Select` / `SelectWithSearch` (com busca e "criar novo")
+- `Card`, `CardHeader`, `CardTitle`, `CardContent`
+- `Dialog`, `ConfirmationDialog`, `NomeEventoDialog`
+- `Tooltip`, `InfoTooltip`
+- `useToast()` → `showToast({ type, title, message })`
+- `Badge`, `Table`, `Tabs`, `Skeleton`, `Progress`, `ScrollArea`
+
+## Componentes de controle de plano
+- `PlanOverlay` — envolve conteúdo e bloqueia se sem plano ativo
+- `PlanoBloqueio` — bloqueia por funcionalidade ou limite específico
+- `LimiteUso` / `LimiteUsoCompacto` — indicadores visuais de uso vs limite
+
+## Hook usePlano
+```tsx
+const { statusPlano, limites, temPermissao, podeCriar, loading, error, refresh } = usePlano();
+```
+- `temPermissao('CODIGO')` → boolean (funcionalidade habilitada no plano)
+- `podeCriar('eventos' | 'clientes')` → `{ pode, motivo?, limite?, usado?, restante? }`
+
+## Formulários
+- Componentes em `src/components/forms/` (EventoForm, PagamentoForm, CustoForm, etc.)
+- Padrão: estado local controlado + callbacks `onSave`/`onCancel`
+- Validação client-side antes de chamar a API
+
+## Padrões gerais
+1. Todas as páginas autenticadas usam `<Layout>` como wrapper
+2. Usar `useSession()` para verificar autenticação no client
+3. Dados carregados via `fetch('/api/...')` em useEffect ou em handlers
+4. Loading states com `LoadingHotmart` ou `Skeleton`
+5. Confirmações de exclusão com `ConfirmationDialog`
+6. Toasts para feedback: `showToast({ type: 'success', title: '...', message: '...' })`

@@ -1,0 +1,74 @@
+---
+description: Padrões para criação de API routes (Next.js App Router)
+globs: src/app/api/**/*.ts
+alwaysApply: false
+---
+
+# API Routes — Padrões
+
+## Estrutura obrigatória de uma route
+
+```typescript
+import { NextRequest } from 'next/server';
+import { dataService } from '@/lib/data-service';
+import {
+  getAuthenticatedUser,
+  handleApiError,
+  createApiResponse,
+  createErrorResponse,
+  getRouteParams,
+  getRequestBody
+} from '@/lib/api/route-helpers';
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await getAuthenticatedUser();
+    const { id } = await getRouteParams(params);
+    const data = await dataService.getXxxById(id, user.id);
+
+    if (!data) {
+      return createErrorResponse('Recurso não encontrado', 404);
+    }
+
+    return createApiResponse(data);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
+```
+
+## Helpers disponíveis (src/lib/api/route-helpers.ts)
+- `getAuthenticatedUser()` → `{ id, role, email, name }` ou throw 401
+- `getAuthenticatedUserOptional()` → user ou null
+- `requireAdmin()` → user admin ou throw 403
+- `handleApiError(error)` → resposta JSON padronizada
+- `createApiResponse(data, status?, message?)` → `{ data, message? }`
+- `createErrorResponse(error, status?, details?)` → `{ error, details? }`
+- `getRequestBody<T>(request)` → body parseado ou throw 400
+- `getRouteParams(params)` → params resolvidos (Next.js 15: params é Promise)
+- `getQueryParams(request)` → URLSearchParams
+
+## Regras
+1. **Sempre** usar try/catch com `handleApiError` no catch
+2. **Sempre** autenticar com `getAuthenticatedUser()` (exceto rotas públicas como pré-cadastro)
+3. **Nunca** retornar `NextResponse.json()` direto — usar `createApiResponse`/`createErrorResponse`
+4. **params é Promise** no Next.js 15 — usar `await getRouteParams(params)`
+5. Para rotas admin: usar `requireAdmin()` ao invés de `getAuthenticatedUser()`
+6. Para rotas com validação de plano: usar `withPlanoValidation()` de `@/lib/middleware/plano-validation`
+
+## Validação de plano em routes
+
+```typescript
+import { withPlanoValidation } from '@/lib/middleware/plano-validation';
+
+export async function POST(request: NextRequest) {
+  return withPlanoValidation(request, async (userId, req) => {
+    const body = await getRequestBody(req);
+    const result = await dataService.createXxx(body, userId);
+    return createApiResponse(result, 201);
+  }, { funcionalidade: 'CODIGO_FUNC', limite: 'eventos' });
+}
+```

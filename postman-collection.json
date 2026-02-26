@@ -1,0 +1,1605 @@
+{
+  "info": {
+    "name": "Click-se Sistema - Planos e Funcionalidades",
+    "description": "Collection com todas as APIs do sistema de planos e funcionalidades",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "name": "Webhook Hotmart - Sandbox",
+      "item": [
+        {
+          "name": "Sandbox - Testar Webhook (GET - Mockado)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/sandbox?email=usuario@exemplo.com&plano=BASICO_MENSAL&evento=PURCHASE_APPROVED",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "sandbox"],
+              "query": [
+                { "key": "email", "value": "usuario@exemplo.com" },
+                { "key": "plano", "value": "BASICO_MENSAL" },
+                { "key": "evento", "value": "PURCHASE_APPROVED" }
+              ]
+            },
+            "description": "Endpoint GET para testar o webhook mockado do Hotmart no sandbox"
+          }
+        },
+        {
+          "name": "Sandbox - PURCHASE_APPROVED",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"b7c49973-43ca-4883-a7bb-d4ef2c88b716\",\n  \"creation_date\": 1768533022809,\n  \"event\": \"PURCHASE_APPROVED\",\n  \"version\": \"2.0.0\",\n  \"data\": {\n    \"product\": {\n      \"id\": 6644384,\n      \"ucode\": \"51fd3955-e2a0-447b-9f1b-0e0f5a5caf55c\",\n      \"name\": \"CLICKSEHUB\",\n      \"warranty_date\": \"2026-01-23T00:00:00Z\",\n      \"has_co_production\": false,\n      \"is_physical_product\": false\n    },\n    \"affiliates\": [\n      {\n        \"affiliate_code\": \"\",\n        \"name\": \"\"\n      }\n    ],\n    \"buyer\": {\n      \"email\": \"cliente@exemplo.com\",\n      \"name\": \"Nome do Cliente\",\n      \"first_name\": \"Nome\",\n      \"last_name\": \"Cliente\",\n      \"address\": {\n        \"city\": \"\",\n        \"country\": \"Brasil\",\n        \"country_iso\": \"BR\",\n        \"zipcode\": \"\",\n        \"address\": \"\",\n        \"complement\": \"\"\n      },\n      \"document\": \"\",\n      \"document_type\": \"\"\n    },\n    \"producer\": {\n      \"name\": \"Michael Gomes da Cunha Lourenço\",\n      \"document\": \"33762021848\",\n      \"legal_nature\": \"Pessoa Física\"\n    },\n    \"commissions\": [\n      {\n        \"value\": 0,\n        \"source\": \"MARKETPLACE\",\n        \"currency_value\": \"BRL\"\n      },\n      {\n        \"value\": 0,\n        \"source\": \"PRODUCER\",\n        \"currency_value\": \"BRL\"\n      }\n    ],\n    \"purchase\": {\n      \"approved_date\": 1768533011000,\n      \"full_price\": {\n        \"value\": 0,\n        \"currency_value\": \"BRL\"\n      },\n      \"price\": {\n        \"value\": 0,\n        \"currency_value\": \"BRL\"\n      },\n      \"checkout_country\": {\n        \"name\": \"Brasil\",\n        \"iso\": \"BR\"\n      },\n      \"order_bump\": {\n        \"is_order_bump\": false\n      },\n      \"original_offer_price\": {\n        \"value\": 0,\n        \"currency_value\": \"BRL\"\n      },\n      \"order_date\": 1768533008000,\n      \"status\": \"APPROVED\",\n      \"transaction\": \"HP2534387717\",\n      \"payment\": {\n        \"installments_number\": 1,\n        \"type\": \"CREDIT_CARD\"\n      },\n      \"offer\": {\n        \"code\": \"8i552qn2\",\n        \"description\": \"Sistema completo de gestão para empresas de eventos que estão começando. Ideal para pequenos negócios que precisam organizar seus eventos de forma profissional sem complicações.\"\n      },\n      \"invoice_by\": \"HOTMART\",\n      \"subscription_anticipation_purchase\": false,\n      \"date_next_charge\": 1769169600000,\n      \"recurrence_number\": 1,\n      \"is_funnel\": false,\n      \"business_model\": \"I\"\n    },\n    \"subscription\": {\n      \"status\": \"ACTIVE\",\n      \"plan\": {\n        \"id\": 1196829,\n        \"name\": \"BÁSICO\"\n      },\n      \"subscriber\": {\n        \"code\": \"JIK44XYF\"\n      }\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/sandbox",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "sandbox"]
+            },
+            "description": "Payload completo do webhook PURCHASE_APPROVED no formato v2.0.0 da Hotmart. Inclui subscription.plan.id (1196829 = BASICO_MENSAL)."
+          }
+        },
+        {
+          "name": "Sandbox - PURCHASE_COMPLETED",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"PURCHASE_COMPLETED\",\n  \"data\": {\n    \"subscription\": {\n      \"subscription_code\": \"SUB-SANDBOX-123456\",\n      \"plan\": { \"plan_code\": \"BASICO_MENSAL\" },\n      \"buyer\": { \"email\": \"cliente@exemplo.com\", \"name\": \"Nome do Cliente\" },\n      \"status\": \"ACTIVE\",\n      \"date_next_charge\": \"2025-02-22T00:00:00Z\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/sandbox",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "sandbox"]
+            }
+          }
+        },
+        {
+          "name": "Sandbox - PURCHASE_RENEWED (CHARGED/UPDATED)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"PURCHASE_CHARGED\",\n  \"data\": {\n    \"subscription\": {\n      \"subscription_code\": \"SUB-SANDBOX-123456\",\n      \"plan\": { \"plan_code\": \"BASICO_MENSAL\" },\n      \"buyer\": { \"email\": \"cliente@exemplo.com\" },\n      \"status\": \"ACTIVE\",\n      \"date_next_charge\": \"2025-03-22T00:00:00Z\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/sandbox",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "sandbox"]
+            }
+          }
+        },
+        {
+          "name": "Sandbox - PURCHASE_CANCELLED",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"PURCHASE_CANCELLED\",\n  \"data\": {\n    \"subscription\": {\n      \"subscription_code\": \"SUB-SANDBOX-123456\",\n      \"plan\": { \"plan_code\": \"BASICO_MENSAL\" },\n      \"buyer\": { \"email\": \"cliente@exemplo.com\" },\n      \"status\": \"CANCELLED\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/sandbox",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "sandbox"]
+            }
+          }
+        },
+        {
+          "name": "Sandbox - PURCHASE_EXPIRED",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"PURCHASE_EXPIRED\",\n  \"data\": {\n    \"subscription\": {\n      \"subscription_code\": \"SUB-SANDBOX-123456\",\n      \"plan\": { \"plan_code\": \"BASICO_MENSAL\" },\n      \"buyer\": { \"email\": \"cliente@exemplo.com\" },\n      \"status\": \"EXPIRED\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/sandbox",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "sandbox"]
+            }
+          }
+        },
+        {
+          "name": "Sandbox - SUBSCRIPTION_SUSPENDED (Compatível)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"SUBSCRIPTION_SUSPENDED\",\n  \"data\": {\n    \"subscription\": {\n      \"code\": \"SUB-SANDBOX-123456\",\n      \"plan\": { \"code\": \"BASICO_MENSAL\" },\n      \"buyer\": { \"email\": \"cliente@exemplo.com\" },\n      \"status\": \"SUSPENDED\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/sandbox",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "sandbox"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Funcionalidades",
+      "item": [
+        {
+          "name": "Listar Funcionalidades",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/funcionalidades",
+              "host": ["{{base_url}}"],
+              "path": ["api", "funcionalidades"]
+            }
+          }
+        },
+        {
+          "name": "Criar Funcionalidade",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"codigo\": \"EVENTOS_ILIMITADOS\",\n  \"nome\": \"Eventos Ilimitados\",\n  \"descricao\": \"Criar eventos sem limite\",\n  \"categoria\": \"EVENTOS\",\n  \"ativo\": true,\n  \"ordem\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/funcionalidades",
+              "host": ["{{base_url}}"],
+              "path": ["api", "funcionalidades"]
+            }
+          }
+        },
+        {
+          "name": "Buscar Funcionalidade por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/funcionalidades/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "funcionalidades", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Atualizar Funcionalidade",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Eventos Ilimitados (Atualizado)\",\n  \"ativo\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/funcionalidades/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "funcionalidades", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Deletar Funcionalidade",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/funcionalidades/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "funcionalidades", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Planos",
+      "item": [
+        {
+          "name": "Listar Planos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/planos?ativos=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "planos"],
+              "query": [
+                {
+                  "key": "ativos",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Criar Plano",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Basico\",\n  \"descricao\": \"Plano ideal para comecar a usar o sistema\",\n  \"codigoHotmart\": \"BASICO_MENSAL\",\n  \"funcionalidades\": [\"func_id_1\", \"func_id_2\"],\n  \"preco\": 49.90,\n  \"intervalo\": \"mensal\",\n  \"ativo\": true,\n  \"destaque\": true,\n  \"limiteEventos\": 10,\n  \"limiteClientes\": 50,\n  \"limiteUsuarios\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/planos",
+              "host": ["{{base_url}}"],
+              "path": ["api", "planos"]
+            }
+          }
+        },
+        {
+          "name": "Buscar Plano por ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/planos/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "planos", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Atualizar Plano",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Básico (Atualizado)\",\n  \"preco\": 59.90,\n  \"ativo\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/planos/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "planos", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Deletar Plano",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/planos/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "planos", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": ""
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assinaturas",
+      "item": [
+        {
+          "name": "Buscar Minha Assinatura",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/assinaturas",
+              "host": ["{{base_url}}"],
+              "path": ["api", "assinaturas"]
+            }
+          }
+        },
+        {
+          "name": "Buscar Assinatura por User ID (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/assinaturas?userId=user_id_aqui",
+              "host": ["{{base_url}}"],
+              "path": ["api", "assinaturas"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "user_id_aqui"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuários e Assinaturas",
+      "item": [
+        {
+          "name": "Obter Status do Plano",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/users/:id/assinatura",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", ":id", "assinatura"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "ID do usuário"
+                }
+              ]
+            },
+            "description": "Obtém status completo do plano do usuário (próprio usuário ou admin)"
+          }
+        },
+        {
+          "name": "Atualizar Assinatura do Usuário (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assinaturaId\": \"assinatura_id_aqui\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/:id/assinatura",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", ":id", "assinatura"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "ID do usuário"
+                }
+              ]
+            },
+            "description": "Atualiza assinatura do usuário (apenas admin)"
+          }
+        },
+        {
+          "name": "Sincronizar Plano do Usuário (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sincronizar\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users/:id/assinatura",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users", ":id", "assinatura"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "",
+                  "description": "ID do usuário"
+                }
+              ]
+            },
+            "description": "Força sincronização dos dados do plano no usuário (apenas admin)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhook Hotmart",
+      "item": [
+        {
+          "name": "Testar Webhook (GET - Mockado)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart?email=usuario@exemplo.com&plano=PROFISSIONAL_MENSAL&evento=SUBSCRIPTION_PURCHASE",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart"],
+              "query": [
+                {
+                  "key": "email",
+                  "value": "usuario@exemplo.com"
+                },
+                {
+                  "key": "plano",
+                  "value": "PROFISSIONAL_MENSAL"
+                },
+                {
+                  "key": "evento",
+                  "value": "SUBSCRIPTION_PURCHASE"
+                }
+              ]
+            },
+            "description": "Endpoint GET para testar o webhook mockado da Hotmart"
+          }
+        },
+        {
+          "name": "Webhook Hotmart (POST - Produção) - PURCHASE_APPROVED",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"b7c49973-43ca-4883-a7bb-d4ef2c88b716\",\n  \"creation_date\": 1768533022809,\n  \"event\": \"PURCHASE_APPROVED\",\n  \"version\": \"2.0.0\",\n  \"data\": {\n    \"product\": {\n      \"id\": 6644384,\n      \"ucode\": \"51fd3955-e2a0-447b-9f1b-0e0f5a5caf55c\",\n      \"name\": \"CLICKSEHUB\",\n      \"warranty_date\": \"2026-01-23T00:00:00Z\",\n      \"has_co_production\": false,\n      \"is_physical_product\": false\n    },\n    \"affiliates\": [\n      {\n        \"affiliate_code\": \"\",\n        \"name\": \"\"\n      }\n    ],\n    \"buyer\": {\n      \"email\": \"cliente@exemplo.com\",\n      \"name\": \"Nome do Cliente\",\n      \"first_name\": \"Nome\",\n      \"last_name\": \"Cliente\",\n      \"address\": {\n        \"city\": \"\",\n        \"country\": \"Brasil\",\n        \"country_iso\": \"BR\",\n        \"zipcode\": \"\",\n        \"address\": \"\",\n        \"complement\": \"\"\n      },\n      \"document\": \"\",\n      \"document_type\": \"\"\n    },\n    \"producer\": {\n      \"name\": \"Michael Gomes da Cunha Lourenço\",\n      \"document\": \"33762021848\",\n      \"legal_nature\": \"Pessoa Física\"\n    },\n    \"commissions\": [\n      {\n        \"value\": 0,\n        \"source\": \"MARKETPLACE\",\n        \"currency_value\": \"BRL\"\n      },\n      {\n        \"value\": 0,\n        \"source\": \"PRODUCER\",\n        \"currency_value\": \"BRL\"\n      }\n    ],\n    \"purchase\": {\n      \"approved_date\": 1768533011000,\n      \"full_price\": {\n        \"value\": 0,\n        \"currency_value\": \"BRL\"\n      },\n      \"price\": {\n        \"value\": 0,\n        \"currency_value\": \"BRL\"\n      },\n      \"checkout_country\": {\n        \"name\": \"Brasil\",\n        \"iso\": \"BR\"\n      },\n      \"order_bump\": {\n        \"is_order_bump\": false\n      },\n      \"original_offer_price\": {\n        \"value\": 0,\n        \"currency_value\": \"BRL\"\n      },\n      \"order_date\": 1768533008000,\n      \"status\": \"APPROVED\",\n      \"transaction\": \"HP2534387717\",\n      \"payment\": {\n        \"installments_number\": 1,\n        \"type\": \"CREDIT_CARD\"\n      },\n      \"offer\": {\n        \"code\": \"8i552qn2\",\n        \"description\": \"Sistema completo de gestão para empresas de eventos que estão começando. Ideal para pequenos negócios que precisam organizar seus eventos de forma profissional sem complicações.\"\n      },\n      \"invoice_by\": \"HOTMART\",\n      \"subscription_anticipation_purchase\": false,\n      \"date_next_charge\": 1769169600000,\n      \"recurrence_number\": 1,\n      \"is_funnel\": false,\n      \"business_model\": \"I\"\n    },\n    \"subscription\": {\n      \"status\": \"ACTIVE\",\n      \"plan\": {\n        \"id\": 1196829,\n        \"name\": \"BÁSICO\"\n      },\n      \"subscriber\": {\n        \"code\": \"JIK44XYF\"\n      }\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart"]
+            },
+            "description": "Endpoint POST para receber webhooks da Hotmart em produção. Payload completo do PURCHASE_APPROVED no formato v2.0.0. Inclui subscription.plan.id (1196829 = BASICO_MENSAL, 1197348 = PROFISSIONAL_MENSAL, 1197349 = PREMIUM_MENSAL)."
+          }
+        },
+        {
+          "name": "Webhook - Assinatura Ativada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"SUBSCRIPTION_ACTIVATED\",\n  \"data\": {\n    \"subscription\": {\n      \"code\": \"SUB-123456\",\n      \"plan\": {\n        \"code\": \"PROFISSIONAL_MENSAL\"\n      },\n      \"buyer\": {\n        \"email\": \"cliente@exemplo.com\",\n        \"name\": \"Nome do Cliente\"\n      },\n      \"status\": \"ACTIVE\",\n      \"date_next_charge\": \"2025-02-22T00:00:00Z\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart"]
+            }
+          }
+        },
+        {
+          "name": "Webhook - Assinatura Cancelada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"SUBSCRIPTION_CANCELLED\",\n  \"data\": {\n    \"subscription\": {\n      \"code\": \"SUB-123456\",\n      \"plan\": {\n        \"code\": \"PROFISSIONAL_MENSAL\"\n      },\n      \"buyer\": {\n        \"email\": \"cliente@exemplo.com\",\n        \"name\": \"Nome do Cliente\"\n      },\n      \"status\": \"CANCELLED\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart"]
+            }
+          }
+        },
+        {
+          "name": "Webhook - Assinatura Expirada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"SUBSCRIPTION_EXPIRED\",\n  \"data\": {\n    \"subscription\": {\n      \"code\": \"SUB-123456\",\n      \"plan\": {\n        \"code\": \"PROFISSIONAL_MENSAL\"\n      },\n      \"buyer\": {\n        \"email\": \"cliente@exemplo.com\",\n        \"name\": \"Nome do Cliente\"\n      },\n      \"status\": \"EXPIRED\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart"]
+            }
+          }
+        },
+        {
+          "name": "Webhook - Assinatura Renovada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"SUBSCRIPTION_RENEWED\",\n  \"data\": {\n    \"subscription\": {\n      \"code\": \"SUB-123456\",\n      \"plan\": {\n        \"code\": \"PROFISSIONAL_MENSAL\"\n      },\n      \"buyer\": {\n        \"email\": \"cliente@exemplo.com\",\n        \"name\": \"Nome do Cliente\"\n      },\n      \"status\": \"ACTIVE\",\n      \"date_next_charge\": \"2025-03-22T00:00:00Z\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart"]
+            }
+          }
+        },
+        {
+          "name": "Webhook - Assinatura Suspensa",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"SUBSCRIPTION_SUSPENDED\",\n  \"data\": {\n    \"subscription\": {\n      \"code\": \"SUB-123456\",\n      \"plan\": {\n        \"code\": \"PROFISSIONAL_MENSAL\"\n      },\n      \"buyer\": {\n        \"email\": \"cliente@exemplo.com\",\n        \"name\": \"Nome do Cliente\"\n      },\n      \"status\": \"SUSPENDED\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pagamentos",
+      "item": [
+        {
+          "name": "Atualizar Pagamentos (Normalização)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"seu_user_id_aqui\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/pagamentos/atualiza-pagamento",
+              "host": ["{{base_url}}"],
+              "path": ["api", "pagamentos", "atualiza-pagamento"]
+            },
+            "description": "Normaliza pagamentos existentes da collection de eventos para a collection global. Busca todos os pagamentos em users/{userId}/eventos/{eventoId}/pagamentos e os cria em users/{userId}/pagamentos. Pode ser executado múltiplas vezes (idempotente).\n\nOpções de autenticação:\n1. Via sessão (se estiver logado no navegador)\n2. Via API key (x-api-key header) + userId no body\n3. Em modo dev, apenas userId no body"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Custos",
+      "item": [
+        {
+          "name": "Atualizar Custos (Normalização)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"seu_user_id_aqui\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/custos/atualiza-custo",
+              "host": ["{{base_url}}"],
+              "path": ["api", "custos", "atualiza-custo"]
+            },
+            "description": "Normaliza custos existentes da collection de eventos para a collection global. Busca todos os custos em users/{userId}/eventos/{eventoId}/custos e os cria em users/{userId}/custos. Pode ser executado múltiplas vezes (idempotente).\n\nOpções de autenticação:\n1. Via sessão (se estiver logado no navegador)\n2. Via API key (x-api-key header) + userId no body\n3. Em modo dev, apenas userId no body"
+          }
+        },
+        {
+          "name": "Atualizar Serviços (Normalização)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"seu_user_id_aqui\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/servicos/atualiza-servico",
+              "host": ["{{base_url}}"],
+              "path": ["api", "servicos", "atualiza-servico"]
+            },
+            "description": "Normaliza serviços existentes da collection de eventos para a collection global. Busca todos os serviços em users/{userId}/eventos/{eventoId}/servicos e os cria em users/{userId}/servicos. Pode ser executado múltiplas vezes (idempotente).\n\nOpções de autenticação:\n1. Via sessão (se estiver logado no navegador)\n2. Via API key (x-api-key header) + userId no body\n3. Em modo dev, apenas userId no body"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Planos",
+      "item": [
+        {
+          "name": "Alterar Plano",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"usuario@exemplo.com\",\n  \"codigoHotmart\": \"PROFISSIONAL_MENSAL\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/alterar-plano",
+              "host": ["{{base_url}}"],
+              "path": ["api", "alterar-plano"]
+            },
+            "description": "Altera o plano de um usuário pelo email e codigoHotmart. Se o usuário não tiver plano, cria uma nova assinatura. Se já tiver, atualiza para o novo plano.\n\nParâmetros:\n- email (string): Email do usuário\n- codigoHotmart (string): Código do plano na Hotmart (ex: PROFISSIONAL_MENSAL, BASICO_MENSAL, PREMIUM_MENSAL)\n\nOpções de autenticação:\n1. Via sessão admin\n2. Via API key (x-api-key header)\n3. Em modo dev, sem autenticação"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Seed e Setup",
+      "item": [
+        {
+          "name": "Seed Funcionalidades e Planos (Incremental)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/api/seed/funcionalidades-planos",
+              "host": ["{{base_url}}"],
+              "path": ["api", "seed", "funcionalidades-planos"]
+            },
+            "description": "Cria ou atualiza funcionalidades e planos de forma incremental (sem remover dados existentes).\n\n📋 Cria/Atualiza:\n- 14 funcionalidades\n- 3 planos (Básico, Profissional, Premium)\n\n💡 Use este endpoint para atualizações sem perder dados existentes. Para reset completo, use 'Seed com Reset'."
+          }
+        },
+        {
+          "name": "Criar Usuário Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/create-default-admin",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "create-default-admin"]
+            },
+            "description": "Cria usuário admin@clickse.com com senha 123456"
+          }
+        },
+        {
+          "name": "Seed com Reset (Reformulação 2025)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{base_url}}/api/seed/funcionalidades-planos?reset=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "seed", "funcionalidades-planos"],
+              "query": [
+                {
+                  "key": "reset",
+                  "value": "true",
+                  "description": "Limpa tudo e recria do zero"
+                }
+              ]
+            },
+            "description": "🔄 EXECUTA SEED COM RESET COMPLETO - Reformulação dos Planos 2025\n\nRemove todas as funcionalidades e planos existentes e recria do zero com:\n\n📋 Funcionalidades (14 total):\n- EVENTOS_LIMITADOS\n- CLIENTES_LIMITADOS\n- PAGAMENTOS_REGISTRAR\n- PAGAMENTOS_COMPROVANTES\n- PAGAMENTOS_CONTROLE_PADRAO\n- PAGAMENTOS_CONTROLE_PERSONALIZADO\n- FLUXO_CAIXA\n- RELATORIOS_BASICOS\n- RELATORIOS_AVANCADOS\n- RELATORIOS_FULL\n- TIPOS_PADRAO\n- TIPOS_PERSONALIZADO\n- UPLOAD_ANEXOS\n- BOTAO_COPIAR\n- CONTRATO_AUTOMATIZADO\n\n📦 Planos:\n1. BÁSICO: 10 eventos/mês, 100 clientes/ano\n2. PROFISSIONAL: 50 eventos/mês, 600 clientes/ano\n3. PREMIUM: 400 eventos/mês, 4.800 clientes/ano\n\n⚠️ ATENÇÃO: Este endpoint remove TODOS os dados existentes de funcionalidades e planos antes de recriar!"
+          }
+        },
+        {
+          "name": "Migrar Usuários para Planos",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planoPadrao\": \"BASICO_MENSAL\",\n  \"statusPadrao\": \"active\",\n  \"dataExpiracao\": null,\n  \"dryRun\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/migrate-users-to-plans",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "migrate-users-to-plans"]
+            },
+            "description": "Migra usuários existentes para planos. dryRun=true apenas simula sem aplicar mudanças. Requer autenticação admin."
+          }
+        },
+        {
+          "name": "Migrar Usuários - Dry Run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planoPadrao\": \"BASICO_MENSAL\",\n  \"statusPadrao\": \"active\",\n  \"dryRun\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/migrate-users-to-plans",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "migrate-users-to-plans"]
+            },
+            "description": "Simula migração sem aplicar mudanças (dryRun=true)"
+          }
+        },
+        {
+          "name": "Migrar Campos de Integridade de Dados",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dryRun\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/migrate-data-integrity-fields",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "migrate-data-integrity-fields"]
+            },
+            "description": "Adiciona campos de integridade (ativo, arquivado) em dados existentes. dryRun=true apenas simula sem aplicar mudanças. Requer autenticação admin."
+          }
+        },
+        {
+          "name": "Migrar Campos de Integridade - Dry Run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dryRun\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/migrate-data-integrity-fields",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "migrate-data-integrity-fields"]
+            },
+            "description": "Simula migração de campos de integridade sem aplicar mudanças (dryRun=true)"
+          }
+        },
+        {
+          "name": "Atualizar Planos e Funcionalidades dos Usuários",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"apenasAtivas\": true,\n  \"dryRun\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/atualizar-planos-usuarios",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "atualizar-planos-usuarios"]
+            },
+            "description": "Atualiza planos e funcionalidades de todos os usuários que têm assinaturas. Use após atualizar planos via seed.\n\n📋 Parâmetros:\n- apenasAtivas (boolean): true = apenas assinaturas ativas, false = todas (padrão: true)\n- dryRun (boolean): true = apenas simula sem aplicar mudanças (padrão: false)\n\n🔄 O que faz:\n1. Busca todas as assinaturas (ativas ou todas)\n2. Para cada assinatura, busca o plano atualizado\n3. Atualiza a assinatura com as novas funcionalidades do plano\n4. Sincroniza o plano no usuário (atualiza cache)\n5. Registra histórico de alterações\n\n💡 Use dryRun=true primeiro para testar sem aplicar mudanças.\n\n⚠️ Execute este endpoint após atualizar planos via seed!"
+          }
+        },
+        {
+          "name": "Atualizar Planos - Dry Run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"apenasAtivas\": true,\n  \"dryRun\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/atualizar-planos-usuarios",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "atualizar-planos-usuarios"]
+            },
+            "description": "Simula atualização de planos sem aplicar mudanças (dryRun=true)"
+          }
+        },
+        {
+          "name": "Migrar ENTERPRISE_MENSAL → PREMIUM_MENSAL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dryRun\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/migrate-enterprise-to-premium",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "migrate-enterprise-to-premium"]
+            },
+            "description": "Migra usuários de ENTERPRISE_MENSAL para PREMIUM_MENSAL.\n\n🔄 O que faz:\n1. Busca todas as assinaturas com plano ENTERPRISE_MENSAL\n2. Busca o novo plano PREMIUM_MENSAL\n3. Atualiza as assinaturas para o novo plano\n4. Atualiza os usuários (cache)\n5. Registra histórico de migração\n\n📋 Parâmetros:\n- dryRun (boolean): true = apenas simula sem aplicar mudanças (padrão: false)\n\n💡 Use dryRun=true primeiro para testar sem aplicar mudanças.\n\n⚠️ IMPORTANTE: Execute o seed primeiro para garantir que o plano PREMIUM_MENSAL existe!"
+          }
+        },
+        {
+          "name": "Migrar ENTERPRISE → PREMIUM - Dry Run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dryRun\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/migrate-enterprise-to-premium",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "migrate-enterprise-to-premium"]
+            },
+            "description": "Simula migração de ENTERPRISE_MENSAL para PREMIUM_MENSAL sem aplicar mudanças (dryRun=true)"
+          }
+        },
+        {
+          "name": "Migrar Estrutura de Assinatura dos Usuários",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dryRun\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/migrate-user-assinatura-structure",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "migrate-user-assinatura-structure"]
+            },
+            "description": "Migra estrutura de assinatura dos usuários para formato consolidado.\n\n🔄 O que faz:\n1. Busca todos os usuários\n2. Identifica usuários com campos antigos de assinatura na raiz (planoId, planoNome, etc.)\n3. Busca a assinatura real na coleção assinaturas\n4. Constrói objeto assinatura consolidado (user.assinatura)\n5. Remove campos antigos da raiz usando deleteField()\n\n📋 Migração de campos:\n- assinaturaId → assinatura.id\n- planoId → assinatura.planoId\n- planoNome → assinatura.planoNome\n- planoCodigoHotmart → assinatura.planoCodigoHotmart\n- funcionalidadesHabilitadas → assinatura.funcionalidadesHabilitadas\n- assinaturaStatus → assinatura.status\n- pagamentoEmDia → assinatura.pagamentoEmDia\n- dataExpiraAssinatura → assinatura.dataExpira\n- dataProximoPagamento → assinatura.dataProximoPagamento\n\n📋 Parâmetros:\n- dryRun (boolean): true = apenas simula sem aplicar mudanças (padrão: false)\n\n💡 Use dryRun=true primeiro para testar sem aplicar mudanças.\n\n⚠️ Este endpoint atualiza a estrutura de dados dos usuários. Execute após atualizar o código!"
+          }
+        },
+        {
+          "name": "Migrar Estrutura de Assinatura - Dry Run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dryRun\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/migrate-user-assinatura-structure",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "migrate-user-assinatura-structure"]
+            },
+            "description": "Simula migração de estrutura de assinatura sem aplicar mudanças (dryRun=true)"
+          }
+        },
+        {
+          "name": "Adicionar Assinatura para Usuários sem Plano",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planoPadrao\": \"BASICO_MENSAL\",\n  \"statusPadrao\": \"active\",\n  \"dryRun\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/adicionar-assinatura-usuarios-sem-plano",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "adicionar-assinatura-usuarios-sem-plano"]
+            },
+            "description": "Adiciona assinatura padrão para usuários que não têm nenhuma assinatura.\n\n🔄 O que faz:\n1. Busca todos os usuários (exceto admin)\n2. Identifica usuários sem assinatura (nem na coleção assinaturas, nem no objeto user.assinatura)\n3. Cria uma assinatura padrão para esses usuários\n4. Sincroniza a assinatura no objeto user.assinatura\n\n📋 Parâmetros:\n- planoPadrao (string): Código do plano a ser atribuído (padrão: BASICO_MENSAL)\n- statusPadrao (string): Status da assinatura - 'active', 'trial', etc. (padrão: 'active')\n- dryRun (boolean): true = apenas simula sem aplicar mudanças (padrão: false)\n\n💡 Use dryRun=true primeiro para testar sem aplicar mudanças.\n\n⚠️ Este endpoint cria assinaturas reais na coleção assinaturas!"
+          }
+        },
+        {
+          "name": "Adicionar Assinatura - Dry Run",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"planoPadrao\": \"BASICO_MENSAL\",\n  \"statusPadrao\": \"active\",\n  \"dryRun\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/adicionar-assinatura-usuarios-sem-plano",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "adicionar-assinatura-usuarios-sem-plano"]
+            },
+            "description": "Simula adição de assinaturas sem aplicar mudanças (dryRun=true)"
+          }
+        },
+        {
+          "name": "Migrar Subcollections de Usuário (Firestore → Supabase)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"1AGkVjDbaqWOwk5tg3mHje11PaD2\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/migrate-user-subcollections",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "migrate-user-subcollections"]
+            },
+            "description": "Migra subcollections de eventos de um usuário específico do Firestore para o Supabase.\n\n🔄 O que migra:\n- pagamentos (de eventos/{eventoId}/pagamentos)\n- custos (de eventos/{eventoId}/custos)\n- serviços (de eventos/{eventoId}/servicos)\n- anexos_eventos (de eventos/{eventoId}/controle_anexos_eventos)\n- canais_entrada (de controle_users/{userId}/canais_entrada)\n\n📋 Parâmetros:\n- userId (string, obrigatório): ID do usuário no Firestore (ex: 1AGkVjDbaqWOwk5tg3mHje11PaD2)\n\n✨ Características:\n- Usa SUPABASE_SERVICE_ROLE_KEY para bypassar RLS\n- Insere apenas novos registros (não faz upsert)\n- Verifica existência antes de inserir (evita duplicatas)\n- Extrai userId e eventoId do path do Firestore\n- Converte Timestamps do Firestore para ISO strings\n- Retorna estatísticas detalhadas da migração\n\n💡 Use este endpoint para migrar dados que não foram migrados corretamente na migração inicial.\n\n⚠️ IMPORTANTE: Execute apenas para usuários específicos. O script processa todos os eventos do usuário."
+          }
+        },
+        {
+          "name": "Migrar s3_key dos Anexos (Firestore → Supabase)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (ou usar SEED_API_KEY no .env)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"1AGkVjDbaqWOwk5tg3mHje11PaD2\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/migrate-anexos-s3-keys",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "migrate-anexos-s3-keys"]
+            },
+            "description": "Migra s3_key dos anexos do Firestore para o Supabase.\n\n🔄 O que faz:\n- Busca todos os anexos do Firestore que têm s3Key\n- Encontra os anexos correspondentes no Supabase (por ID ou evento_id + nome)\n- Atualiza o campo s3_key no Supabase\n- Retorna relatório detalhado da migração\n\n📋 Parâmetros:\n- userId (string, opcional): ID do usuário específico. Se não fornecido, migra todos os usuários\n\n✨ Características:\n- Matching inteligente: primeiro tenta por ID do Firestore, depois por evento_id + nome\n- Atualiza apenas se s3_key for diferente (evita atualizações desnecessárias)\n- Retorna estatísticas detalhadas (total, atualizados, não encontrados, erros)\n- Retorna collection com detalhes de cada anexo processado\n- Processa todos os eventos de todos os usuários (ou usuário específico)\n\n💡 Use este endpoint quando os anexos já estão no Supabase mas faltam as s3_key.\n\n⚠️ IMPORTANTE: Execute após garantir que os anexos foram migrados para o Supabase. Este endpoint apenas atualiza as s3_key."
+          }
+        },
+        {
+          "name": "Gerar Eventos Aleatórios (Teste de Estresse)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-api-key",
+                "value": "dev-seed-key-2024",
+                "description": "API key para bypass de autenticação em dev (opcional)"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"usuario@exemplo.com\",\n  \"quantidadeEventos\": 100,\n  \"custos\": true,\n  \"pagamento\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/test/generate-events",
+              "host": ["{{base_url}}"],
+              "path": ["api", "test", "generate-events"]
+            },
+            "description": "Gera eventos aleatórios para testes de estresse. Parâmetros: email (string) - email da conta, quantidadeEventos (number) - número de eventos (1-1000), custos (boolean) - adiciona 3 custos por evento, pagamento (boolean) - adiciona pagamento por evento. Cada evento inclui: cliente aleatório, tipo de evento aleatório, status aleatório, 2 serviços aleatórios. Ignora validações de plano."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Google Calendar",
+      "item": [
+        {
+          "name": "Status da Conexão",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/google-calendar/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "google-calendar", "status"]
+            },
+            "description": "Obtém o status da conexão com Google Calendar. Retorna se está conectado, se sincronização está ativa, email da conta, etc. Requer autenticação."
+          }
+        },
+        {
+          "name": "Iniciar Conexão OAuth",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/google-calendar/auth?force=false",
+              "host": ["{{base_url}}"],
+              "path": ["api", "google-calendar", "auth"],
+              "query": [
+                {
+                  "key": "force",
+                  "value": "false",
+                  "description": "Se true, força nova autorização mesmo se já autorizou antes"
+                }
+              ]
+            },
+            "description": "Inicia o fluxo OAuth do Google Calendar. Redireciona para página de autorização do Google. Requer autenticação e plano permitido (Profissional ou Premium)."
+          }
+        },
+        {
+          "name": "Desconectar Google Calendar",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/google-calendar/disconnect",
+              "host": ["{{base_url}}"],
+              "path": ["api", "google-calendar", "disconnect"]
+            },
+            "description": "Desconecta a conta do Google Calendar. Remove tokens armazenados. Requer autenticação."
+          }
+        },
+        {
+          "name": "Ativar/Desativar Sincronização",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"syncEnabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/google-calendar/toggle-sync",
+              "host": ["{{base_url}}"],
+              "path": ["api", "google-calendar", "toggle-sync"]
+            },
+            "description": "Ativa ou desativa a sincronização automática com Google Calendar. Requer autenticação e conexão ativa."
+          }
+        },
+        {
+          "name": "Informações de Debug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/google-calendar/debug",
+              "host": ["{{base_url}}"],
+              "path": ["api", "google-calendar", "debug"]
+            },
+            "description": "Retorna informações detalhadas de debug sobre tokens, conexão e validação. Inclui access token, refresh token, status de expiração, validação do token, etc. Útil para desenvolvimento. Requer autenticação."
+          }
+        },
+        {
+          "name": "Criar Evento no Google Calendar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"summary\": \"Reunião com cliente\",\n  \"description\": \"Discussão sobre novo projeto\",\n  \"startDateTime\": \"2025-01-20T14:00:00\",\n  \"endDateTime\": \"2025-01-20T15:30:00\",\n  \"location\": \"Rua das Flores, 123 - São Paulo, SP\",\n  \"timeZone\": \"America/Sao_Paulo\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/google-calendar/events",
+              "host": ["{{base_url}}"],
+              "path": ["api", "google-calendar", "events"]
+            },
+            "description": "Cria um evento diretamente no Google Calendar. Campos obrigatórios: summary, startDateTime. Campos opcionais: description, endDateTime, location, timeZone (padrão: America/Sao_Paulo). Requer autenticação, plano permitido e sincronização ativa."
+          }
+        },
+        {
+          "name": "Forçar Renovação do Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/google-calendar/refresh-token",
+              "host": ["{{base_url}}"],
+              "path": ["api", "google-calendar", "refresh-token"]
+            },
+            "description": "Força a renovação do access token usando o refresh token. Útil quando o token está expirado ou inválido. Requer autenticação e conexão ativa."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Webhook Hotmart - Mock (Testes)",
+      "description": "Endpoints mock para simular webhooks da Hotmart sem usar sandbox ou produção",
+      "item": [
+        {
+          "name": "Mock - Documentação (GET)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/mock",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "mock"]
+            },
+            "description": "Retorna documentação do endpoint mock com exemplos e eventos disponíveis"
+          }
+        },
+        {
+          "name": "Mock - PURCHASE_APPROVED (Básico)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/mock?event=PURCHASE_APPROVED&email={{email}}&plan_code=BASICO_MENSAL",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "mock"],
+              "query": [
+                { "key": "event", "value": "PURCHASE_APPROVED" },
+                { "key": "email", "value": "{{email}}" },
+                { "key": "plan_code", "value": "BASICO_MENSAL" }
+              ]
+            },
+            "description": "Simula compra aprovada do plano Básico"
+          }
+        },
+        {
+          "name": "Mock - PURCHASE_APPROVED (Profissional)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/mock?event=PURCHASE_APPROVED&email={{email}}&plan_code=PROFISSIONAL_MENSAL",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "mock"],
+              "query": [
+                { "key": "event", "value": "PURCHASE_APPROVED" },
+                { "key": "email", "value": "{{email}}" },
+                { "key": "plan_code", "value": "PROFISSIONAL_MENSAL" }
+              ]
+            },
+            "description": "Simula compra aprovada do plano Profissional"
+          }
+        },
+        {
+          "name": "Mock - PURCHASE_APPROVED (Premium)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/mock?event=PURCHASE_APPROVED&email={{email}}&plan_code=PREMIUM_MENSAL",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "mock"],
+              "query": [
+                { "key": "event", "value": "PURCHASE_APPROVED" },
+                { "key": "email", "value": "{{email}}" },
+                { "key": "plan_code", "value": "PREMIUM_MENSAL" }
+              ]
+            },
+            "description": "Simula compra aprovada do plano Premium"
+          }
+        },
+        {
+          "name": "Mock - SWITCH_PLAN (Básico → Profissional)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/mock?event=SWITCH_PLAN&email={{email}}&new_plan_code=PROFISSIONAL_MENSAL",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "mock"],
+              "query": [
+                { "key": "event", "value": "SWITCH_PLAN" },
+                { "key": "email", "value": "{{email}}" },
+                { "key": "new_plan_code", "value": "PROFISSIONAL_MENSAL" }
+              ]
+            },
+            "description": "Simula troca de plano de Básico para Profissional"
+          }
+        },
+        {
+          "name": "Mock - SWITCH_PLAN (Profissional → Premium)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/mock?event=SWITCH_PLAN&email={{email}}&new_plan_code=PREMIUM_MENSAL",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "mock"],
+              "query": [
+                { "key": "event", "value": "SWITCH_PLAN" },
+                { "key": "email", "value": "{{email}}" },
+                { "key": "new_plan_code", "value": "PREMIUM_MENSAL" }
+              ]
+            },
+            "description": "Simula troca de plano de Profissional para Premium"
+          }
+        },
+        {
+          "name": "Mock - UPDATE_SUBSCRIPTION_CHARGE_DATE",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/mock?event=UPDATE_SUBSCRIPTION_CHARGE_DATE&email={{email}}&new_charge_date=2025-02-15T00:00:00.000Z",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "mock"],
+              "query": [
+                { "key": "event", "value": "UPDATE_SUBSCRIPTION_CHARGE_DATE" },
+                { "key": "email", "value": "{{email}}" },
+                { "key": "new_charge_date", "value": "2025-02-15T00:00:00.000Z" }
+              ]
+            },
+            "description": "Simula atualização de data de cobrança da assinatura"
+          }
+        },
+        {
+          "name": "Mock - SUBSCRIPTION_CANCELLATION",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/mock?event=SUBSCRIPTION_CANCELLATION&email={{email}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "mock"],
+              "query": [
+                { "key": "event", "value": "SUBSCRIPTION_CANCELLATION" },
+                { "key": "email", "value": "{{email}}" }
+              ]
+            },
+            "description": "Simula cancelamento de assinatura"
+          }
+        },
+        {
+          "name": "Mock - SUBSCRIPTION_EXPIRED",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/mock?event=SUBSCRIPTION_EXPIRED&email={{email}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "mock"],
+              "query": [
+                { "key": "event", "value": "SUBSCRIPTION_EXPIRED" },
+                { "key": "email", "value": "{{email}}" }
+              ]
+            },
+            "description": "Simula expiração de assinatura"
+          }
+        },
+        {
+          "name": "Mock - PURCHASE_CHARGEBACK",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/mock?event=PURCHASE_CHARGEBACK&email={{email}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "mock"],
+              "query": [
+                { "key": "event", "value": "PURCHASE_CHARGEBACK" },
+                { "key": "email", "value": "{{email}}" }
+              ]
+            },
+            "description": "Simula chargeback - suspende assinatura imediatamente"
+          }
+        },
+        {
+          "name": "Mock - PURCHASE_PROTEST",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/mock?event=PURCHASE_PROTEST&email={{email}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "mock"],
+              "query": [
+                { "key": "event", "value": "PURCHASE_PROTEST" },
+                { "key": "email", "value": "{{email}}" }
+              ]
+            },
+            "description": "Simula protesto de boleto - suspende assinatura"
+          }
+        },
+        {
+          "name": "Mock - PURCHASE_REFUNDED",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/mock?event=PURCHASE_REFUNDED&email={{email}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "mock"],
+              "query": [
+                { "key": "event", "value": "PURCHASE_REFUNDED" },
+                { "key": "email", "value": "{{email}}" }
+              ]
+            },
+            "description": "Simula reembolso - cancela assinatura imediatamente"
+          }
+        },
+        {
+          "name": "Mock - PURCHASE_DELAYED",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/webhooks/hotmart/mock?event=PURCHASE_DELAYED&email={{email}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "webhooks", "hotmart", "mock"],
+              "query": [
+                { "key": "event", "value": "PURCHASE_DELAYED" },
+                { "key": "email", "value": "{{email}}" }
+              ]
+            },
+            "description": "Simula pagamento atrasado - suspende temporariamente"
+          }
+        }
+      ]
+    }
+  ]
+}
+

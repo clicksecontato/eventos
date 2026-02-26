@@ -1,0 +1,59 @@
+---
+description: Contexto global do projeto Click-se Sistema - SaaS de gestão de eventos
+alwaysApply: true
+---
+
+# Click-se Sistema — Contexto do Projeto
+
+## O que é
+SaaS de gestão de eventos (fotografia/cerimonial). Gerencia clientes, eventos, pagamentos, custos, contratos, serviços e relatórios. Possui sistema de planos/assinaturas com integração Hotmart.
+
+## Stack principal
+- **Framework:** Next.js 15 (App Router) + React 19 + TypeScript 5
+- **Auth:** NextAuth 4 (JWT + Credentials) + Firebase Auth
+- **DB primário:** Supabase (Postgres) — dados de domínio (clientes, eventos, pagamentos, custos, contratos, relatórios)
+- **DB secundário:** Firebase Firestore — dados de controle (users, planos, assinaturas, funcionalidades)
+- **UI:** Tailwind CSS 4, Radix UI (shadcn-style em `src/components/ui/`), Heroicons, Lucide
+- **Charts:** Recharts
+- **Storage:** AWS S3 (comprovantes, anexos)
+- **Email:** Resend
+- **Editor rich-text:** TipTap (templates de contrato)
+- **PDF:** Puppeteer / @sparticuz/chromium
+
+## Estrutura de diretórios
+```
+src/
+├── app/                    # Pages + API routes (App Router)
+│   ├── api/                # Route handlers REST
+│   ├── admin/              # Páginas admin
+│   ├── eventos/            # CRUD de eventos
+│   ├── clientes/           # CRUD de clientes
+│   ├── contratos/          # Contratos, templates, variáveis
+│   └── ...                 # Demais páginas
+├── components/             # Componentes React
+│   ├── ui/                 # Primitivos shadcn (Button, Input, Dialog, etc.)
+│   ├── forms/              # Formulários (EventoForm, PagamentoForm, etc.)
+│   ├── charts/             # Gráficos (StatCard, BarChart, PieChart)
+│   ├── relatorios/         # Componentes de relatório
+│   ├── filters/            # Filtros reutilizáveis
+│   └── providers/          # SessionProvider, FirebaseAuthProvider
+├── lib/
+│   ├── api/                # route-helpers.ts (auth + response helpers), types.ts
+│   ├── repositories/       # Interfaces + implementações Supabase e Firestore
+│   ├── services/           # Lógica de negócio (PlanoService, ContratoService, etc.)
+│   ├── factories/          # ServiceFactory (singleton com lazy init)
+│   ├── middleware/          # plano-validation.ts (feature/limit gates)
+│   ├── hooks/              # usePlano.ts
+│   ├── utils/              # Formatadores, date-helpers, uuid, error-handler
+│   └── supabase/           # Client Supabase + tipos gerados
+├── contexts/               # ThemeContext, SidebarContext
+├── types/                  # Tipos TypeScript do domínio
+supabase/
+└── schema.sql              # Schema Postgres (fonte de verdade)
+```
+
+## Idioma do código
+Todo o código (variáveis, funções, componentes, mensagens) é escrito em **português brasileiro**. Manter esse padrão.
+
+## Sem Prisma
+Este projeto **não usa Prisma**. O acesso a dados é via Supabase Client (queries diretas) com o padrão Repository.

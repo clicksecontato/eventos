@@ -1,0 +1,796 @@
+@import "tailwindcss";
+
+@plugin "tailwindcss-animate";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Sistema de cores moderno - Light Mode */
+  --primary: #313c43;
+  --primary-dark: #1b2126;
+  --secondary: #5d6b74;
+  --secondary-dark: #2c383f;
+  --accent: #21b6bf;
+  --accent-dark: #1a9ba3;
+  --brand-orange: #FF4001;
+  --neutral: #1b2126;
+  --neutral-light: #7d8d96;
+  --surface: #f8f9fa;
+  --surface-hover: #e9ecef;
+  --border: #a4b3ba;
+  --text-primary: #1b2126;
+  --text-secondary: #5d6b74;
+  --text-muted: #7d8d96;
+  --link: #2563eb;
+  --link-hover: #1d4ed8;
+  --background: #ffffff;
+
+  /* Cores semânticas Light Mode - Tons mais suaves */
+  --success: #10b981;
+  --success-bg: #ecfdf5;
+  --success-text: #065f46;
+  --error: #ef4444;
+  --error-bg: #fef2f2;
+  --error-text: #991b1b;
+  --warning: #f59e0b;
+  --warning-bg: #fffbeb;
+  --warning-text: #92400e;
+  --info: #3b82f6;
+  --info-bg: #eff6ff;
+  --info-text: #1e40af;
+  --radius: 0.625rem;
+  
+  /* Cores para erros de formulário */
+  --form-error-border: #ef4444;
+  --form-error-bg: #fef2f2;
+  --form-error-text: #dc2626;
+  --form-error-ring: rgba(239, 68, 68, 0.2);
+  
+  /* Cores para botões de adicionar */
+  --add-button-bg: #10b981;
+  --add-button-bg-hover: #059669;
+  --add-button-text: #ffffff;
+  --add-button-shadow: rgba(16, 185, 129, 0.3);
+  
+  /* Cores para botões de ação padronizados */
+  /* Visualizar - Verde/Azul claro */
+  --action-view-bg: #10b981;
+  --action-view-bg-hover: #059669;
+  --action-view-text: #ffffff;
+  --action-view-border: #10b981;
+  --action-view-shadow: rgba(16, 185, 129, 0.25);
+  
+  /* Editar - Azul */
+  --action-edit-bg: #3b82f6;
+  --action-edit-bg-hover: #2563eb;
+  --action-edit-text: #ffffff;
+  --action-edit-border: #3b82f6;
+  --action-edit-shadow: rgba(59, 130, 246, 0.25);
+  
+  /* Excluir/Arquivar - Vermelho */
+  --action-delete-bg: #ef4444;
+  --action-delete-bg-hover: #dc2626;
+  --action-delete-text: #ffffff;
+  --action-delete-border: #ef4444;
+  --action-delete-shadow: rgba(239, 68, 68, 0.25);
+  
+  /* Copiar - Cinza/Azul */
+  --action-copy-bg: #6b7280;
+  --action-copy-bg-hover: #4b5563;
+  --action-copy-text: #ffffff;
+  --action-copy-border: #6b7280;
+  --action-copy-shadow: rgba(107, 114, 128, 0.25);
+  
+  /* Imprimir - Cinza */
+  --action-print-bg: #6b7280;
+  --action-print-bg-hover: #4b5563;
+  --action-print-text: #ffffff;
+  --action-print-border: #6b7280;
+  --action-print-shadow: rgba(107, 114, 128, 0.25);
+  
+  /* Voltar - Cinza neutro */
+  --action-back-bg: #9ca3af;
+  --action-back-bg-hover: #6b7280;
+  --action-back-text: #ffffff;
+  --action-back-border: #9ca3af;
+  --action-back-shadow: rgba(156, 163, 175, 0.25);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+/* Estilos globais para erros de formulário */
+.form-error {
+  border-color: var(--form-error-border) !important;
+  background-color: var(--form-error-bg) !important;
+  box-shadow: 0 0 0 3px var(--form-error-ring), 0 0 0 1px var(--form-error-border) !important;
+  animation: error-pulse 0.3s ease-in-out;
+}
+
+.form-error-text {
+  color: var(--form-error-text) !important;
+  font-weight: 500;
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.form-error-text::before {
+  content: "⚠";
+  font-size: 0.875rem;
+}
+
+/* Estilos globais para botões de adicionar */
+.btn-add {
+  background-color: var(--add-button-bg) !important;
+  color: var(--add-button-text) !important;
+  border-color: var(--add-button-bg) !important;
+  box-shadow: 0 2px 4px var(--add-button-shadow) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.btn-add:hover {
+  background-color: var(--add-button-bg-hover) !important;
+  border-color: var(--add-button-bg-hover) !important;
+  box-shadow: 0 4px 8px var(--add-button-shadow) !important;
+  transform: translateY(-1px) !important;
+}
+
+.btn-add:active {
+  transform: translateY(0) !important;
+  box-shadow: 0 1px 2px var(--add-button-shadow) !important;
+}
+
+.btn-add:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 3px var(--add-button-shadow), 0 2px 4px var(--add-button-shadow) !important;
+}
+
+/* Estilos globais para botões de ação padronizados */
+.btn-action-view {
+  background-color: var(--action-view-bg) !important;
+  color: var(--action-view-text) !important;
+  border: 1px solid var(--action-view-border) !important;
+  box-shadow: 0 2px 4px var(--action-view-shadow) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.btn-action-view:hover {
+  background-color: var(--action-view-bg-hover) !important;
+  border-color: var(--action-view-bg-hover) !important;
+  box-shadow: 0 4px 8px var(--action-view-shadow) !important;
+  transform: translateY(-1px) scale(1.02) !important;
+}
+
+.btn-action-view:active {
+  transform: translateY(0) scale(0.98) !important;
+  box-shadow: 0 1px 2px var(--action-view-shadow) !important;
+}
+
+.btn-action-edit {
+  background-color: var(--action-edit-bg) !important;
+  color: var(--action-edit-text) !important;
+  border: 1px solid var(--action-edit-border) !important;
+  box-shadow: 0 2px 4px var(--action-edit-shadow) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.btn-action-edit:hover {
+  background-color: var(--action-edit-bg-hover) !important;
+  border-color: var(--action-edit-bg-hover) !important;
+  box-shadow: 0 4px 8px var(--action-edit-shadow) !important;
+  transform: translateY(-1px) scale(1.02) !important;
+}
+
+.btn-action-edit:active {
+  transform: translateY(0) scale(0.98) !important;
+  box-shadow: 0 1px 2px var(--action-edit-shadow) !important;
+}
+
+.btn-action-delete {
+  background-color: var(--action-delete-bg) !important;
+  color: var(--action-delete-text) !important;
+  border: 1px solid var(--action-delete-border) !important;
+  box-shadow: 0 2px 4px var(--action-delete-shadow) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.btn-action-delete:hover {
+  background-color: var(--action-delete-bg-hover) !important;
+  border-color: var(--action-delete-bg-hover) !important;
+  box-shadow: 0 4px 8px var(--action-delete-shadow) !important;
+  transform: translateY(-1px) scale(1.02) !important;
+}
+
+.btn-action-delete:active {
+  transform: translateY(0) scale(0.98) !important;
+  box-shadow: 0 1px 2px var(--action-delete-shadow) !important;
+}
+
+.btn-action-copy {
+  background-color: var(--action-copy-bg) !important;
+  color: var(--action-copy-text) !important;
+  border: 1px solid var(--action-copy-border) !important;
+  box-shadow: 0 2px 4px var(--action-copy-shadow) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.btn-action-copy:hover {
+  background-color: var(--action-copy-bg-hover) !important;
+  border-color: var(--action-copy-bg-hover) !important;
+  box-shadow: 0 4px 8px var(--action-copy-shadow) !important;
+  transform: translateY(-1px) scale(1.02) !important;
+}
+
+.btn-action-copy:active {
+  transform: translateY(0) scale(0.98) !important;
+  box-shadow: 0 1px 2px var(--action-copy-shadow) !important;
+}
+
+.btn-action-print {
+  background-color: var(--action-print-bg) !important;
+  color: var(--action-print-text) !important;
+  border: 1px solid var(--action-print-border) !important;
+  box-shadow: 0 2px 4px var(--action-print-shadow) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.btn-action-print:hover {
+  background-color: var(--action-print-bg-hover) !important;
+  border-color: var(--action-print-bg-hover) !important;
+  box-shadow: 0 4px 8px var(--action-print-shadow) !important;
+  transform: translateY(-1px) scale(1.02) !important;
+}
+
+.btn-action-print:active {
+  transform: translateY(0) scale(0.98) !important;
+  box-shadow: 0 1px 2px var(--action-print-shadow) !important;
+}
+
+.btn-action-back {
+  background-color: var(--action-back-bg) !important;
+  color: var(--action-back-text) !important;
+  border: 1px solid var(--action-back-border) !important;
+  box-shadow: 0 2px 4px var(--action-back-shadow) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.btn-action-back:hover {
+  background-color: var(--action-back-bg-hover) !important;
+  border-color: var(--action-back-bg-hover) !important;
+  box-shadow: 0 4px 8px var(--action-back-shadow) !important;
+  transform: translateY(-1px) scale(1.02) !important;
+}
+
+.btn-action-back:active {
+  transform: translateY(0) scale(0.98) !important;
+  box-shadow: 0 1px 2px var(--action-back-shadow) !important;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+.dark {
+  --background: #1b2126;
+  --foreground: #f8fafc;
+  /* Sistema de cores moderno - Dark Mode */
+  --primary: #a4b3ba;
+  --primary-dark: #7d8d96;
+  --secondary: #5d6b74;
+  --secondary-dark: #313c43;
+  --accent: #21b6bf;
+  --accent-dark: #1a9ba3;
+  --brand-orange: #FF4001;
+  --neutral: #f8f9fa;
+  --neutral-light: #a4b3ba;
+  --surface: #2c383f;
+  --surface-hover: #313c43;
+  --border: #5d6b74;
+  --text-primary: #f8fafc;
+  --text-secondary: #a4b3ba;
+  --text-muted: #7d8d96;
+  --link: #60a5fa;
+  --link-hover: #3b82f6;
+
+  /* Cores semânticas Dark Mode - Tons mais suaves */
+  --success: #34d399;
+  --success-bg: #064e3b;
+  --success-text: #a7f3d0;
+  --error: #f87171;
+  --error-bg: #450a0a;
+  --error-text: #fecaca;
+  --warning: #fbbf24;
+  --warning-bg: #451a03;
+  --warning-text: #fde68a;
+  --info: #60a5fa;
+  --info-bg: #1e3a5f;
+  --info-text: #dbeafe;
+  
+  /* Cores para botões de adicionar (Dark Mode) */
+  --add-button-bg: #10b981;
+  --add-button-bg-hover: #34d399;
+  --add-button-text: #ffffff;
+  --add-button-shadow: rgba(16, 185, 129, 0.4);
+  
+  /* Cores para botões de ação padronizados (Dark Mode) */
+  /* Visualizar - Verde/Azul claro */
+  --action-view-bg: #34d399;
+  --action-view-bg-hover: #10b981;
+  --action-view-text: #ffffff;
+  --action-view-border: #34d399;
+  --action-view-shadow: rgba(52, 211, 153, 0.3);
+  
+  /* Editar - Azul */
+  --action-edit-bg: #60a5fa;
+  --action-edit-bg-hover: #3b82f6;
+  --action-edit-text: #ffffff;
+  --action-edit-border: #60a5fa;
+  --action-edit-shadow: rgba(96, 165, 250, 0.3);
+  
+  /* Excluir/Arquivar - Vermelho */
+  --action-delete-bg: #f87171;
+  --action-delete-bg-hover: #ef4444;
+  --action-delete-text: #ffffff;
+  --action-delete-border: #f87171;
+  --action-delete-shadow: rgba(248, 113, 113, 0.3);
+  
+  /* Copiar - Cinza/Azul */
+  --action-copy-bg: #9ca3af;
+  --action-copy-bg-hover: #6b7280;
+  --action-copy-text: #ffffff;
+  --action-copy-border: #9ca3af;
+  --action-copy-shadow: rgba(156, 163, 175, 0.3);
+  
+  /* Imprimir - Cinza */
+  --action-print-bg: #9ca3af;
+  --action-print-bg-hover: #6b7280;
+  --action-print-text: #ffffff;
+  --action-print-border: #9ca3af;
+  --action-print-shadow: rgba(156, 163, 175, 0.3);
+  
+  /* Voltar - Cinza neutro */
+  --action-back-bg: #6b7280;
+  --action-back-bg-hover: #4b5563;
+  --action-back-text: #ffffff;
+  --action-back-border: #6b7280;
+  --action-back-shadow: rgba(107, 114, 128, 0.3);
+  --card: #2C383F;
+  --card-foreground: oklch(0.985 0 0);
+  --popover: #2C383F;
+  --popover-foreground: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+body {
+  background-attachment: fixed;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  transition: all 0.3s ease;
+  min-height: 100vh;
+}
+
+/* Estilos para ícones de data e hora no modo dark */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0);
+  opacity: 0.8;
+}
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.8;
+}
+
+/* Garantir que todos os ícones SVG usem as cores do tema */
+svg {
+  color: inherit;
+}
+
+.dark svg {
+  color: inherit;
+}
+
+/* Modal background fix */
+.modal-card {
+  background-color: var(--surface) !important;
+  border-color: var(--border) !important;
+  opacity: 1 !important;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+}
+
+/* Modal overlay com gradiente sutil */
+.modal-overlay {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.6) 100%);
+  backdrop-filter: blur(8px);
+}
+
+/* Estilos suaves para componentes */
+.card-soft {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  transition: all 0.2s ease;
+}
+
+.card-soft:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+/* Botões suaves */
+.btn-soft {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+  border-radius: 8px;
+}
+
+.btn-soft:hover {
+  background-color: var(--surface-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Inputs suaves */
+.input-soft {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.input-soft:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+/* Estilos específicos para ícones de input */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator,
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  background-color: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator,
+.dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  background-color: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  opacity: 0.8;
+}
+
+/* Estilos para dropdowns de select no modo dark */
+select option {
+  background-color: var(--surface) !important;
+  color: var(--text-primary) !important;
+  padding: 8px 12px !important;
+}
+
+.dark select option {
+  background-color: var(--surface) !important;
+  color: var(--text-primary) !important;
+  padding: 8px 12px !important;
+}
+
+/* Estilos adicionais para garantir opacidade */
+select {
+  background-color: var(--surface) !important;
+}
+
+select:focus {
+  background-color: var(--surface) !important;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .text-link {
+    color: var(--link) !important;
+  }
+  .text-link:hover {
+    color: var(--link-hover) !important;
+  }
+
+  /* Scrollbar completamente oculta mas funcional */
+  .scrollbar-hidden {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE e Edge */
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  /* Garantir que o texto do Select seja sempre visível */
+  [data-radix-select-trigger] {
+    color: var(--text-primary) !important;
+    background-color: var(--surface) !important;
+  }
+
+  [data-radix-select-trigger] > span {
+    color: var(--text-primary) !important;
+  }
+
+  [data-radix-select-trigger][data-placeholder] > span {
+    color: var(--text-muted) !important;
+  }
+
+  /* Estilo específico para o SelectValue */
+  [data-radix-select-value] {
+    color: var(--text-primary) !important;
+  }
+
+  [data-radix-select-value][data-placeholder] {
+    color: var(--text-muted) !important;
+  }
+
+  /* Forçar cor do texto no SelectValue mesmo com placeholder */
+  [data-radix-select-trigger]:not([data-placeholder]) [data-radix-select-value] {
+    color: var(--text-primary) !important;
+  }
+}
+
+/* Estilos para Badges de Variáveis */
+.variable-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+  margin: 0 0.125rem;
+  vertical-align: middle;
+}
+
+.variable-unica {
+  background-color: #dbeafe !important;
+  color: #1e40af !important;
+  border: 1px solid #93c5fd !important;
+}
+
+.variable-unica:hover {
+  background-color: #bfdbfe !important;
+  border-color: #60a5fa !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(30, 64, 175, 0.2);
+}
+
+.variable-multipla {
+  background-color: #f3e8ff !important;
+  color: #6b21a8 !important;
+  border: 1px solid #c084fc !important;
+}
+
+.variable-multipla:hover {
+  background-color: #e9d5ff !important;
+  border-color: #a855f7 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(107, 33, 168, 0.2);
+}
+
+/* Estilos para TipTap Editor - Simular dimensões do PDF A4 */
+.ProseMirror {
+  outline: none;
+  min-height: 400px;
+  color: #1f2937 !important;
+  background-color: #ffffff !important;
+  white-space: pre-wrap;
+}
+
+/* Conteúdo do editor com dimensões iguais ao PDF */
+.contract-editor-content {
+  font-family: Arial, sans-serif !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  /* A4 (210mm) - margens 20mm cada lado = 170mm = 642px */
+  max-width: 642px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.ProseMirror * {
+  color: #1f2937 !important;
+  font-family: Arial, sans-serif !important;
+}
+
+.ProseMirror p {
+  margin: 0.5em 0;
+  color: #1f2937 !important;
+}
+
+.ProseMirror p.is-editor-empty:first-child::before {
+  color: #9ca3af !important;
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6 {
+  font-weight: bold;
+  margin-top: 1em;
+  margin-bottom: 0.5em;
+  color: #1f2937 !important;
+}
+
+.ProseMirror h1 {
+  font-size: 2em;
+  color: #1f2937 !important;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5em;
+  color: #1f2937 !important;
+}
+
+.ProseMirror h3 {
+  font-size: 1.25em;
+  color: #1f2937 !important;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.ProseMirror li {
+  margin: 0.25em 0;
+  color: #1f2937 !important;
+}
+
+.ProseMirror strong,
+.ProseMirror b {
+  font-weight: bold;
+  color: #1f2937 !important;
+}
+
+.ProseMirror em,
+.ProseMirror i {
+  font-style: italic;
+  color: #1f2937 !important;
+}
+
+.ProseMirror u {
+  text-decoration: underline;
+  color: #1f2937 !important;
+}
+
+.ProseMirror hr {
+  margin: 1em 0;
+  border: none;
+  border-top: 1px solid #d1d5db;
+}
+
+.ProseMirror a {
+  color: #2563eb !important;
+}
+
+/* Container do editor - forçar fundo branco */
+.tiptap-editor-container {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+}
+
+.tiptap-editor-container .ProseMirror {
+  background-color: #ffffff !important;
+  color: #1f2937 !important;
+}
+
+/* Esconde setas (spinners) de input number em campos monetários */
+.input-no-spinner::-webkit-outer-spin-button,
+.input-no-spinner::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.input-no-spinner {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

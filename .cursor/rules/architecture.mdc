@@ -1,0 +1,42 @@
+---
+description: Padrões arquiteturais - Repository, Service Factory, Data Flow
+alwaysApply: true
+---
+
+# Arquitetura — Padrões do Projeto
+
+## Camadas (de cima para baixo)
+```
+Pages/Components → API Routes → DataService/Services → Repositories → Supabase/Firestore
+```
+
+## Repository Pattern
+- **RepositoryFactory** (`src/lib/repositories/repository-factory.ts`): singleton que cria todos os repositórios
+  - **Supabase repos**: clientes, eventos, pagamentos, custos, serviços, canais, tipos, contratos, relatórios, pré-cadastros, anexos, valores atrasados
+  - **Firestore repos**: users, planos, assinaturas, funcionalidades, tokens Google Calendar, arquivos, password-reset-tokens
+- Cada repositório herda de `BaseSupabaseRepository<T>` (CRUD genérico) ou implementa interface própria
+- Acessar repos via `repositoryFactory.getXxxRepository()`, nunca instanciar diretamente
+
+## Service Factory
+- **ServiceFactory** (`src/lib/factories/service-factory.ts`): singleton com lazy init para evitar dependências circulares
+- Serviços recebem dependências via construtor (repos injetados)
+- Acessar via `getServiceFactory().getXxxService()`
+
+## DataService (fachada principal)
+- `src/lib/data-service.ts` — singleton `dataService`
+- Agrega CRUD de todas entidades + relatórios/dashboard
+- Usado pelas API routes para operações de dados
+- Sempre filtra por `userId` para isolamento multi-tenant
+
+## Padrão Multi-tenant
+Toda query de dados de domínio DEVE filtrar por `user_id`. O `userId` vem da sessão autenticada via `getAuthenticatedUser()`.
+
+## Singletons
+- `repositoryFactory` — RepositoryFactory.getInstance()
+- `serviceFactory` — ServiceFactory.getInstance()
+- `dataService` — instância de DataService
+- `DashboardReportService.getInstance()` / `RelatoriosReportService.getInstance()`
+
+## Imports
+- Path alias: `@/` mapeia para `./src/`
+- Exemplo: `import { dataService } from '@/lib/data-service'`

@@ -1,0 +1,36 @@
+-- ============================================
+-- HABILITAR RLS EM TODAS AS TABELAS
+-- ============================================
+-- Execute este script no SQL Editor do Supabase para habilitar RLS em todas as tabelas
+
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE canais_entrada ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tipo_eventos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tipo_custos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tipo_servicos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE eventos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pagamentos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE anexos_pagamento ENABLE ROW LEVEL SECURITY;
+ALTER TABLE custos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE servicos_evento ENABLE ROW LEVEL SECURITY;
+ALTER TABLE anexos_eventos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE modelos_contrato ENABLE ROW LEVEL SECURITY;
+ALTER TABLE configuracao_contrato ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contratos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE relatorios_diarios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE relatorios_cache ENABLE ROW LEVEL SECURITY;
+ALTER TABLE google_calendar_tokens ENABLE ROW LEVEL SECURITY;
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,78 @@
+---
+description: Padrões de estilo - Tailwind CSS 4, shadcn, tema claro/escuro
+globs: src/components/**/*.tsx
+alwaysApply: false
+---
+
+# Styling & UI — Padrões
+
+## Tailwind CSS 4
+- Usar classes utilitárias Tailwind — sem CSS modules ou styled-components
+- Helper `cn()` de `@/lib/utils` para merge condicional de classes (clsx + tailwind-merge)
+
+```tsx
+import { cn } from '@/lib/utils';
+
+<div className={cn('p-4 rounded-lg', isActive && 'bg-blue-500', className)} />
+```
+
+## Tema claro/escuro
+- Gerenciado por `ThemeContext` (`src/contexts/ThemeContext.tsx`)
+- Toggle via `ThemeToggle` component
+- Usar classes `dark:` do Tailwind para variantes escuras
+- Cores de fundo: `bg-white dark:bg-gray-900`, `bg-gray-50 dark:bg-gray-800`
+- Texto: `text-gray-900 dark:text-white`, `text-gray-600 dark:text-gray-400`
+- Bordas: `border-gray-200 dark:border-gray-700`
+
+## Componentes UI (shadcn-style)
+Localizados em `src/components/ui/` — usar cva (class-variance-authority) para variantes:
+
+```tsx
+// Já existem e devem ser reutilizados:
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+```
+
+## Ícones
+- **Heroicons** (`@heroicons/react/24/outline` e `/24/solid`) — principal
+- **Lucide** (`lucide-react`) — complementar (usado em alguns ui/ components)
+- Preferir Heroicons para novos componentes
+
+## Charts
+- **Recharts** via wrappers em `src/components/charts/`
+- Usar `ChartContainer`, `StatCard`, `BarChart`, `PieChart`
+- Config de cores via `ChartConfig` do shadcn chart
+
+## Layout padrão
+- Sidebar colapsável (SidebarContext) com navegação principal
+- Container principal com padding: `p-4 md:p-6 lg:p-8`
+- Cards como containers de conteúdo principal
+- Responsivo: mobile-first com breakpoints `sm:`, `md:`, `lg:`
+
+## Toast / Feedback
+```tsx
+import { useToast } from '@/components/ui/toast';
+
+const { showToast } = useToast();
+showToast({ type: 'success', title: 'Sucesso', message: 'Operação realizada' });
+showToast({ type: 'error', title: 'Erro', message: 'Algo deu errado' });
+```
+
+## Confirmações
+```tsx
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog';
+
+<ConfirmationDialog
+  open={showConfirm}
+  onOpenChange={setShowConfirm}
+  title="Confirmar exclusão"
+  description="Tem certeza que deseja excluir?"
+  variant="destructive"
+  onConfirm={handleDelete}
+/>
+```

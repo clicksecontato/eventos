@@ -1,0 +1,52 @@
+---
+description: Padrões de banco de dados Supabase e schema
+globs: src/lib/repositories/**/*.ts,src/lib/supabase/**/*.ts,supabase/**/*.sql
+alwaysApply: false
+---
+
+# Database — Supabase (Postgres)
+
+## Schema fonte de verdade
+`supabase/schema.sql` — toda alteração de schema deve ser refletida neste arquivo.
+
+## Tabelas principais (Supabase/Postgres)
+- **users** (id varchar PK, email, nome, role, ativo, assinatura jsonb)
+- **clientes** (id, user_id FK, nome, cpf, email, telefone, endereco, canal_entrada_id, arquivado)
+- **eventos** (id, user_id FK, cliente_id, nome_evento, data_evento, local, tipo_evento_id, status, valor_total, arquivado)
+- **pagamentos** (id, user_id FK, evento_id, valor, data_pagamento, forma_pagamento, status, anexo_id)
+- **custos** (id, user_id FK, evento_id, tipo_custo_id, valor, quantidade, removido)
+- **servicos_evento** (id, user_id FK, evento_id, tipo_servico_id, removido)
+- **contratos** (id, user_id FK, evento_id, modelo_contrato_id, dados_preenchidos jsonb, status, pdf_url)
+- **modelos_contrato** / **variaveis_contrato** / **configuracao_contrato**
+- **pre_cadastros_eventos** (status: pendente|preenchido|convertido|expirado|ignorado)
+- **relatorios_diarios** / **relatorios_cache** (dados agregados em jsonb)
+- **tipo_eventos** / **tipo_custos** / **tipo_servicos** / **canais_entrada** (tabelas de lookup por user_id)
+- **anexos_pagamento** / **anexos_custo** / **anexos_eventos** (s3_key, url)
+
+## Firestore (dados de controle — NÃO migrar)
+- `controle_users`, planos, assinaturas, funcionalidades, google_calendar_tokens
+
+## Convenções de schema
+1. Toda tabela de domínio tem `user_id` (multi-tenant)
+2. PKs são `id varchar` (UUID gerado via `generateUUID()` ou `gen_random_uuid()`)
+3. Campos de data: `data_cadastro`, `data_atualizacao` (com trigger `update_updated_at_column`)
+4. Soft delete via `arquivado`/`removido`/`cancelado` + `data_xxx` + `motivo_xxx`
+5. Status como enum string: ('Agendado', 'Confirmado', 'Em andamento', 'Concluído', 'Cancelado')
+6. Dados complexos em jsonb: `assinatura`, `dados_preenchidos`, `cerimonialista`, `endereco`
+
+## Acesso a dados
+```typescript
+// SEMPRE via repositório, nunca query direta
+const repo = repositoryFactory.getEventoRepository();
+const eventos = await repo.findByUserId(userId);
+
+// Para operações complexas, usar DataService
+const data = await dataService.getEventos(userId);
+```
+
+## Supabase Client
+- `src/lib/supabase/client.ts` exporta:
+  - `supabase` — client (anon key, para browser)
+  - `supabaseAdmin` — server (service role key)
+  - `getSupabaseClient(useAdmin?)` — helper
+- Tipos: `src/lib/supabase/types.ts` (Database type manual)
