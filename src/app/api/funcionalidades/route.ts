@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { 
-  requireAdmin,
+  requireAdminOrPremium,
   handleApiError,
   createApiResponse,
   getRequestBody
@@ -9,7 +9,7 @@ import {
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin();
+    await requireAdminOrPremium();
 
     const repo = repositoryFactory.getFuncionalidadeRepository();
     let funcionalidades: any[] = [];
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin();
+    await requireAdminOrPremium();
 
     const data = await getRequestBody(request);
     const repo = repositoryFactory.getFuncionalidadeRepository();

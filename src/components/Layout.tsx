@@ -77,6 +77,7 @@ export default function Layout({ children }: LayoutProps) {
 
   // Verificar se usuário tem plano ativo
   const temPlanoAtivo = statusPlano?.ativo === true;
+  const temAcessoAdmin = session?.user?.role === 'admin' || statusPlano?.plano?.codigoHotmart === 'PREMIUM_MENSAL';
 
   React.useEffect(() => {
     if (status === 'unauthenticated') {
@@ -160,7 +161,7 @@ export default function Layout({ children }: LayoutProps) {
               );
             })}
             
-            {session?.user?.role === 'admin' && (
+            {temAcessoAdmin && (
               <>
                 <div className="border-t border-border my-4"></div>
                 <div className="px-2">
@@ -320,7 +321,7 @@ export default function Layout({ children }: LayoutProps) {
               })}
             </TooltipProvider>
             
-            {session?.user?.role === 'admin' && (
+            {temAcessoAdmin && (
               <>
                 <div className="border-t border-border my-4"></div>
                 {!isCollapsed && (

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { 
-  requireAdmin,
+  requireAdminOrPremium,
   handleApiError,
   createApiResponse,
   createErrorResponse,
@@ -50,7 +50,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin();
+    await requireAdminOrPremium();
 
     const { id } = await getRouteParams(params);
     const data = await getRequestBody(request);
@@ -73,7 +73,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin();
+    await requireAdminOrPremium();
 
     const { id } = await getRouteParams(params);
     const { AdminPlanoRepository } = await import('@/lib/repositories/admin-plano-repository');

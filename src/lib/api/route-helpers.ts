@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { AuthenticatedUser, ApiError, ApiResponse } from './types';
 
 /**
@@ -42,6 +43,31 @@ export async function requireAdmin(): Promise<AuthenticatedUser> {
     throw new ApiError('Acesso negado. Apenas administradores podem acessar este recurso.', 403);
   }
   return user;
+}
+
+/**
+ * Verifica se o usuário é admin ou possui plano PREMIUM_MENSAL.
+ * @throws {ApiError} Se o usuário não atender aos critérios
+ */
+export async function requireAdminOrPremium(): Promise<AuthenticatedUser> {
+  const user = await getAuthenticatedUser();
+
+  if (user.role === 'admin') {
+    return user;
+  }
+
+  const userRepo = repositoryFactory.getUserRepository();
+  const userData = await userRepo.findById(user.id);
+  const codigoPlano = userData?.assinatura?.planoCodigoHotmart?.toUpperCase?.() || '';
+
+  if (codigoPlano === 'PREMIUM_MENSAL') {
+    return user;
+  }
+
+  throw new ApiError(
+    'Acesso negado. Apenas administradores ou usuários com plano PREMIUM_MENSAL podem acessar este recurso.',
+    403
+  );
 }
 
 /**

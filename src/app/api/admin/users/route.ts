@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import {
-  requireAdmin,
+  requireAdminOrPremium,
   handleApiError,
   createApiResponse,
   getQueryParams
@@ -9,7 +9,7 @@ import { repositoryFactory } from '@/lib/repositories/repository-factory';
 
 export async function GET(request: NextRequest) {
   try {
-    await requireAdmin();
+    await requireAdminOrPremium();
 
     const query = getQueryParams(request);
     const role = query.get('role');

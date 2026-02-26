@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Layout from '@/components/Layout';
+import { usePlano } from '@/lib/hooks/usePlano';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   UserPlusIcon,
@@ -51,8 +52,10 @@ function formatarData(data: string | Date): string {
 export default function AdminAtividadesPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
+  const { statusPlano } = usePlano();
   const [atividades, setAtividades] = useState<Atividade[]>([]);
   const [loading, setLoading] = useState(true);
+  const temAcessoAdmin = session?.user?.role === 'admin' || statusPlano?.plano?.codigoHotmart === 'PREMIUM_MENSAL';
 
   const loadAtividades = useCallback(async () => {
     try {
@@ -76,20 +79,20 @@ export default function AdminAtividadesPage() {
       router.push('/painel');
       return;
     }
-    if (session?.user?.role !== 'admin') {
+    if (!temAcessoAdmin) {
       router.push('/painel');
       return;
     }
     loadAtividades();
-  }, [status, session?.user?.role, router, loadAtividades]);
+  }, [status, temAcessoAdmin, router, loadAtividades]);
 
   useEffect(() => {
-    if (session?.user?.role !== 'admin') return;
+    if (!temAcessoAdmin) return;
     const interval = setInterval(loadAtividades, 30 * 1000);
     return () => clearInterval(interval);
-  }, [session?.user?.role, loadAtividades]);
+  }, [temAcessoAdmin, loadAtividades]);
 
-  if (status === 'loading' || (status === 'authenticated' && session?.user?.role !== 'admin')) {
+  if (status === 'loading' || (status === 'authenticated' && !temAcessoAdmin)) {
     return (
       <Layout>
         <div className="flex items-center justify-center py-12">

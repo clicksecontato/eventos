@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import {
-  requireAdmin,
+  requireAdminOrPremium,
   handleApiError,
   createApiResponse,
   createErrorResponse,
@@ -22,7 +22,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const admin = await requireAdmin();
+    const admin = await requireAdminOrPremium();
     const { id: userId } = await getRouteParams(params);
     const body = await getRequestBody<DefinirPlanoBody>(request);
 

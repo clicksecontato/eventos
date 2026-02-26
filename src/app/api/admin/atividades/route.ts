@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { AdminUserRepository } from '@/lib/repositories/admin-user-repository';
 import { AdminAssinaturaRepository } from '@/lib/repositories/admin-assinatura-repository';
 import { AdminPlanoRepository } from '@/lib/repositories/admin-plano-repository';
-import { requireAdmin, handleApiError, createApiResponse } from '@/lib/api/route-helpers';
+import { requireAdminOrPremium, handleApiError, createApiResponse } from '@/lib/api/route-helpers';
 import { User } from '@/types';
 import { Assinatura, StatusAssinatura } from '@/types/funcionalidades';
 
@@ -24,7 +24,7 @@ function toDate(v: Date | unknown): Date {
 
 export async function GET() {
   try {
-    await requireAdmin();
+    await requireAdminOrPremium();
 
     const userRepo = new AdminUserRepository();
     const assinaturaRepo = new AdminAssinaturaRepository();

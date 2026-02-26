@@ -4,7 +4,7 @@ import { AdminPlanoRepository } from '@/lib/repositories/admin-plano-repository'
 import { isFirebaseAdminInitialized, getFirebaseAdminInitializationError } from '@/lib/firebase-admin';
 import { 
   getAuthenticatedUserOptional,
-  requireAdmin,
+  requireAdminOrPremium,
   handleApiError,
   createApiResponse,
   createErrorResponse,
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    await requireAdmin();
+    await requireAdminOrPremium();
 
     const data = await getRequestBody(request);
     // Usar AdminPlanoRepository no servidor para bypassar regras de segurança do Firebase

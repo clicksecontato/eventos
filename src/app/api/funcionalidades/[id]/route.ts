@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { 
-  requireAdmin,
+  requireAdminOrPremium,
   handleApiError,
   createApiResponse,
   createErrorResponse,
@@ -14,7 +14,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin();
+    await requireAdminOrPremium();
 
     const { id } = await getRouteParams(params);
     const repo = repositoryFactory.getFuncionalidadeRepository();
@@ -35,7 +35,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin();
+    await requireAdminOrPremium();
 
     const { id } = await getRouteParams(params);
     const data = await getRequestBody(request);
@@ -54,7 +54,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await requireAdmin();
+    await requireAdminOrPremium();
 
     const { id } = await getRouteParams(params);
     const repo = repositoryFactory.getFuncionalidadeRepository();
