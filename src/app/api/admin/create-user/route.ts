@@ -1,16 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { requireAdminOrPremium } from '@/lib/api/route-helpers';
 
 export async function POST(request: NextRequest) {
   try {
+    const usuarioAutenticado = await requireAdminOrPremium();
     const { email, password, nome, role = 'user' } = await request.json();
+    const roleNormalizado = role === 'admin' ? 'admin' : 'user';
 
     if (!email || !password || !nome) {
       return NextResponse.json(
         { error: 'Email, senha e nome são obrigatórios' },
         { status: 400 }
+      );
+    }
+
+    if (role !== 'admin' && role !== 'user') {
+      return NextResponse.json(
+        { error: 'Role inválido. Valores permitidos: admin ou user.' },
+        { status: 400 }
+      );
+    }
+
+    // Conta PREMIUM_MENSAL pode criar usuários, mas não promover para admin.
+    if (usuarioAutenticado.role !== 'admin' && roleNormalizado === 'admin') {
+      return NextResponse.json(
+        { error: 'Apenas administradores podem criar contas com role admin.' },
+        { status: 403 }
       );
     }
 
@@ -23,7 +41,7 @@ export async function POST(request: NextRequest) {
       id: user.uid,
       nome,
       email,
-      role: role || 'user',
+      role: roleNormalizado,
       ativo: true,
       dataCadastro: new Date(),
       dataAtualizacao: new Date()

@@ -2,9 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { requireAdminOrPremium } from '@/lib/api/route-helpers';
 
 export async function POST(request: NextRequest) {
   try {
+    await requireAdminOrPremium();
+
+    if (process.env.ADMIN_BOOTSTRAP_ENABLED !== 'true') {
+      return NextResponse.json(
+        { error: 'Endpoint de bootstrap desabilitado neste ambiente.' },
+        { status: 410 }
+      );
+    }
+
     const adminEmail = 'admin@clickse.com';
     const adminPassword = '123456';
     const adminNome = 'Administrador';

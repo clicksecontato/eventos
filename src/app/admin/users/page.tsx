@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
 import { Plano, StatusAssinatura } from '@/types/funcionalidades';
 import { User } from '@/types';
@@ -26,8 +27,15 @@ const statusDisponiveis: Array<{ value: StatusAssinatura; label: string }> = [
 export default function AdminUsersPage() {
   const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [criandoUsuario, setCriandoUsuario] = useState(false);
   const [users, setUsers] = useState<UserLinha[]>([]);
   const [planos, setPlanos] = useState<Plano[]>([]);
+  const [novoUsuario, setNovoUsuario] = useState({
+    nome: '',
+    email: '',
+    password: '',
+    role: 'user' as 'admin' | 'user'
+  });
   const [salvandoPlano, setSalvandoPlano] = useState<Record<string, boolean>>({});
   const [salvandoStatus, setSalvandoStatus] = useState<Record<string, boolean>>({});
   const [sincronizando, setSincronizando] = useState<Record<string, boolean>>({});
@@ -178,6 +186,42 @@ export default function AdminUsersPage() {
     }
   };
 
+  const criarUsuario = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!novoUsuario.nome || !novoUsuario.email || !novoUsuario.password) {
+      showToast('Preencha nome, email e senha para criar o usuário', 'warning');
+      return;
+    }
+
+    setCriandoUsuario(true);
+    try {
+      const res = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(novoUsuario)
+      });
+      const json = await res.json();
+
+      if (!res.ok) {
+        throw new Error(json.error || 'Erro ao criar usuário');
+      }
+
+      showToast('Usuário criado com sucesso', 'success');
+      setNovoUsuario({
+        nome: '',
+        email: '',
+        password: '',
+        role: 'user'
+      });
+      await carregarDados();
+    } catch (error: any) {
+      showToast(error?.message || 'Erro ao criar usuário', 'error');
+    } finally {
+      setCriandoUsuario(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -187,6 +231,55 @@ export default function AdminUsersPage() {
             Defina plano e status da assinatura diretamente pelo CRM.
           </p>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Novo Usuário</CardTitle>
+            <CardDescription>
+              Criação de contas é feita exclusivamente por este painel administrativo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={criarUsuario} className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input
+                label="Nome"
+                value={novoUsuario.nome}
+                onChange={(e) => setNovoUsuario(prev => ({ ...prev, nome: e.target.value }))}
+                required
+              />
+              <Input
+                label="Email"
+                type="email"
+                value={novoUsuario.email}
+                onChange={(e) => setNovoUsuario(prev => ({ ...prev, email: e.target.value }))}
+                required
+              />
+              <Input
+                label="Senha"
+                type="password"
+                value={novoUsuario.password}
+                onChange={(e) => setNovoUsuario(prev => ({ ...prev, password: e.target.value }))}
+                required
+              />
+              <div>
+                <label className="block text-sm font-medium text-text-primary mb-1">Perfil</label>
+                <select
+                  value={novoUsuario.role}
+                  onChange={(e) => setNovoUsuario(prev => ({ ...prev, role: e.target.value as 'admin' | 'user' }))}
+                  className="w-full px-3 py-2 border border-border bg-background text-text-primary rounded-md focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                >
+                  <option value="user">Usuário</option>
+                  <option value="admin">Administrador</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <Button type="submit" disabled={criandoUsuario}>
+                  {criandoUsuario ? 'Criando usuário...' : 'Criar usuário'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

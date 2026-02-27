@@ -175,14 +175,7 @@ export default function LoginPage() {
                 {' '}com o e-mail da sua compra.
               </p>
               <p className="text-sm text-text-secondary">
-                Não tem uma conta?{' '}
-                <button
-                  type="button"
-                  onClick={() => router.push('/register')}
-                  className="font-medium text-link cursor-pointer transition-colors"
-                >
-                  Criar conta
-                </button>
+                Criação de conta disponível apenas no painel administrativo.
               </p>
             </div>
           </CardContent>
