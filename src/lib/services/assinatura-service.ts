@@ -33,6 +33,22 @@ export class AssinaturaService {
   }
 
   /**
+   * Obtém o plano padrão por perfil:
+   * - admin -> PREMIUM_MENSAL
+   * - user  -> BASICO_MENSAL
+   */
+  private async obterPlanoPadraoPorPerfil(user: User): Promise<Plano> {
+    const codigoPlanoPadrao = user.role === 'admin' ? 'PREMIUM_MENSAL' : 'BASICO_MENSAL';
+    const plano = await this.planoRepo.findByCodigoHotmart(codigoPlanoPadrao);
+
+    if (!plano) {
+      throw new Error(`Plano padrão ${codigoPlanoPadrao} não encontrado`);
+    }
+
+    return plano;
+  }
+
+  /**
    * Verifica se usuário tem assinatura ativa
    */
   async verificarAssinaturaAtiva(userId: string): Promise<boolean> {
@@ -407,19 +423,26 @@ export class AssinaturaService {
       const agora = new Date();
       const dataFim = status === 'trial' ? new Date(agora.getTime() + 7 * 24 * 60 * 60 * 1000) : undefined;
       const dataRenovacao = status === 'active' ? new Date(agora.getTime() + 30 * 24 * 60 * 60 * 1000) : undefined;
+      const planoPadrao = await this.obterPlanoPadraoPorPerfil(user);
 
       assinatura = await this.assinaturaRepo.create({
         userId,
+        planoId: planoPadrao.id,
         hotmartSubscriptionId: `CRM_STATUS_${userId}_${agora.getTime()}`,
         status,
         dataInicio: agora,
         dataFim,
         dataRenovacao,
-        funcionalidadesHabilitadas: [],
+        funcionalidadesHabilitadas: planoPadrao.funcionalidades || [],
         historico: [{
           data: agora,
           acao: `Assinatura criada automaticamente via atualização de status (${status})`,
-          detalhes: detalhesHistorico || { origem: 'admin_manual' }
+          detalhes: {
+            planoId: planoPadrao.id,
+            planoCodigo: planoPadrao.codigoHotmart,
+            planoNome: planoPadrao.nome,
+            ...(detalhesHistorico || { origem: 'admin_manual' })
+          }
         }],
         dataCadastro: agora,
         dataAtualizacao: agora
@@ -433,7 +456,12 @@ export class AssinaturaService {
 
     // Ativar novamente deve restaurar funcionalidades do plano atual, se existir.
     if (status === 'active' || status === 'trial') {
-      const plano = assinatura.planoId ? await this.planoRepo.findById(assinatura.planoId) : null;
+      let plano = assinatura.planoId ? await this.planoRepo.findById(assinatura.planoId) : null;
+      if (!plano) {
+        // Assinaturas antigas sem plano passam a receber o plano padrão do perfil.
+        plano = await this.obterPlanoPadraoPorPerfil(user);
+        dadosAdicionais.planoId = plano.id;
+      }
       if (plano) {
         dadosAdicionais.funcionalidadesHabilitadas = plano.funcionalidades || [];
       }
