@@ -404,7 +404,26 @@ export class AssinaturaService {
     }
 
     if (!assinatura) {
-      throw new Error('Usuário não possui assinatura para atualizar status');
+      const agora = new Date();
+      const dataFim = status === 'trial' ? new Date(agora.getTime() + 7 * 24 * 60 * 60 * 1000) : undefined;
+      const dataRenovacao = status === 'active' ? new Date(agora.getTime() + 30 * 24 * 60 * 60 * 1000) : undefined;
+
+      assinatura = await this.assinaturaRepo.create({
+        userId,
+        hotmartSubscriptionId: `CRM_STATUS_${userId}_${agora.getTime()}`,
+        status,
+        dataInicio: agora,
+        dataFim,
+        dataRenovacao,
+        funcionalidadesHabilitadas: [],
+        historico: [{
+          data: agora,
+          acao: `Assinatura criada automaticamente via atualização de status (${status})`,
+          detalhes: detalhesHistorico || { origem: 'admin_manual' }
+        }],
+        dataCadastro: agora,
+        dataAtualizacao: agora
+      });
     }
 
     const agora = new Date();
