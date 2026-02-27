@@ -49,10 +49,29 @@ export async function POST(request: NextRequest) {
 
     await setDoc(doc(db, 'controle_users', user.uid), userData);
 
+    // Vincular assinatura/plano padrão automaticamente:
+    // - user  -> BASICO_MENSAL
+    // - admin -> PREMIUM_MENSAL
+    const { getServiceFactory } = await import('@/lib/factories/service-factory');
+    const assinaturaService = getServiceFactory().getAssinaturaService();
+    const resultadoAssinatura = await assinaturaService.atualizarStatusAssinaturaUsuario(
+      user.uid,
+      'active',
+      {
+        origem: 'admin_create_user',
+        criadoPor: usuarioAutenticado.id,
+        roleNovoUsuario: roleNormalizado
+      }
+    );
+
     return NextResponse.json({ 
       success: true, 
-      message: 'Usuário criado com sucesso',
-      user: userData
+      message: 'Usuário criado com sucesso e vinculado ao plano padrão do perfil',
+      user: userData,
+      planoAtribuido: {
+        planoCodigo: resultadoAssinatura.user.assinatura?.planoCodigoHotmart || null,
+        planoNome: resultadoAssinatura.user.assinatura?.planoNome || null
+      }
     });
   } catch (error: any) {
     console.error('Erro ao criar usuário:', error);

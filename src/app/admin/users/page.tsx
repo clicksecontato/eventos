@@ -36,6 +36,12 @@ export default function AdminUsersPage() {
     password: '',
     role: 'user' as 'admin' | 'user'
   });
+  const [ultimoUsuarioCriado, setUltimoUsuarioCriado] = useState<{
+    nome: string;
+    email: string;
+    planoNome: string | null;
+    planoCodigo: string | null;
+  } | null>(null);
   const [salvandoPlano, setSalvandoPlano] = useState<Record<string, boolean>>({});
   const [salvandoStatus, setSalvandoStatus] = useState<Record<string, boolean>>({});
   const [sincronizando, setSincronizando] = useState<Record<string, boolean>>({});
@@ -207,7 +213,19 @@ export default function AdminUsersPage() {
         throw new Error(json.error || 'Erro ao criar usuário');
       }
 
-      showToast('Usuário criado com sucesso', 'success');
+      const planoCodigo = json?.planoAtribuido?.planoCodigo;
+      const planoNome = json?.planoAtribuido?.planoNome;
+      const mensagemSucesso = planoCodigo || planoNome
+        ? `Usuário criado com sucesso (${planoNome || 'Plano'}${planoCodigo ? ` - ${planoCodigo}` : ''})`
+        : 'Usuário criado com sucesso';
+
+      showToast(mensagemSucesso, 'success');
+      setUltimoUsuarioCriado({
+        nome: json?.user?.nome || novoUsuario.nome,
+        email: json?.user?.email || novoUsuario.email,
+        planoNome: planoNome || null,
+        planoCodigo: planoCodigo || null
+      });
       setNovoUsuario({
         nome: '',
         email: '',
@@ -277,6 +295,15 @@ export default function AdminUsersPage() {
                   {criandoUsuario ? 'Criando usuário...' : 'Criar usuário'}
                 </Button>
               </div>
+              {ultimoUsuarioCriado && (
+                <div className="md:col-span-2 rounded-md border border-green-500/30 bg-green-500/10 px-3 py-2 text-sm text-green-700">
+                  <span className="font-medium">Último usuário criado:</span>{' '}
+                  {ultimoUsuarioCriado.nome} ({ultimoUsuarioCriado.email}){' '}
+                  {ultimoUsuarioCriado.planoCodigo || ultimoUsuarioCriado.planoNome
+                    ? `• Plano atribuído: ${ultimoUsuarioCriado.planoNome || 'Plano'}${ultimoUsuarioCriado.planoCodigo ? ` (${ultimoUsuarioCriado.planoCodigo})` : ''}`
+                    : ''}
+                </div>
+              )}
             </form>
           </CardContent>
         </Card>
