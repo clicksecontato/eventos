@@ -1,6 +1,7 @@
 import { BaseSupabaseRepository } from './base-supabase-repository';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { generateUUID } from '@/lib/utils/uuid';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export interface DashboardRelatorioPersistido {
   data: Record<string, any>;
@@ -52,11 +53,12 @@ export class RelatoriosDiariosSupabaseRepository {
 
     const id = this.getDocId(userId, dateKey);
 
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
@@ -105,6 +107,7 @@ export class RelatoriosDiariosSupabaseRepository {
       .upsert({
         id,
         user_id: userId,
+        empresa_id: getEmpresaIdPadrao(),
         date_key: dateKey,
         data_geracao: dataGeracao.toISOString(),
         dashboard: payload
@@ -156,6 +159,7 @@ export class RelatoriosDiariosSupabaseRepository {
     const updateData: any = {
       id,
       user_id: userId,
+      empresa_id: getEmpresaIdPadrao(),
       date_key: dateKey,
       data_geracao: dataGeracao.toISOString(),
       [campoSupabase]: payload
@@ -215,6 +219,7 @@ export class RelatoriosDiariosSupabaseRepository {
     const updateData: any = {
       id,
       user_id: userId,
+      empresa_id: getEmpresaIdPadrao(),
       date_key: dateKey,
       data_geracao: dataGeracao.toISOString()
     };

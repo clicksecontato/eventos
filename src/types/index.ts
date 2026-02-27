@@ -163,7 +163,7 @@ export interface ModeloContrato {
   template: string;
   campos: CampoContrato[];
   ativo: boolean;
-  userId?: string; // NULL = modelo global (padrão), preenchido = template privado do usuário
+  userId?: string; // Mantido para auditoria de criação
   dataCadastro: Date;
   dataAtualizacao: Date;
 }

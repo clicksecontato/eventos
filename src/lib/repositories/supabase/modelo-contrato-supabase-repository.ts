@@ -2,6 +2,7 @@ import { BaseSupabaseRepository } from './base-supabase-repository';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { ModeloContrato, CampoContrato } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class ModeloContratoSupabaseRepository extends BaseSupabaseRepository<ModeloContrato> {
   constructor() {
@@ -16,7 +17,7 @@ export class ModeloContratoSupabaseRepository extends BaseSupabaseRepository<Mod
       template: row.template,
       campos: (row.campos || []) as CampoContrato[],
       ativo: row.ativo || true,
-      userId: row.user_id || undefined, // NULL = modelo global, preenchido = template privado
+      userId: row.user_id || undefined, // Mantido para auditoria de criação
       dataCadastro: new Date(row.data_cadastro),
       dataAtualizacao: new Date(row.data_atualizacao),
     };
@@ -30,7 +31,7 @@ export class ModeloContratoSupabaseRepository extends BaseSupabaseRepository<Mod
     if (entity.template !== undefined) data.template = entity.template;
     if (entity.campos !== undefined) data.campos = entity.campos || [];
     if (entity.ativo !== undefined) data.ativo = entity.ativo;
-    if (entity.userId !== undefined) data.user_id = entity.userId || null; // NULL = global, preenchido = privado
+    if (entity.userId !== undefined) data.user_id = entity.userId || null; // Auditoria de criação
     if (entity.dataCadastro !== undefined) data.data_cadastro = entity.dataCadastro instanceof Date ? entity.dataCadastro.toISOString() : entity.dataCadastro;
     if (entity.dataAtualizacao !== undefined) data.data_atualizacao = entity.dataAtualizacao instanceof Date ? entity.dataAtualizacao.toISOString() : entity.dataAtualizacao;
     
@@ -38,26 +39,15 @@ export class ModeloContratoSupabaseRepository extends BaseSupabaseRepository<Mod
   }
 
   /**
-   * Busca modelos ativos: globais (user_id IS NULL) + modelos do usuário especificado
-   * @param userId - ID do usuário. Se fornecido, retorna modelos globais + modelos do usuário
+   * Busca modelos ativos do sistema (escopo por empresa)
    */
-  async findAtivos(userId?: string): Promise<ModeloContrato[]> {
-    let query = this.supabase
+  async findAtivos(): Promise<ModeloContrato[]> {
+    const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('ativo', true);
-
-    if (userId) {
-      // Retornar modelos globais (user_id IS NULL) + modelos do usuário
-      query = query.or(`user_id.is.null,user_id.eq.${userId}`);
-    } else {
-      // Se não fornecer userId, retornar apenas modelos globais
-      query = query.is('user_id', null);
-    }
-
-    query = query.order('nome', { ascending: true });
-
-    const { data, error } = await query;
+      .eq('empresa_id', getEmpresaIdPadrao())
+      .eq('ativo', true)
+      .order('nome', { ascending: true });
 
     if (error) {
       throw new Error(`Erro ao buscar modelos de contrato ativos: ${error.message}`);
@@ -67,45 +57,17 @@ export class ModeloContratoSupabaseRepository extends BaseSupabaseRepository<Mod
   }
 
   /**
-   * Busca todos os modelos: globais (user_id IS NULL) + modelos do usuário especificado
-   * @param userId - ID do usuário. Se fornecido, retorna modelos globais + modelos do usuário
+   * Busca todos os modelos do sistema (escopo por empresa)
    */
-  async findAll(userId?: string): Promise<ModeloContrato[]> {
-    let query = this.supabase
-      .from(this.tableName)
-      .select('*');
-
-    if (userId) {
-      // Retornar modelos globais (user_id IS NULL) + modelos do usuário
-      query = query.or(`user_id.is.null,user_id.eq.${userId}`);
-    } else {
-      // Se não fornecer userId, retornar apenas modelos globais
-      query = query.is('user_id', null);
-    }
-
-    query = query.order('nome', { ascending: true });
-
-    const { data, error } = await query;
-
-    if (error) {
-      throw new Error(`Erro ao buscar modelos de contrato: ${error.message}`);
-    }
-
-    return (data || []).map(row => this.convertFromSupabase(row));
-  }
-
-  /**
-   * Busca apenas templates privados do usuário (não inclui globais)
-   */
-  async findByUserId(userId: string): Promise<ModeloContrato[]> {
+  async findAll(): Promise<ModeloContrato[]> {
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', getEmpresaIdPadrao())
       .order('nome', { ascending: true });
 
     if (error) {
-      throw new Error(`Erro ao buscar templates do usuário: ${error.message}`);
+      throw new Error(`Erro ao buscar modelos de contrato: ${error.message}`);
     }
 
     return (data || []).map(row => this.convertFromSupabase(row));
@@ -116,6 +78,7 @@ export class ModeloContratoSupabaseRepository extends BaseSupabaseRepository<Mod
       .from(this.tableName)
       .select('*')
       .eq('id', id)
+      .eq('empresa_id', getEmpresaIdPadrao())
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
@@ -136,6 +99,7 @@ export class ModeloContratoSupabaseRepository extends BaseSupabaseRepository<Mod
 
     const supabaseData = this.convertToSupabase(modeloWithMeta);
     supabaseData.id = id;
+    supabaseData.empresa_id = getEmpresaIdPadrao();
 
     const { data, error } = await this.supabase
       .from(this.tableName)
@@ -159,6 +123,7 @@ export class ModeloContratoSupabaseRepository extends BaseSupabaseRepository<Mod
       .from(this.tableName)
       .update(supabaseData)
       .eq('id', id)
+      .eq('empresa_id', getEmpresaIdPadrao())
       .select()
       .single();
 
@@ -173,7 +138,8 @@ export class ModeloContratoSupabaseRepository extends BaseSupabaseRepository<Mod
     const { error } = await this.supabase
       .from(this.tableName)
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('empresa_id', getEmpresaIdPadrao());
 
     if (error) {
       throw new Error(`Erro ao deletar modelo de contrato: ${error.message}`);

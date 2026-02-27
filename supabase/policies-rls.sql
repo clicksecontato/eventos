@@ -3,21 +3,21 @@
 -- ============================================
 -- Este script cria políticas RLS para todas as tabelas
 -- IMPORTANTE: Este sistema usa NextAuth, não Supabase Auth
--- Portanto, as políticas são baseadas em user_id passado diretamente
+-- Portanto, as políticas são baseadas no controle feito pela API (role/permissões)
 -- Operações via service_role_key bypassam RLS automaticamente
 -- ============================================
 
 -- Como o sistema usa NextAuth e não Supabase Auth, precisamos de políticas
 -- que permitam acesso quando usar service role (admin) ou baseadas em user_id
 -- Por enquanto, vamos criar políticas que permitam tudo para service role
--- e acesso baseado em user_id para operações autenticadas
+-- e, no modelo single-tenant, por empresa_id quando aplicável
 
 -- IMPORTANTE: Service role key bypassa RLS automaticamente, então se os
 -- repositórios estiverem usando service role (useAdmin: true), estas políticas
 -- podem não ser necessárias. Mas vamos criá-las como segurança adicional.
 
 -- ============================================
--- POLÍTICAS PARA TABELAS POR USER_ID
+-- POLÍTICAS PARA TABELAS DE DOMÍNIO
 -- ============================================
 
 -- Clientes
@@ -157,7 +157,7 @@ CREATE POLICY "Service role can manage users" ON users
 -- Estas políticas permitem acesso geral (USING (true))
 -- porque o sistema usa NextAuth e não Supabase Auth
 -- A segurança é gerenciada pelo código (API routes verificam autenticação)
--- e pelos repositórios que filtram por user_id
+-- e pelos repositórios (com migração em andamento para filtro por empresa_id)
 -- 
 -- Service role key bypassa RLS automaticamente, então se os repositórios
 -- estiverem usando service role, estas políticas são redundantes mas não causam problema

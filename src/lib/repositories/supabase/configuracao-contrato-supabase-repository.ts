@@ -2,6 +2,7 @@ import { BaseSupabaseRepository } from './base-supabase-repository';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { ConfiguracaoContrato } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class ConfiguracaoContratoSupabaseRepository extends BaseSupabaseRepository<ConfiguracaoContrato> {
   constructor() {
@@ -65,10 +66,11 @@ export class ConfiguracaoContratoSupabaseRepository extends BaseSupabaseReposito
   }
 
   async findByUserId(userId: string): Promise<ConfiguracaoContrato | null> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
@@ -126,6 +128,7 @@ export class ConfiguracaoContratoSupabaseRepository extends BaseSupabaseReposito
 
     const supabaseData = this.convertToSupabase(configWithMeta);
     supabaseData.id = id;
+    supabaseData.empresa_id = getEmpresaIdPadrao();
 
     const { data, error } = await this.supabase
       .from(this.tableName)

@@ -2,6 +2,7 @@ import { BaseSupabaseRepository } from './base-supabase-repository';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { TipoCusto } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class TipoCustoSupabaseRepository extends BaseSupabaseRepository<TipoCusto> {
   constructor() {
@@ -30,10 +31,11 @@ export class TipoCustoSupabaseRepository extends BaseSupabaseRepository<TipoCust
   }
 
   async getAtivos(userId: string): Promise<TipoCusto[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('ativo', true)
       .order('nome', { ascending: true });
 
@@ -45,10 +47,11 @@ export class TipoCustoSupabaseRepository extends BaseSupabaseRepository<TipoCust
   }
 
   async getInativos(userId: string): Promise<TipoCusto[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('ativo', false)
       .order('nome', { ascending: true });
 
@@ -60,10 +63,11 @@ export class TipoCustoSupabaseRepository extends BaseSupabaseRepository<TipoCust
   }
 
   async searchByName(name: string, userId: string): Promise<TipoCusto[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .or(`nome.ilike.%${name}%,descricao.ilike.%${name}%`);
 
     if (error) {
@@ -85,6 +89,7 @@ export class TipoCustoSupabaseRepository extends BaseSupabaseRepository<TipoCust
     const supabaseData = this.convertToSupabase(tipoWithMeta);
     supabaseData.id = id;
     supabaseData.user_id = userId;
+    supabaseData.empresa_id = getEmpresaIdPadrao();
 
     const { data, error } = await this.supabase
       .from(this.tableName)
@@ -104,10 +109,11 @@ export class TipoCustoSupabaseRepository extends BaseSupabaseRepository<TipoCust
       throw new Error('userId é obrigatório para buscar tipos de custo');
     }
     
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .order('nome', { ascending: true });
 
     if (error) {
@@ -125,11 +131,12 @@ export class TipoCustoSupabaseRepository extends BaseSupabaseRepository<TipoCust
   }
 
   async getTipoCustoById(id: string, userId: string): Promise<TipoCusto | null> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
@@ -140,13 +147,14 @@ export class TipoCustoSupabaseRepository extends BaseSupabaseRepository<TipoCust
   }
 
   async updateTipoCusto(id: string, tipoCusto: Partial<TipoCusto>, userId: string): Promise<TipoCusto> {
+    const empresaId = getEmpresaIdPadrao();
     const supabaseData = this.convertToSupabase(tipoCusto);
 
     const { data, error } = await this.supabase
       .from(this.tableName)
       .update(supabaseData)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .select()
       .single();
 
@@ -159,11 +167,12 @@ export class TipoCustoSupabaseRepository extends BaseSupabaseRepository<TipoCust
 
   async deleteTipoCusto(id: string, userId: string): Promise<void> {
     // Inativação ao invés de exclusão física
+    const empresaId = getEmpresaIdPadrao();
     const { error } = await this.supabase
       .from(this.tableName)
       .update({ ativo: false })
       .eq('id', id)
-      .eq('user_id', userId);
+      .eq('empresa_id', empresaId);
 
     if (error) {
       throw new Error(`Erro ao inativar tipo de custo: ${error.message}`);
@@ -171,11 +180,12 @@ export class TipoCustoSupabaseRepository extends BaseSupabaseRepository<TipoCust
   }
 
   async reativarTipoCusto(id: string, userId: string): Promise<void> {
+    const empresaId = getEmpresaIdPadrao();
     const { error } = await this.supabase
       .from(this.tableName)
       .update({ ativo: true })
       .eq('id', id)
-      .eq('user_id', userId);
+      .eq('empresa_id', empresaId);
 
     if (error) {
       throw new Error(`Erro ao reativar tipo de custo: ${error.message}`);

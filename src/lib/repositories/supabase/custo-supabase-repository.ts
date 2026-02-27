@@ -2,6 +2,7 @@ import { BaseSupabaseRepository } from './base-supabase-repository';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { CustoEvento } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class CustoSupabaseRepository extends BaseSupabaseRepository<CustoEvento> {
   constructor() {
@@ -43,10 +44,11 @@ export class CustoSupabaseRepository extends BaseSupabaseRepository<CustoEvento>
   }
 
   async findByEventoId(userId: string, eventoId: string): Promise<CustoEvento[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*, tipo_custos(*)')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .eq('removido', false) // Filtrar apenas custos não removidos
       .order('data_cadastro', { ascending: false });
@@ -88,6 +90,7 @@ export class CustoSupabaseRepository extends BaseSupabaseRepository<CustoEvento>
     const supabaseData = this.convertToSupabase(custoWithMeta);
     supabaseData.id = id;
     supabaseData.user_id = userId;
+    supabaseData.empresa_id = getEmpresaIdPadrao();
 
     const { data, error } = await this.supabase
       .from(this.tableName)
@@ -117,13 +120,14 @@ export class CustoSupabaseRepository extends BaseSupabaseRepository<CustoEvento>
   }
 
   async updateCusto(userId: string, eventoId: string, custoId: string, custo: Partial<CustoEvento>): Promise<CustoEvento> {
+    const empresaId = getEmpresaIdPadrao();
     const supabaseData = this.convertToSupabase(custo);
 
     const { data, error } = await this.supabase
       .from(this.tableName)
       .update(supabaseData)
       .eq('id', custoId)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .select('*, tipo_custos(*)')
       .single();
@@ -162,11 +166,12 @@ export class CustoSupabaseRepository extends BaseSupabaseRepository<CustoEvento>
     const supabaseData = this.convertToSupabase(updateData);
     console.log('[CustoSupabaseRepository] Dados convertidos para Supabase:', supabaseData);
 
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .update(supabaseData)
       .eq('id', custoId)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .select()
       .single();
@@ -184,10 +189,11 @@ export class CustoSupabaseRepository extends BaseSupabaseRepository<CustoEvento>
       throw new Error('userId é obrigatório para buscar custos');
     }
     
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*, tipo_custos(*)')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .order('data_cadastro', { ascending: false });
 
     if (error) {
@@ -217,11 +223,12 @@ export class CustoSupabaseRepository extends BaseSupabaseRepository<CustoEvento>
     if (!userId) {
       throw new Error('userId é obrigatório para buscar custo');
     }
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*, tipo_custos(*)')
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {

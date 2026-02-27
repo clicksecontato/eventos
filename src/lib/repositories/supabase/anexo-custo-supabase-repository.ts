@@ -1,6 +1,7 @@
 import { BaseSupabaseRepository } from './base-supabase-repository';
 import { AnexoCusto } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class AnexoCustoSupabaseRepository extends BaseSupabaseRepository<AnexoCusto> {
   constructor() {
@@ -47,10 +48,11 @@ export class AnexoCustoSupabaseRepository extends BaseSupabaseRepository<AnexoCu
   }
 
   async findByCustoId(userId: string, eventoId: string, custoId: string): Promise<AnexoCusto[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .eq('custo_id', custoId)
       .order('data_upload', { ascending: false });
@@ -80,6 +82,7 @@ export class AnexoCustoSupabaseRepository extends BaseSupabaseRepository<AnexoCu
 
     const supabaseData = this.convertToSupabase(anexoWithMeta);
     supabaseData.id = id;
+    supabaseData.empresa_id = getEmpresaIdPadrao();
 
     const { data, error } = await this.supabase
       .from(this.tableName)
@@ -95,11 +98,12 @@ export class AnexoCustoSupabaseRepository extends BaseSupabaseRepository<AnexoCu
   }
 
   async deleteAnexo(userId: string, eventoId: string, custoId: string, anexoId: string): Promise<void> {
+    const empresaId = getEmpresaIdPadrao();
     const { error } = await this.supabase
       .from(this.tableName)
       .delete()
       .eq('id', anexoId)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .eq('custo_id', custoId);
 
@@ -114,11 +118,12 @@ export class AnexoCustoSupabaseRepository extends BaseSupabaseRepository<AnexoCu
     custoId: string,
     anexoId: string
   ): Promise<AnexoCusto | null> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
       .eq('id', anexoId)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .eq('custo_id', custoId)
       .maybeSingle();

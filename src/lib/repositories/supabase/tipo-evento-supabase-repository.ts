@@ -2,6 +2,7 @@ import { BaseSupabaseRepository } from './base-supabase-repository';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { TipoEvento } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class TipoEventoSupabaseRepository extends BaseSupabaseRepository<TipoEvento> {
   constructor() {
@@ -30,10 +31,11 @@ export class TipoEventoSupabaseRepository extends BaseSupabaseRepository<TipoEve
   }
 
   async findByNome(nome: string, userId: string): Promise<TipoEvento | null> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('nome', nome)
       .maybeSingle();
 
@@ -46,16 +48,17 @@ export class TipoEventoSupabaseRepository extends BaseSupabaseRepository<TipoEve
 
   async getAtivos(userId: string): Promise<TipoEvento[]> {
     return this.query(
-      [{ field: 'user_id', operator: '==', value: userId }, { field: 'ativo', operator: '==', value: true }],
+      [{ field: 'empresa_id', operator: '==', value: getEmpresaIdPadrao() }, { field: 'ativo', operator: '==', value: true }],
       { field: 'nome', direction: 'asc' }
     );
   }
 
   async searchByName(name: string, userId: string): Promise<TipoEvento[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .or(`nome.ilike.%${name}%,descricao.ilike.%${name}%`);
 
     if (error) {
@@ -77,6 +80,7 @@ export class TipoEventoSupabaseRepository extends BaseSupabaseRepository<TipoEve
     const supabaseData = this.convertToSupabase(tipoWithMeta);
     supabaseData.id = id;
     supabaseData.user_id = userId;
+    supabaseData.empresa_id = getEmpresaIdPadrao();
 
     const { data, error } = await this.supabase
       .from(this.tableName)
@@ -92,13 +96,14 @@ export class TipoEventoSupabaseRepository extends BaseSupabaseRepository<TipoEve
   }
 
   async updateTipoEvento(id: string, tipoEvento: Partial<TipoEvento>, userId: string): Promise<TipoEvento> {
+    const empresaId = getEmpresaIdPadrao();
     const supabaseData = this.convertToSupabase(tipoEvento);
 
     const { data, error } = await this.supabase
       .from(this.tableName)
       .update(supabaseData)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .select()
       .single();
 
@@ -119,17 +124,18 @@ export class TipoEventoSupabaseRepository extends BaseSupabaseRepository<TipoEve
 
   async getInativos(userId: string): Promise<TipoEvento[]> {
     return this.query(
-      [{ field: 'user_id', operator: '==', value: userId }, { field: 'ativo', operator: '==', value: false }],
+      [{ field: 'empresa_id', operator: '==', value: getEmpresaIdPadrao() }, { field: 'ativo', operator: '==', value: false }],
       { field: 'nome', direction: 'asc' }
     );
   }
 
   async getTipoEventoById(id: string, userId: string): Promise<TipoEvento | null> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
@@ -144,10 +150,11 @@ export class TipoEventoSupabaseRepository extends BaseSupabaseRepository<TipoEve
       throw new Error('userId é obrigatório para buscar tipos de evento');
     }
     
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .order('nome', { ascending: true });
 
     if (error) {

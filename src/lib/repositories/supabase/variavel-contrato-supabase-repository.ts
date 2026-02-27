@@ -2,6 +2,7 @@ import { BaseSupabaseRepository } from './base-supabase-repository';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { VariavelContrato } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class VariavelContratoSupabaseRepository extends BaseSupabaseRepository<VariavelContrato> {
   constructor() {
@@ -42,10 +43,11 @@ export class VariavelContratoSupabaseRepository extends BaseSupabaseRepository<V
   }
 
   async findByUserId(userId: string): Promise<VariavelContrato[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .order('ordem', { ascending: true })
       .order('label', { ascending: true });
 
@@ -57,10 +59,11 @@ export class VariavelContratoSupabaseRepository extends BaseSupabaseRepository<V
   }
 
   async findAtivasByUserId(userId: string): Promise<VariavelContrato[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('ativo', true)
       .order('ordem', { ascending: true })
       .order('label', { ascending: true });
@@ -73,10 +76,11 @@ export class VariavelContratoSupabaseRepository extends BaseSupabaseRepository<V
   }
 
   async findByChave(userId: string, chave: string): Promise<VariavelContrato | null> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('chave', chave)
       .maybeSingle();
 
@@ -98,6 +102,7 @@ export class VariavelContratoSupabaseRepository extends BaseSupabaseRepository<V
 
     const supabaseData = this.convertToSupabase(variavelWithMeta);
     supabaseData.id = id;
+    supabaseData.empresa_id = getEmpresaIdPadrao();
 
     const { data, error } = await this.supabase
       .from(this.tableName)

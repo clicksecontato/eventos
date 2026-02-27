@@ -1,6 +1,7 @@
 import { BaseSupabaseRepository } from './base-supabase-repository';
 import { Cliente } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class ClienteSupabaseRepository extends BaseSupabaseRepository<Cliente> {
   constructor() {
@@ -104,10 +105,11 @@ export class ClienteSupabaseRepository extends BaseSupabaseRepository<Cliente> {
 
     const normalizedEmail = email.toLowerCase().trim();
     
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .ilike('email', normalizedEmail)
       .maybeSingle();
 
@@ -119,10 +121,11 @@ export class ClienteSupabaseRepository extends BaseSupabaseRepository<Cliente> {
   }
 
   async findByCpf(cpf: string, userId: string): Promise<Cliente | null> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('cpf', cpf)
       .maybeSingle();
 
@@ -134,10 +137,11 @@ export class ClienteSupabaseRepository extends BaseSupabaseRepository<Cliente> {
   }
 
   async searchByName(name: string, userId: string): Promise<Cliente[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .ilike('nome', `%${name}%`);
 
     if (error) {
@@ -148,10 +152,11 @@ export class ClienteSupabaseRepository extends BaseSupabaseRepository<Cliente> {
   }
 
   async getRecentClientes(userId: string, limit: number = 10): Promise<Cliente[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .order('data_cadastro', { ascending: false })
       .limit(limit);
 
@@ -174,6 +179,7 @@ export class ClienteSupabaseRepository extends BaseSupabaseRepository<Cliente> {
     const supabaseData = this.convertToSupabase(clienteWithMeta);
     supabaseData.id = id;
     supabaseData.user_id = userId;
+    supabaseData.empresa_id = getEmpresaIdPadrao();
 
     const { data, error } = await this.supabase
       .from(this.tableName)
@@ -189,13 +195,14 @@ export class ClienteSupabaseRepository extends BaseSupabaseRepository<Cliente> {
   }
 
   async updateCliente(id: string, cliente: Partial<Cliente>, userId: string): Promise<Cliente> {
+    const empresaId = getEmpresaIdPadrao();
     const supabaseData = this.convertToSupabase(cliente);
 
     const { data, error } = await this.supabase
       .from(this.tableName)
       .update(supabaseData)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .select()
       .single();
 
@@ -223,7 +230,7 @@ export class ClienteSupabaseRepository extends BaseSupabaseRepository<Cliente> {
 
   async getArquivados(userId: string): Promise<Cliente[]> {
     return this.query(
-      [{ field: 'user_id', operator: '==', value: userId }, { field: 'arquivado', operator: '==', value: true }],
+      [{ field: 'empresa_id', operator: '==', value: getEmpresaIdPadrao() }, { field: 'arquivado', operator: '==', value: true }],
       { field: 'data_cadastro', direction: 'desc' }
     );
   }
@@ -231,10 +238,11 @@ export class ClienteSupabaseRepository extends BaseSupabaseRepository<Cliente> {
   async getAtivos(userId: string): Promise<Cliente[]> {
     console.log(`[ClienteSupabaseRepository] Buscando clientes ativos para userId: ${userId}`);
     
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .or('arquivado.is.null,arquivado.eq.false')
       .order('data_cadastro', { ascending: false });
 
@@ -248,11 +256,12 @@ export class ClienteSupabaseRepository extends BaseSupabaseRepository<Cliente> {
   }
 
   async getClienteById(id: string, userId: string): Promise<Cliente | null> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
@@ -270,7 +279,7 @@ export class ClienteSupabaseRepository extends BaseSupabaseRepository<Cliente> {
           .from('canais_entrada')
           .select('*')
           .eq('id', cliente.canalEntradaId)
-          .eq('user_id', userId)
+          .eq('empresa_id', empresaId)
           .maybeSingle();
 
         if (canalError && canalError.code !== 'PGRST116') {
@@ -301,10 +310,11 @@ export class ClienteSupabaseRepository extends BaseSupabaseRepository<Cliente> {
     
     console.log(`[ClienteSupabaseRepository] Buscando todos os clientes para userId: ${userId}`);
     
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .order('data_cadastro', { ascending: false });
 
     if (error) {
@@ -327,10 +337,11 @@ export class ClienteSupabaseRepository extends BaseSupabaseRepository<Cliente> {
     const inicioAno = new Date(ano, 0, 1);
     const fimAno = new Date(ano, 11, 31, 23, 59, 59, 999);
 
+    const empresaId = getEmpresaIdPadrao();
     const { count, error } = await this.supabase
       .from(this.tableName)
       .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('arquivado', false)
       .gte('data_cadastro', inicioAno.toISOString())
       .lte('data_cadastro', fimAno.toISOString());

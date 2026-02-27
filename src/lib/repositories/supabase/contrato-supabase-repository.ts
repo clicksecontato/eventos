@@ -2,6 +2,7 @@ import { BaseSupabaseRepository } from './base-supabase-repository';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { Contrato } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class ContratoSupabaseRepository extends BaseSupabaseRepository<Contrato> {
   constructor() {
@@ -78,6 +79,7 @@ export class ContratoSupabaseRepository extends BaseSupabaseRepository<Contrato>
 
     const supabaseData = this.convertToSupabase(contratoWithMeta);
     supabaseData.id = id; // Assign generated ID
+    supabaseData.empresa_id = getEmpresaIdPadrao();
 
     const { data, error } = await this.supabase
       .from(this.tableName)
@@ -97,10 +99,11 @@ export class ContratoSupabaseRepository extends BaseSupabaseRepository<Contrato>
       throw new Error('userId é obrigatório para buscar contratos');
     }
     
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .order('data_cadastro', { ascending: false });
 
     if (error) {
@@ -111,10 +114,11 @@ export class ContratoSupabaseRepository extends BaseSupabaseRepository<Contrato>
   }
 
   async findByEventoId(eventoId: string, userId: string): Promise<Contrato[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .order('data_cadastro', { ascending: false });
 
@@ -127,12 +131,13 @@ export class ContratoSupabaseRepository extends BaseSupabaseRepository<Contrato>
 
   async gerarNumeroContrato(userId: string): Promise<string> {
     const ano = new Date().getFullYear();
+    const empresaId = getEmpresaIdPadrao();
     
     // Buscar contratos do ano atual ordenados por número
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('numero_contrato')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .like('numero_contrato', `CON-${ano}-%`)
       .order('numero_contrato', { ascending: false })
       .limit(1);
@@ -159,10 +164,11 @@ export class ContratoSupabaseRepository extends BaseSupabaseRepository<Contrato>
   }
 
   async contarPorStatus(userId: string): Promise<Record<string, number>> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('status')
-      .eq('user_id', userId);
+      .eq('empresa_id', empresaId);
 
     if (error) {
       throw new Error(`Erro ao contar contratos por status: ${error.message}`);
@@ -198,11 +204,12 @@ export class ContratoSupabaseRepository extends BaseSupabaseRepository<Contrato>
     // Sempre atualizar data_atualizacao
     supabaseData.data_atualizacao = new Date().toISOString();
 
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .update(supabaseData)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .select()
       .single();
 
@@ -219,9 +226,7 @@ export class ContratoSupabaseRepository extends BaseSupabaseRepository<Contrato>
       .select('*')
       .eq('id', id);
 
-    if (userId) {
-      query = query.eq('user_id', userId);
-    }
+    query = query.eq('empresa_id', getEmpresaIdPadrao());
 
     const { data, error } = await query.maybeSingle();
 

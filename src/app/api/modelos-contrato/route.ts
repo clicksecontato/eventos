@@ -11,15 +11,14 @@ import { TemplateService } from '@/lib/services/template-service';
 import { VariavelContratoService } from '@/lib/services/variavel-contrato-service';
 
 /**
- * GET - Lista modelos ativos: globais + modelos do usuário autenticado
+ * GET - Lista modelos ativos do sistema
  */
 export async function GET(request: NextRequest) {
   try {
-    const user = await getAuthenticatedUser();
+    await getAuthenticatedUser();
 
     const modeloRepo = repositoryFactory.getModeloContratoRepository();
-    // Buscar modelos globais + modelos do usuário
-    const modelos = await modeloRepo.findAtivos(user.id);
+    const modelos = await modeloRepo.findAtivos();
 
     // Serializar datas manualmente para evitar problemas de JSON
     const modelosSerializados = modelos.map(modelo => ({
@@ -39,7 +38,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST - Criar novo template personalizado do usuário
+ * POST - Criar novo template do sistema
  * 
  * Body:
  * - nome: string (obrigatório)
@@ -48,7 +47,7 @@ export async function GET(request: NextRequest) {
  * - campos?: CampoContrato[] (opcional, para compatibilidade)
  * - ativo?: boolean (default: true)
  * 
- * O template será criado como privado do usuário (userId será preenchido automaticamente)
+ * O template fica disponível para toda a empresa (escopo do sistema)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -76,14 +75,14 @@ export async function POST(request: NextRequest) {
       console.warn('Template contém variáveis não definidas:', validacao.erros);
     }
 
-    // Criar template como privado do usuário
+    // Criar template global do sistema (userId mantido apenas como auditoria)
     const novoTemplate = await modeloRepo.create({
       nome,
       descricao,
       template,
       campos, // Manter para compatibilidade
       ativo,
-      userId: user.id, // Template privado do usuário
+      userId: user.id,
       dataCadastro: new Date(),
       dataAtualizacao: new Date()
     });

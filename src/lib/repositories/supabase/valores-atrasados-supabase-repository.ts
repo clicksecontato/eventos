@@ -1,5 +1,6 @@
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { ValorAtrasado, ValoresAtrasadosFiltros } from '@/types';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class ValoresAtrasadosSupabaseRepository {
   private tableName = 'eventos';
@@ -30,7 +31,7 @@ export class ValoresAtrasadosSupabaseRepository {
         valor_total,
         cliente_id
       `)
-      .eq('user_id', userId)
+      .eq('empresa_id', getEmpresaIdPadrao())
       .eq('arquivado', false)
       .gt('valor_total', 0)
       .not('dia_final_pagamento', 'is', null)

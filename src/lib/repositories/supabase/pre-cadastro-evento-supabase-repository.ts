@@ -3,6 +3,7 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { PreCadastroEvento, StatusPreCadastro } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
 import { dateToLocalMidnight, dateToUTCMidnight } from '@/lib/utils/date-helpers';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class PreCadastroEventoSupabaseRepository extends BaseSupabaseRepository<PreCadastroEvento> {
   constructor() {
@@ -173,10 +174,11 @@ export class PreCadastroEventoSupabaseRepository extends BaseSupabaseRepository<
    * Busca todos os pré-cadastros do usuário com filtros opcionais
    */
   async findAll(userId: string, filtros?: { status?: StatusPreCadastro }): Promise<PreCadastroEvento[]> {
+    const empresaId = getEmpresaIdPadrao();
     let query = this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId);
+      .eq('empresa_id', empresaId);
 
     if (filtros?.status) {
       query = query.eq('status', filtros.status);
@@ -197,10 +199,11 @@ export class PreCadastroEventoSupabaseRepository extends BaseSupabaseRepository<
    * Conta pré-cadastros por status
    */
   async contarPorStatus(userId: string): Promise<Record<StatusPreCadastro, number>> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('status')
-      .eq('user_id', userId);
+      .eq('empresa_id', empresaId);
 
     if (error) {
       throw new Error(`Erro ao contar pré-cadastros: ${error.message}`);
@@ -250,6 +253,7 @@ export class PreCadastroEventoSupabaseRepository extends BaseSupabaseRepository<
    */
   async atualizarExpirados(userId: string): Promise<number> {
     const agora = new Date().toISOString();
+    const empresaId = getEmpresaIdPadrao();
     
     const { data, error } = await this.supabase
       .from(this.tableName)
@@ -257,7 +261,7 @@ export class PreCadastroEventoSupabaseRepository extends BaseSupabaseRepository<
         status: StatusPreCadastro.EXPIRADO,
         data_atualizacao: agora
       })
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .in('status', [StatusPreCadastro.PENDENTE, StatusPreCadastro.PREENCHIDO])
       .lt('data_expiracao', agora)
       .select('id');
@@ -290,6 +294,7 @@ export class PreCadastroEventoSupabaseRepository extends BaseSupabaseRepository<
 
     const supabaseData = this.convertToSupabase(preCadastro);
     supabaseData.id = id;
+    supabaseData.empresa_id = getEmpresaIdPadrao();
 
     const { data, error } = await this.supabase
       .from(this.tableName)
@@ -359,6 +364,7 @@ export class PreCadastroEventoSupabaseRepository extends BaseSupabaseRepository<
    */
   async updatePreCadastro(id: string, entity: Partial<PreCadastroEvento>, userId: string): Promise<PreCadastroEvento> {
     entity.dataAtualizacao = new Date();
+    const empresaId = getEmpresaIdPadrao();
     
     const supabaseData = this.convertToSupabase(entity);
     
@@ -366,7 +372,7 @@ export class PreCadastroEventoSupabaseRepository extends BaseSupabaseRepository<
       .from(this.tableName)
       .update(supabaseData)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .select()
       .single();
 
@@ -389,11 +395,12 @@ export class PreCadastroEventoSupabaseRepository extends BaseSupabaseRepository<
    * Deleta pré-cadastro com validação de userId
    */
   async deletePreCadastro(id: string, userId: string): Promise<void> {
+    const empresaId = getEmpresaIdPadrao();
     const { error } = await this.supabase
       .from(this.tableName)
       .delete()
       .eq('id', id)
-      .eq('user_id', userId);
+      .eq('empresa_id', empresaId);
 
     if (error) {
       throw new Error(`Erro ao deletar pré-cadastro: ${error.message}`);

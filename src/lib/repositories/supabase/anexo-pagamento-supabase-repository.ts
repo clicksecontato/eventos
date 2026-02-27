@@ -2,6 +2,7 @@ import { BaseSupabaseRepository } from './base-supabase-repository';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { AnexoPagamento } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class AnexoPagamentoSupabaseRepository extends BaseSupabaseRepository<AnexoPagamento> {
   constructor() {
@@ -50,10 +51,11 @@ export class AnexoPagamentoSupabaseRepository extends BaseSupabaseRepository<Ane
   }
 
   async findByPagamentoId(userId: string, eventoId: string, pagamentoId: string): Promise<AnexoPagamento[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .eq('pagamento_id', pagamentoId)
       .order('data_upload', { ascending: false });
@@ -85,6 +87,7 @@ export class AnexoPagamentoSupabaseRepository extends BaseSupabaseRepository<Ane
 
     const supabaseData = this.convertToSupabase(anexoWithMeta);
     supabaseData.id = id;
+    supabaseData.empresa_id = getEmpresaIdPadrao();
 
     const { data, error } = await this.supabase
       .from(this.tableName)
@@ -100,11 +103,12 @@ export class AnexoPagamentoSupabaseRepository extends BaseSupabaseRepository<Ane
   }
 
   async deleteAnexo(userId: string, eventoId: string, pagamentoId: string, anexoId: string): Promise<void> {
+    const empresaId = getEmpresaIdPadrao();
     const { error } = await this.supabase
       .from(this.tableName)
       .delete()
       .eq('id', anexoId)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .eq('pagamento_id', pagamentoId);
 
@@ -119,11 +123,12 @@ export class AnexoPagamentoSupabaseRepository extends BaseSupabaseRepository<Ane
     pagamentoId: string,
     anexoId: string
   ): Promise<AnexoPagamento | null> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
       .eq('id', anexoId)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .eq('pagamento_id', pagamentoId)
       .maybeSingle();

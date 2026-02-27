@@ -2,6 +2,7 @@ import { BaseSupabaseRepository } from './base-supabase-repository';
 import { Evento, StatusEvento } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
 import { getDiaSemana, dateToUTCMidnight, dateToLocalMidnight } from '@/lib/utils/date-helpers';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
   constructor() {
@@ -121,21 +122,21 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
   // Métodos específicos mantendo a interface original
   async findByClienteId(clienteId: string, userId: string): Promise<Evento[]> {
     return this.query(
-      [{ field: 'user_id', operator: '==', value: userId }, { field: 'cliente_id', operator: '==', value: clienteId }],
+      [{ field: 'empresa_id', operator: '==', value: getEmpresaIdPadrao() }, { field: 'cliente_id', operator: '==', value: clienteId }],
       { field: 'data_evento', direction: 'asc' }
     );
   }
 
   async findByStatus(status: string, userId: string): Promise<Evento[]> {
     return this.query(
-      [{ field: 'user_id', operator: '==', value: userId }, { field: 'status', operator: '==', value: status }],
+      [{ field: 'empresa_id', operator: '==', value: getEmpresaIdPadrao() }, { field: 'status', operator: '==', value: status }],
       { field: 'data_evento', direction: 'asc' }
     );
   }
 
   async findByTipoEvento(tipoEvento: string, userId: string): Promise<Evento[]> {
     return this.query(
-      [{ field: 'user_id', operator: '==', value: userId }, { field: 'tipo_evento', operator: '==', value: tipoEvento }],
+      [{ field: 'empresa_id', operator: '==', value: getEmpresaIdPadrao() }, { field: 'tipo_evento', operator: '==', value: tipoEvento }],
       { field: 'data_evento', direction: 'asc' }
     );
   }
@@ -143,7 +144,7 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
   async findByDataEvento(dataInicio: Date, dataFim: Date, userId: string): Promise<Evento[]> {
     return this.query(
       [
-        { field: 'user_id', operator: '==', value: userId },
+        { field: 'empresa_id', operator: '==', value: getEmpresaIdPadrao() },
         { field: 'data_evento', operator: '>=', value: dataInicio.toISOString() },
         { field: 'data_evento', operator: '<=', value: dataFim.toISOString() }
       ],
@@ -162,11 +163,12 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
 
   async getProximosEventos(userId: string, limit: number = 10): Promise<Evento[]> {
     const hoje = new Date();
+    const empresaId = getEmpresaIdPadrao();
     
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('arquivado', false)
       .gte('data_evento', hoje.toISOString())
       .order('data_evento', { ascending: true })
@@ -187,10 +189,11 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
   }
 
   async searchByLocal(local: string, userId: string): Promise<Evento[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .or(`local.ilike.%${local}%,endereco.ilike.%${local}%`);
 
     if (error) {
@@ -217,6 +220,7 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
     const supabaseData = this.convertToSupabase(eventoWithMeta);
     supabaseData.id = id;
     supabaseData.user_id = userId;
+    supabaseData.empresa_id = getEmpresaIdPadrao();
 
     const { data, error } = await this.supabase
       .from(this.tableName)
@@ -232,13 +236,14 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
   }
 
   async updateEvento(id: string, evento: Partial<Evento>, userId: string): Promise<Evento> {
+    const empresaId = getEmpresaIdPadrao();
     const supabaseData = this.convertToSupabase(evento);
 
     const { data, error } = await this.supabase
       .from(this.tableName)
       .update(supabaseData)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .select()
       .single();
 
@@ -265,10 +270,11 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
   }
 
   async getArquivados(userId: string): Promise<Evento[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*, clientes(*)')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('arquivado', true)
       .order('data_evento', { ascending: false });
 
@@ -305,10 +311,11 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
   }
 
   async getAtivos(userId: string): Promise<Evento[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*, clientes(*)')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .or('arquivado.is.null,arquivado.eq.false')
       .order('data_evento', { ascending: true });
 
@@ -345,11 +352,12 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
   }
 
   async getEventoById(id: string, userId: string): Promise<Evento | null> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*, clientes(*)')
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
@@ -389,10 +397,11 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
       throw new Error('userId é obrigatório para buscar eventos');
     }
     
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .order('data_evento', { ascending: true });
 
     if (error) {

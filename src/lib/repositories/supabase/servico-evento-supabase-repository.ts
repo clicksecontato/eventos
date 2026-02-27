@@ -2,6 +2,7 @@ import { BaseSupabaseRepository } from './base-supabase-repository';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { ServicoEvento } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<ServicoEvento> {
   constructor() {
@@ -38,10 +39,11 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
   }
 
   async findByEventoId(userId: string, eventoId: string): Promise<ServicoEvento[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*, tipo_servicos(*)')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .eq('removido', false)
       .order('data_cadastro', { ascending: false });
@@ -83,6 +85,7 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     const supabaseData = this.convertToSupabase(servicoWithMeta);
     supabaseData.id = id;
     supabaseData.user_id = userId;
+    supabaseData.empresa_id = getEmpresaIdPadrao();
 
     const { data, error } = await this.supabase
       .from(this.tableName)
@@ -112,13 +115,14 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
   }
 
   async updateServicoEvento(userId: string, eventoId: string, servicoId: string, servico: Partial<ServicoEvento>): Promise<ServicoEvento> {
+    const empresaId = getEmpresaIdPadrao();
     const supabaseData = this.convertToSupabase(servico);
 
     const { data, error } = await this.supabase
       .from(this.tableName)
       .update(supabaseData)
       .eq('id', servicoId)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .select('*, tipo_servicos(*)')
       .single();
@@ -156,10 +160,11 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
       throw new Error('userId é obrigatório para buscar serviços');
     }
     
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*, tipo_servicos(*)')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .order('data_cadastro', { ascending: false });
 
     if (error) {
@@ -189,11 +194,12 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     if (!userId) {
       throw new Error('userId é obrigatório para buscar serviço');
     }
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*, tipo_servicos(*)')
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
@@ -225,10 +231,11 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     porCategoria: Record<string, number>;
   }> {
     // Buscar todos os serviços (incluindo removidos) para manter consistência com Firebase
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*, tipo_servicos(*)')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .order('data_cadastro', { ascending: false });
 
@@ -290,11 +297,12 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     const allServicos: ServicoEvento[] = [];
 
     // Processar cada chunk
+    const empresaId = getEmpresaIdPadrao();
     for (const chunk of chunks) {
       const { data, error } = await this.supabase
         .from(this.tableName)
         .select('*, tipo_servicos(*)')
-        .eq('user_id', userId)
+        .eq('empresa_id', empresaId)
         .in('evento_id', chunk)
         .eq('removido', false)
         .order('data_cadastro', { ascending: false });

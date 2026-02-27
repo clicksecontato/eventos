@@ -1,5 +1,6 @@
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { RelatorioSnapshot } from '@/types/relatorios';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class RelatorioCacheSupabaseRepository {
   private tableName = 'relatorios_cache';
@@ -13,10 +14,11 @@ export class RelatorioCacheSupabaseRepository {
       throw new Error('userId é obrigatório para buscar snapshot de relatórios');
     }
 
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .order('data_geracao', { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -70,11 +72,12 @@ export class RelatorioCacheSupabaseRepository {
       throw new Error('userId e snapshotId são obrigatórios');
     }
 
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
       .eq('id', snapshotId)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
@@ -96,10 +99,11 @@ export class RelatorioCacheSupabaseRepository {
       throw new Error('userId é obrigatório');
     }
 
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .order('data_geracao', { ascending: false })
       .limit(limit);
 
@@ -122,10 +126,11 @@ export class RelatorioCacheSupabaseRepository {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - keepDays);
 
+      const empresaId = getEmpresaIdPadrao();
       const { error } = await this.supabase
         .from(this.tableName)
         .delete()
-        .eq('user_id', userId)
+        .eq('empresa_id', empresaId)
         .lt('data_geracao', cutoffDate.toISOString());
 
       if (error) {
@@ -168,6 +173,7 @@ export class RelatorioCacheSupabaseRepository {
     return {
       id,
       user_id: userId,
+      empresa_id: getEmpresaIdPadrao(),
       data_geracao: snapshot.dataGeracao.toISOString(),
       periodo_inicio: snapshot.periodo.inicio.toISOString(),
       periodo_fim: snapshot.periodo.fim.toISOString(),

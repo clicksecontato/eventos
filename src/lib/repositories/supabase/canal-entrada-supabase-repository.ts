@@ -2,6 +2,7 @@ import { BaseSupabaseRepository } from './base-supabase-repository';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { CanalEntrada } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class CanalEntradaSupabaseRepository extends BaseSupabaseRepository<CanalEntrada> {
   constructor() {
@@ -32,10 +33,11 @@ export class CanalEntradaSupabaseRepository extends BaseSupabaseRepository<Canal
   async getAtivos(userId: string): Promise<CanalEntrada[]> {
     console.log(`[CanalEntradaSupabaseRepository] Buscando canais ativos para userId: ${userId}`);
     
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('ativo', true)
       .order('nome', { ascending: true });
 
@@ -51,10 +53,11 @@ export class CanalEntradaSupabaseRepository extends BaseSupabaseRepository<Canal
   async getInativos(userId: string): Promise<CanalEntrada[]> {
     console.log(`[CanalEntradaSupabaseRepository] Buscando canais inativos para userId: ${userId}`);
     
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('ativo', false)
       .order('nome', { ascending: true });
 
@@ -68,10 +71,11 @@ export class CanalEntradaSupabaseRepository extends BaseSupabaseRepository<Canal
   }
 
   async searchByName(userId: string, searchTerm: string): Promise<CanalEntrada[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .ilike('nome', `%${searchTerm}%`);
 
     if (error) {
@@ -93,6 +97,7 @@ export class CanalEntradaSupabaseRepository extends BaseSupabaseRepository<Canal
     const supabaseData = this.convertToSupabase(canalWithMeta);
     supabaseData.id = id;
     supabaseData.user_id = userId;
+    supabaseData.empresa_id = getEmpresaIdPadrao();
 
     const { data, error } = await this.supabase
       .from(this.tableName)
@@ -108,11 +113,12 @@ export class CanalEntradaSupabaseRepository extends BaseSupabaseRepository<Canal
   }
 
   async getCanalEntradaById(userId: string, id: string): Promise<CanalEntrada | null> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
@@ -129,10 +135,11 @@ export class CanalEntradaSupabaseRepository extends BaseSupabaseRepository<Canal
     
     console.log(`[CanalEntradaSupabaseRepository] Buscando todos os canais para userId: ${userId}`);
     
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .order('nome', { ascending: true });
 
     if (error) {
@@ -152,13 +159,14 @@ export class CanalEntradaSupabaseRepository extends BaseSupabaseRepository<Canal
   }
 
   async updateCanalEntrada(userId: string, canalId: string, canal: Partial<CanalEntrada>): Promise<CanalEntrada> {
+    const empresaId = getEmpresaIdPadrao();
     const supabaseData = this.convertToSupabase(canal);
 
     const { data, error } = await this.supabase
       .from(this.tableName)
       .update(supabaseData)
       .eq('id', canalId)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .select()
       .single();
 
@@ -171,11 +179,12 @@ export class CanalEntradaSupabaseRepository extends BaseSupabaseRepository<Canal
 
   async deleteCanalEntrada(userId: string, canalId: string): Promise<void> {
     // Inativação ao invés de exclusão física
+    const empresaId = getEmpresaIdPadrao();
     const { error } = await this.supabase
       .from(this.tableName)
       .update({ ativo: false })
       .eq('id', canalId)
-      .eq('user_id', userId);
+      .eq('empresa_id', empresaId);
 
     if (error) {
       throw new Error(`Erro ao inativar canal de entrada: ${error.message}`);
@@ -183,11 +192,12 @@ export class CanalEntradaSupabaseRepository extends BaseSupabaseRepository<Canal
   }
 
   async reativarCanalEntrada(userId: string, canalId: string): Promise<void> {
+    const empresaId = getEmpresaIdPadrao();
     const { error } = await this.supabase
       .from(this.tableName)
       .update({ ativo: true })
       .eq('id', canalId)
-      .eq('user_id', userId);
+      .eq('empresa_id', empresaId);
 
     if (error) {
       throw new Error(`Erro ao reativar canal de entrada: ${error.message}`);

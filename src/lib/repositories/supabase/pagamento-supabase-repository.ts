@@ -2,6 +2,7 @@ import { BaseSupabaseRepository } from './base-supabase-repository';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { Pagamento } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class PagamentoSupabaseRepository extends BaseSupabaseRepository<Pagamento> {
   constructor() {
@@ -63,6 +64,7 @@ export class PagamentoSupabaseRepository extends BaseSupabaseRepository<Pagament
 
     const supabaseData = this.convertToSupabase(pagamentoWithMeta);
     supabaseData.id = id;
+    supabaseData.empresa_id = getEmpresaIdPadrao();
 
     const { data, error } = await this.supabase
       .from(this.tableName)
@@ -78,6 +80,7 @@ export class PagamentoSupabaseRepository extends BaseSupabaseRepository<Pagament
   }
 
   async updatePagamento(userId: string, eventoId: string, pagamentoId: string, pagamento: Partial<Pagamento>): Promise<Pagamento> {
+    const empresaId = getEmpresaIdPadrao();
     const supabaseData = this.convertToSupabase(pagamento);
     // Sempre atualizar data_atualizacao
     supabaseData.data_atualizacao = new Date().toISOString();
@@ -86,7 +89,7 @@ export class PagamentoSupabaseRepository extends BaseSupabaseRepository<Pagament
       .from(this.tableName)
       .update(supabaseData)
       .eq('id', pagamentoId)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .select()
       .single();
@@ -99,11 +102,12 @@ export class PagamentoSupabaseRepository extends BaseSupabaseRepository<Pagament
   }
 
   async deletePagamento(userId: string, eventoId: string, pagamentoId: string): Promise<void> {
+    const empresaId = getEmpresaIdPadrao();
     const { error } = await this.supabase
       .from(this.tableName)
       .delete()
       .eq('id', pagamentoId)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId);
 
     if (error) {
@@ -112,10 +116,11 @@ export class PagamentoSupabaseRepository extends BaseSupabaseRepository<Pagament
   }
 
   async findByEventoId(userId: string, eventoId: string): Promise<Pagamento[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .order('data_pagamento', { ascending: false });
 
@@ -129,7 +134,7 @@ export class PagamentoSupabaseRepository extends BaseSupabaseRepository<Pagament
   async findByStatus(userId: string, eventoId: string, status: string): Promise<Pagamento[]> {
     return this.query(
       [
-        { field: 'user_id', operator: '==', value: userId },
+        { field: 'empresa_id', operator: '==', value: getEmpresaIdPadrao() },
         { field: 'evento_id', operator: '==', value: eventoId },
         { field: 'status', operator: '==', value: status }
       ],
@@ -140,7 +145,7 @@ export class PagamentoSupabaseRepository extends BaseSupabaseRepository<Pagament
   async findByFormaPagamento(userId: string, eventoId: string, formaPagamento: string): Promise<Pagamento[]> {
     return this.query(
       [
-        { field: 'user_id', operator: '==', value: userId },
+        { field: 'empresa_id', operator: '==', value: getEmpresaIdPadrao() },
         { field: 'evento_id', operator: '==', value: eventoId },
         { field: 'forma_pagamento', operator: '==', value: formaPagamento }
       ],
@@ -151,7 +156,7 @@ export class PagamentoSupabaseRepository extends BaseSupabaseRepository<Pagament
   async findByDataPagamento(userId: string, eventoId: string, dataInicio: Date, dataFim: Date): Promise<Pagamento[]> {
     return this.query(
       [
-        { field: 'user_id', operator: '==', value: userId },
+        { field: 'empresa_id', operator: '==', value: getEmpresaIdPadrao() },
         { field: 'evento_id', operator: '==', value: eventoId },
         { field: 'data_pagamento', operator: '>=', value: dataInicio.toISOString() },
         { field: 'data_pagamento', operator: '<=', value: dataFim.toISOString() }
@@ -170,7 +175,7 @@ export class PagamentoSupabaseRepository extends BaseSupabaseRepository<Pagament
   async getPagamentosPendentes(userId: string, eventoId: string): Promise<Pagamento[]> {
     return this.query(
       [
-        { field: 'user_id', operator: '==', value: userId },
+        { field: 'empresa_id', operator: '==', value: getEmpresaIdPadrao() },
         { field: 'evento_id', operator: '==', value: eventoId },
         { field: 'status', operator: '!=', value: 'Pago' },
         { field: 'cancelado', operator: '==', value: false }
@@ -234,10 +239,11 @@ export class PagamentoSupabaseRepository extends BaseSupabaseRepository<Pagament
       throw new Error('userId é obrigatório para buscar pagamentos');
     }
     
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .order('data_pagamento', { ascending: false });
 
     if (error) {
@@ -251,11 +257,12 @@ export class PagamentoSupabaseRepository extends BaseSupabaseRepository<Pagament
     if (!userId) {
       throw new Error('userId é obrigatório para buscar pagamento');
     }
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*')
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {

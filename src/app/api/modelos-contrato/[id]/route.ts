@@ -13,14 +13,14 @@ import { VariavelContratoService } from '@/lib/services/variavel-contrato-servic
 
 /**
  * GET - Buscar modelo/template por ID
- * Usuário pode ver modelos globais (userId = null) e seus próprios templates
+ * Modelos são globais do sistema (escopo por empresa)
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getAuthenticatedUser();
+    await getAuthenticatedUser();
     const { id } = await getRouteParams(params);
     
     const modeloRepo = repositoryFactory.getModeloContratoRepository();
@@ -28,12 +28,6 @@ export async function GET(
     
     if (!modelo) {
       return createErrorResponse('Modelo de contrato não encontrado', 404);
-    }
-
-    // Verificar se o usuário tem permissão para ver este modelo
-    // Pode ver se: modelo é global (userId = null) OU modelo pertence ao usuário
-    if (modelo.userId && modelo.userId !== user.id) {
-      return createErrorResponse('Acesso negado: este template pertence a outro usuário', 403);
     }
 
     // Serializar datas
@@ -55,7 +49,7 @@ export async function GET(
 
 /**
  * PUT - Atualizar template
- * Usuário só pode atualizar seus próprios templates (não pode editar modelos globais)
+ * Modelos são globais do sistema (escopo por empresa)
  */
 export async function PUT(
   request: NextRequest,
@@ -74,15 +68,6 @@ export async function PUT(
       return createErrorResponse('Modelo de contrato não encontrado', 404);
     }
 
-    // Verificar permissão: só pode editar templates próprios (não globais)
-    if (!modeloExistente.userId) {
-      return createErrorResponse('Não é possível editar modelos globais do sistema', 403);
-    }
-
-    if (modeloExistente.userId !== user.id) {
-      return createErrorResponse('Acesso negado: este template pertence a outro usuário', 403);
-    }
-
     // Validar template se fornecido
     if (template) {
       const metadados = await VariavelContratoService.obterMetadadosVariaveis(user.id);
@@ -99,7 +84,7 @@ export async function PUT(
       }
     }
 
-    // Atualizar template (garantir que userId não seja alterado)
+    // Atualizar template do sistema
     const atualizado = await modeloRepo.update(id, {
       ...(nome !== undefined && { nome }),
       ...(descricao !== undefined && { descricao }),
@@ -128,7 +113,7 @@ export async function PUT(
 
 /**
  * DELETE - Deletar template
- * Usuário só pode deletar seus próprios templates (não pode deletar modelos globais)
+ * Modelos são globais do sistema (escopo por empresa)
  */
 export async function DELETE(
   request: NextRequest,
@@ -143,15 +128,6 @@ export async function DELETE(
     
     if (!modelo) {
       return createErrorResponse('Modelo de contrato não encontrado', 404);
-    }
-
-    // Verificar permissão: só pode deletar templates próprios (não globais)
-    if (!modelo.userId) {
-      return createErrorResponse('Não é possível deletar modelos globais do sistema', 403);
-    }
-
-    if (modelo.userId !== user.id) {
-      return createErrorResponse('Acesso negado: este template pertence a outro usuário', 403);
     }
 
     // Verificar se há contratos usando este template

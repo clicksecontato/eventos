@@ -2,6 +2,7 @@ import { BaseSupabaseRepository } from './base-supabase-repository';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { PreCadastroServico } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository<PreCadastroServico> {
   constructor() {
@@ -43,10 +44,11 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
    * Busca serviços por pré-cadastro ID
    */
   async findByPreCadastroId(userId: string, preCadastroId: string): Promise<PreCadastroServico[]> {
+    const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
       .select('*, tipo_servicos(*)')
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('pre_cadastro_id', preCadastroId)
       .eq('removido', false)
       .order('data_cadastro', { ascending: false });
@@ -126,6 +128,7 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
 
       const supabaseData = this.convertToSupabase(servicoCompleto);
       supabaseData.id = id;
+      supabaseData.empresa_id = getEmpresaIdPadrao();
       return supabaseData;
     });
 
@@ -160,10 +163,11 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
    * Deleta todos os serviços de um pré-cadastro
    */
   async deleteByPreCadastroId(userId: string, preCadastroId: string): Promise<void> {
+    const empresaId = getEmpresaIdPadrao();
     const { error } = await this.supabase
       .from(this.tableName)
       .delete()
-      .eq('user_id', userId)
+      .eq('empresa_id', empresaId)
       .eq('pre_cadastro_id', preCadastroId);
 
     if (error) {
@@ -186,6 +190,7 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
 
     const supabaseData = this.convertToSupabase(servicoCompleto);
     supabaseData.id = id;
+    supabaseData.empresa_id = getEmpresaIdPadrao();
 
     const { data, error } = await this.supabase
       .from(this.tableName)

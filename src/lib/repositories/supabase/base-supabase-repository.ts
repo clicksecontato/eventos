@@ -2,6 +2,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from '@/lib/supabase/types';
 import { BaseRepository } from '../base-repository';
 import { getSupabaseClient, isSupabaseConfigured } from '@/lib/supabase/client';
+import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 /**
  * Repository base para Supabase
@@ -61,8 +62,8 @@ export abstract class BaseSupabaseRepository<T extends { id: string }> implement
 
   /**
    * Busca um registro por ID
-   * Nota: Este método deve ser sobrescrito por repositórios que precisam de userId
-   * Implementação base para repositórios que não precisam filtrar por userId (como ModeloContrato)
+   * Nota: Este método deve ser sobrescrito por repositórios com regras específicas
+   * Implementação base aplica escopo por empresa e não por userId
    */
   async findById(id: string, userId?: string): Promise<T | null> {
     let query = this.supabase
@@ -71,7 +72,7 @@ export abstract class BaseSupabaseRepository<T extends { id: string }> implement
       .eq('id', id);
 
     if (userId) {
-      query = query.eq('user_id', userId);
+      query = query.eq('empresa_id', getEmpresaIdPadrao());
     }
 
     const { data, error } = await query.maybeSingle();
