@@ -516,7 +516,7 @@ export default function EventoViewPage() {
                             </div>
                           </div>
                           <div className="text-sm" style={{ color: 'var(--warning-text)', opacity: 0.8 }}>
-                            Preenchimento automatizado de contrato está disponível apenas no plano Premium
+                            Preenchimento automatizado de contrato está disponível apenas para perfis com acesso Premium
                           </div>
                         </div>
                         {statusPlano?.plano && (
@@ -530,7 +530,7 @@ export default function EventoViewPage() {
                           className="w-full"
                           variant="default"
                         >
-                          Ver Planos Disponíveis
+                          Ver status da assinatura
                         </Button>
                       </div>
                     </TooltipContent>

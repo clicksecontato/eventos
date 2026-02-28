@@ -119,14 +119,14 @@ export default function LimiteUso({ tipo, usado, limite, periodo = 'total', unid
         {/* Aviso se próximo do limite */}
         {estaPertoDoLimite && !limiteAtingido && (
           <p className="text-xs text-warning-text mt-2">
-            ⚠️ Você está usando {porcentagem.toFixed(0)}% do seu limite. Considere fazer upgrade do plano.
+            ⚠️ Você está usando {porcentagem.toFixed(0)}% do seu limite. Se necessário, solicite ajuste ao administrador.
           </p>
         )}
 
         {/* Aviso se limite atingido */}
         {limiteAtingido && (
           <p className="text-xs text-error-text mt-2">
-            ❌ Limite atingido. Atualize seu plano para continuar usando esta funcionalidade.
+            ❌ Limite atingido. Solicite ao administrador a ampliação do seu acesso.
           </p>
         )}
       </CardContent>

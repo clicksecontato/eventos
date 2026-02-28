@@ -60,7 +60,7 @@ export default function LimiteUsoCompacto({
   const { icon: IconComponent, label } = getIconAndLabel();
   const textoPeriodo = periodo === 'mes' ? 'do mês' : 'total';
   const tooltipText = limiteAtingido
-    ? `Limite atingido: ${usado}/${limite} ${label} ${textoPeriodo}. Atualize seu plano para continuar.`
+    ? `Limite atingido: ${usado}/${limite} ${label} ${textoPeriodo}. Solicite ao administrador a ampliação do acesso.`
     : estaPertoDoLimite
     ? `Próximo do limite: ${usado}/${limite} ${label} ${textoPeriodo}. ${restante} restante${restante !== 1 ? 's' : ''}.`
     : `${usado}/${limite} ${label} ${textoPeriodo}. ${restante} restante${restante !== 1 ? 's' : ''}.`;
@@ -101,8 +101,8 @@ export default function LimiteUsoCompacto({
             {mostraAlerta && (
               <p className="text-xs text-warning-text mt-1">
                 {limiteAtingido 
-                  ? `Atualize seu plano para continuar criando ${label}.`
-                  : 'Considere fazer upgrade do plano.'}
+                  ? `Solicite ao administrador o aumento de limite para continuar criando ${label}.`
+                  : 'Se necessário, solicite ajuste de limite ao administrador.'}
               </p>
             )}
           </div>
