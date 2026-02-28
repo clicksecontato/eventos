@@ -69,7 +69,7 @@ function OnboardingScreen({ bemVindo }: { bemVindo: boolean }) {
         </p>
         {bemVindo && (
           <div className="rounded-lg bg-success-bg border border-success/20 px-4 py-3 text-success-text text-sm font-medium inline-block">
-            Conta criada com sucesso! Agora escolha seu plano para começar a usar o sistema.
+            Conta criada com sucesso! O plano é definido internamente pelo administrador.
           </div>
         )}
       </div>
@@ -103,9 +103,9 @@ function OnboardingScreen({ bemVindo }: { bemVindo: boolean }) {
         <Button
           size="lg"
           className="text-base px-8 py-6 font-semibold shadow-lg hover:shadow-xl transition-shadow"
-          onClick={() => router.push('/planos')}
+          onClick={() => router.push('/assinatura')}
         >
-          Escolha seu plano para começar
+          Ver status do meu acesso
         </Button>
       </div>
     </div>

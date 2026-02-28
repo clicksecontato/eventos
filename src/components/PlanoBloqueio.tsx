@@ -127,7 +127,7 @@ export default function PlanoBloqueio({
               className="w-full"
               variant="default"
             >
-              Ver Planos Disponíveis
+              Ver status da assinatura
             </Button>
           )}
         </CardContent>

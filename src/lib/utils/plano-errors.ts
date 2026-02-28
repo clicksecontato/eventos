@@ -1,6 +1,6 @@
 /**
  * Helper para tratar erros de plano e mostrar toast informativo
- * com opção de redirecionar para página de planos
+ * com opção de abrir página de status da assinatura
  */
 export function handlePlanoError(
   error: any,
@@ -39,22 +39,28 @@ export function handlePlanoError(
       // Usar a mensagem original que já é clara
       mensagem = originalMessage;
     } else if (errorMessage.includes('não tem plano') || errorMessage.includes('sem plano') || errorMessage.includes('sem assinatura')) {
-      mensagem = 'Você ainda não possui um plano ativo. Contrate um plano para começar a usar todas as funcionalidades!';
+      mensagem = 'Sua conta está sem assinatura ativa. Entre em contato com o administrador para liberação.';
     } else if (errorMessage.includes('limite') || errorMessage.includes('atingido')) {
-      mensagem = 'Você atingiu o limite do seu plano. Faça upgrade para continuar criando!';
+      mensagem = 'Você atingiu o limite disponível para seu perfil. Solicite ajuste ao administrador.';
     } else {
       // Mensagem genérica apenas se não houver mensagem original clara
-      mensagem = originalMessage || 'Esta funcionalidade não está disponível no seu plano atual. Faça upgrade para acessar!';
+      mensagem = originalMessage || 'Esta funcionalidade não está disponível para seu perfil atual. Solicite ajuste ao administrador.';
     }
 
-    // Mostrar toast com ação para contratar planos
+    // Mostrar toast com ação para ver detalhes da assinatura/status
     showToast(
       mensagem,
       'warning',
       10000, // 10 segundos para dar tempo de ler e clicar
       {
-        label: 'Ver Planos Disponíveis',
-        onClick: navigateToPlanos
+        label: 'Ver status da assinatura',
+        onClick: () => {
+          if (typeof window !== 'undefined') {
+            window.location.href = '/assinatura';
+          } else {
+            navigateToPlanos();
+          }
+        }
       }
     );
     

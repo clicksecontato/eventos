@@ -78,6 +78,37 @@ export default function Layout({ children }: LayoutProps) {
   // Verificar se usuário tem plano ativo
   const temPlanoAtivo = statusPlano?.ativo === true;
   const temAcessoAdmin = session?.user?.role === 'admin' || statusPlano?.plano?.codigoHotmart === 'PREMIUM_MENSAL';
+  const statusAssinatura = statusPlano?.status;
+  const alertaAcesso = (() => {
+    if (statusAssinatura === 'suspended') {
+      return {
+        titulo: 'Seu acesso está suspenso',
+        descricao: 'Entre em contato com o administrador para reativar sua assinatura.'
+      };
+    }
+    if (statusAssinatura === 'cancelled') {
+      return {
+        titulo: 'Sua assinatura foi cancelada',
+        descricao: 'Solicite ao administrador a definição de um novo plano para voltar a usar o sistema.'
+      };
+    }
+    if (statusAssinatura === 'expired') {
+      return {
+        titulo: 'Sua assinatura expirou',
+        descricao: 'Peça ao administrador para atualizar seu plano e status de acesso.'
+      };
+    }
+    if (statusAssinatura === 'sem_assinatura') {
+      return {
+        titulo: 'Sua conta está sem assinatura ativa',
+        descricao: 'A ativação de plano é feita internamente pelo administrador.'
+      };
+    }
+    return {
+      titulo: 'Sua conta não possui acesso ativo',
+      descricao: 'A liberação é feita internamente pelo administrador do sistema.'
+    };
+  })();
 
   React.useEffect(() => {
     if (status === 'unauthenticated') {
@@ -425,19 +456,19 @@ export default function Layout({ children }: LayoutProps) {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-text-primary">
-                    Você ainda não possui um plano ativo
+                    {alertaAcesso.titulo}
                   </p>
                   <p className="text-xs text-text-secondary mt-0.5">
-                    Adquira um plano para desbloquear todas as funcionalidades do sistema
+                    {alertaAcesso.descricao}
                   </p>
                 </div>
               </div>
               <Button
                 size="sm"
-                onClick={() => router.push('/planos')}
+                onClick={() => router.push('/assinatura')}
                 className="bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-sm"
               >
-                Ver Planos Disponíveis
+                Ver detalhes do acesso
               </Button>
             </div>
           </div>

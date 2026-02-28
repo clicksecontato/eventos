@@ -140,7 +140,7 @@ export default function PlanosPage() {
 
   const handleSolicitarPlano = (plano: Plano) => {
     showToast(
-      `Solicitação do plano ${plano.nome} registrada. Entre em contato com o administrador para ativação.`,
+      `O plano ${plano.nome} é gerenciado internamente. Solicite a alteração ao administrador.`,
       'info',
       7000
     );
@@ -160,8 +160,8 @@ export default function PlanosPage() {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold text-text-primary mb-2">Planos Disponíveis</h1>
-          <p className="text-text-secondary">Escolha o plano ideal para seu negócio</p>
+          <h1 className="text-3xl font-bold text-text-primary mb-2">Planos do Sistema</h1>
+          <p className="text-text-secondary">Visualização dos planos disponíveis (alterações somente via administrador)</p>
         </div>
 
         {/* Resumo do Plano Atual */}
@@ -318,7 +318,7 @@ export default function PlanosPage() {
                         className="w-full bg-primary hover:bg-accent hover:text-white cursor-pointer"
                         onClick={() => handleSolicitarPlano(plano)}
                       >
-                        {plano.destaque ? 'Solicitar Plano' : 'Selecionar Plano'}
+                        {plano.destaque ? 'Solicitar alteração ao admin' : 'Pedir alteração ao admin'}
                       </Button>
                     )}
                   </div>
@@ -334,7 +334,7 @@ export default function PlanosPage() {
               <div className="text-center py-12">
                 <p className="text-text-secondary mb-4">Nenhum plano disponível no momento.</p>
                 <Button onClick={() => window.location.href = '/assinatura'}>
-                  Ver Minha Assinatura
+                  Ver meu status de assinatura
                 </Button>
               </div>
             </CardContent>

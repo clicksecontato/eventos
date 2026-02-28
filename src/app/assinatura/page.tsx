@@ -171,6 +171,22 @@ export default function AssinaturaPage() {
     );
   };
 
+  const getMensagemStatusAcesso = (status?: string) => {
+    if (status === 'suspended') {
+      return 'Sua assinatura está suspensa. Entre em contato com o administrador para reativação.';
+    }
+    if (status === 'cancelled') {
+      return 'Sua assinatura foi cancelada. Solicite ao administrador a definição de um novo plano.';
+    }
+    if (status === 'expired') {
+      return 'Sua assinatura expirou. Peça ao administrador para renovar seu acesso.';
+    }
+    if (status === 'trial') {
+      return 'Você está em período de trial. Caso precise manter o acesso, fale com o administrador.';
+    }
+    return 'A gestão de plano e status é feita internamente pelo administrador do sistema.';
+  };
+
   const formatDate = (date?: Date | string | any) => {
     if (!date) return 'N/A';
     
@@ -373,16 +389,16 @@ export default function AssinaturaPage() {
         <div className="space-y-6">
           <div>
             <h1 className="text-3xl font-bold text-text-primary mb-2">Minha Assinatura</h1>
-            <p className="text-text-secondary">Gerencie sua assinatura</p>
+            <p className="text-text-secondary">Status do seu acesso</p>
           </div>
 
           <Card>
             <CardContent className="pt-6">
               <div className="text-center py-12">
-                <p className="text-text-secondary mb-4">Você não possui uma assinatura ativa.</p>
-                <Button onClick={() => window.location.href = '/planos'}>
-                  Ver Planos Disponíveis
-                </Button>
+                <p className="text-text-secondary mb-2">Sua conta está sem assinatura ativa.</p>
+                <p className="text-sm text-text-muted">
+                  A ativação de plano é feita internamente. Entre em contato com o administrador.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -396,8 +412,18 @@ export default function AssinaturaPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold text-text-primary mb-2">Minha Assinatura</h1>
-          <p className="text-text-secondary">Gerencie sua assinatura e funcionalidades</p>
+          <p className="text-text-secondary">Acompanhe seu status de acesso e funcionalidades</p>
         </div>
+
+        {assinatura && assinatura.status !== 'active' && (
+          <Card className="border-warning-border bg-warning-bg">
+            <CardContent className="pt-6">
+              <p className="text-sm text-warning-text">
+                {getMensagemStatusAcesso(assinatura.status)}
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {assinatura && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -486,9 +512,9 @@ export default function AssinaturaPage() {
                     <Button 
                       variant="outline" 
                       className="w-full"
-                      onClick={() => window.location.href = '/planos'}
+                      onClick={() => showToast('Solicite ao administrador a revisão do seu plano e permissões.', 'info', 7000)}
                     >
-                      Ver Detalhes do Plano
+                      Solicitar revisão ao administrador
                     </Button>
                   </div>
                 ) : (
@@ -549,9 +575,9 @@ export default function AssinaturaPage() {
                     <Button 
                       variant="outline" 
                       className="w-full mt-4"
-                      onClick={() => window.location.href = '/planos'}
+                      onClick={() => showToast('A gestão de planos é interna. Fale com o administrador.', 'info', 7000)}
                     >
-                      Ver Todos os Planos
+                      Preciso de mais acesso
                     </Button>
                   </div>
                 )}
@@ -680,16 +706,14 @@ export default function AssinaturaPage() {
         <Card>
           <CardHeader>
             <CardTitle>Ações</CardTitle>
-            <CardDescription>Gerenciar sua assinatura</CardDescription>
+            <CardDescription>Operações disponíveis para seu perfil</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => window.location.href = '/planos'}
-            >
-              Ver Planos Disponíveis
-            </Button>
+            <div className="rounded-md border border-border p-3 bg-surface">
+              <p className="text-sm text-text-secondary">
+                Alterações de plano e status são realizadas somente pelo administrador.
+              </p>
+            </div>
             {assinatura && (assinatura.status === 'active' || assinatura.status === 'trial') && (
               <>
                 <Button 

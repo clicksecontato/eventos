@@ -10,6 +10,15 @@ export default function PlanOverlay({ children }: { children: React.ReactNode })
   const { statusPlano, loading } = usePlano();
   const router = useRouter();
   const temPlanoAtivo = statusPlano?.ativo === true;
+  const statusAssinatura = statusPlano?.status;
+
+  const mensagemBloqueio = (() => {
+    if (statusAssinatura === 'suspended') return 'Sua assinatura está suspensa. Entre em contato com o administrador.';
+    if (statusAssinatura === 'cancelled') return 'Sua assinatura foi cancelada. Solicite ao administrador a reativação.';
+    if (statusAssinatura === 'expired') return 'Sua assinatura expirou. Solicite ao administrador a renovação.';
+    if (statusAssinatura === 'sem_assinatura') return 'Sua conta está sem assinatura ativa. A liberação é feita pelo administrador.';
+    return 'Seu perfil não possui acesso ativo a esta funcionalidade.';
+  })();
 
   if (loading || temPlanoAtivo) {
     return <>{children}</>;
@@ -31,13 +40,13 @@ export default function PlanOverlay({ children }: { children: React.ReactNode })
             Funcionalidade bloqueada
           </h2>
           <p className="text-sm text-text-secondary mb-6">
-            Adquira um plano para acessar esta funcionalidade
+            {mensagemBloqueio}
           </p>
           <Button
-            onClick={() => router.push('/planos')}
+            onClick={() => router.push('/assinatura')}
             className="w-full sm:w-auto"
           >
-            Ver Planos Disponíveis
+            Ver detalhes do acesso
           </Button>
         </div>
       </div>

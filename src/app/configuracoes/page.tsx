@@ -84,16 +84,16 @@ export default function ConfiguracoesPage() {
                 </div>
                 <div>
                   <CardTitle>Planos</CardTitle>
-                  <CardDescription>Visualizar planos disponíveis</CardDescription>
+                  <CardDescription>Visualizar catálogo de planos</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-text-secondary mb-4">
-                Visualize e compare os planos disponíveis para sua conta
+                Consulte os planos e limites. Alterações são realizadas pelo administrador.
               </p>
               <Button variant="outline" className="w-full">
-                Ver Planos
+                Ver catálogo
               </Button>
             </CardContent>
           </Card>
@@ -108,16 +108,16 @@ export default function ConfiguracoesPage() {
                 </div>
                 <div>
                   <CardTitle>Assinatura</CardTitle>
-                  <CardDescription>Gerenciar sua assinatura</CardDescription>
+                  <CardDescription>Status e histórico da assinatura</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-text-secondary mb-4">
-                Gerencie sua assinatura atual, altere de plano ou cancele
+                Acompanhe seu status de acesso. Alterações de plano/status são feitas pelo administrador.
               </p>
               <Button variant="outline" className="w-full">
-                Gerenciar Assinatura
+                Ver Assinatura
               </Button>
             </CardContent>
           </Card>
