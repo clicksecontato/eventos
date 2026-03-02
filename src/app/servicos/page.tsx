@@ -37,8 +37,8 @@ export default function ServicosPage() {
   const [tipoParaExcluir, setTipoParaExcluir] = useState<TipoServico | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { showToast } = useToast();
-  const [novoTipo, setNovoTipo] = useState({ nome: '', descricao: '' });
-  const [editandoTipo, setEditandoTipo] = useState({ nome: '', descricao: '', ativo: true });
+  const [novoTipo, setNovoTipo] = useState({ nome: '', descricao: '', valorPadrao: 0 });
+  const [editandoTipo, setEditandoTipo] = useState({ nome: '', descricao: '', valorPadrao: 0, ativo: true });
   const [mostrarFormNovo, setMostrarFormNovo] = useState(false);
 
   // Carregar tipos de serviço
@@ -89,12 +89,13 @@ export default function ServicosPage() {
       await dataService.createTipoServico({
         nome: novoTipo.nome.trim(),
         descricao: novoTipo.descricao.trim() || '',
+        valorPadrao: Number(novoTipo.valorPadrao || 0),
         ativo: true
       }, userId);
       
       showToast('Tipo de serviço criado com sucesso!', 'success');
       await recarregarTipos();
-      setNovoTipo({ nome: '', descricao: '' });
+      setNovoTipo({ nome: '', descricao: '', valorPadrao: 0 });
       setMostrarFormNovo(false);
     } catch (error: any) {
       // Tratar erros de plano
@@ -113,6 +114,7 @@ export default function ServicosPage() {
       await dataService.updateTipoServico(tipo.id, {
         nome: editandoTipo.nome.trim(),
         descricao: editandoTipo.descricao.trim() || '',
+        valorPadrao: Number(editandoTipo.valorPadrao || 0),
         ativo: editandoTipo.ativo
       }, userId);
       
@@ -133,7 +135,7 @@ export default function ServicosPage() {
     if (!tipoParaExcluir || !userId) return;
 
     try {
-      await dataService.deleteTipoServico(userId, tipoParaExcluir.id);
+      await dataService.deleteTipoServico(tipoParaExcluir.id, userId);
       showToast('Tipo de serviço inativado com sucesso!', 'success');
       await recarregarTipos();
       setTipoParaExcluir(null);
@@ -156,12 +158,17 @@ export default function ServicosPage() {
 
   const iniciarEdicao = (tipo: TipoServico) => {
     setEditandoId(tipo.id);
-    setEditandoTipo({ nome: tipo.nome, descricao: tipo.descricao || '', ativo: tipo.ativo });
+    setEditandoTipo({
+      nome: tipo.nome,
+      descricao: tipo.descricao || '',
+      valorPadrao: tipo.valorPadrao ?? 0,
+      ativo: tipo.ativo
+    });
   };
 
   const cancelarEdicao = () => {
     setEditandoId(null);
-    setEditandoTipo({ nome: '', descricao: '', ativo: true });
+    setEditandoTipo({ nome: '', descricao: '', valorPadrao: 0, ativo: true });
   };
 
   const getTipoServicoColor = (nome: string) => {
@@ -286,12 +293,21 @@ export default function ServicosPage() {
                 onChange={(e) => setNovoTipo(prev => ({ ...prev, descricao: e.target.value }))}
                 rows={3}
               />
+              <Input
+                label="Valor padrão (R$)"
+                type="number"
+                min="0"
+                step="0.01"
+                value={novoTipo.valorPadrao}
+                onChange={(e) => setNovoTipo(prev => ({ ...prev, valorPadrao: Number(e.target.value || 0) }))}
+                hideSpinner
+              />
               <div className="flex justify-end gap-2">
                 <Button
                   variant="outline"
                   onClick={() => {
                     setMostrarFormNovo(false);
-                    setNovoTipo({ nome: '', descricao: '' });
+                    setNovoTipo({ nome: '', descricao: '', valorPadrao: 0 });
                   }}
                 >
                   Cancelar
@@ -324,6 +340,15 @@ export default function ServicosPage() {
                       value={editandoTipo.descricao}
                       onChange={(e) => setEditandoTipo(prev => ({ ...prev, descricao: e.target.value }))}
                       rows={3}
+                    />
+                    <Input
+                      label="Valor padrão (R$)"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={editandoTipo.valorPadrao}
+                      onChange={(e) => setEditandoTipo(prev => ({ ...prev, valorPadrao: Number(e.target.value || 0) }))}
+                      hideSpinner
                     />
                     <div className="flex items-center gap-2 rounded-md border border-border/80 bg-surface/60 px-3 py-2">
                       <input
@@ -374,6 +399,9 @@ export default function ServicosPage() {
                           {tipo.descricao}
                         </p>
                       )}
+                      <p className="text-sm text-text-secondary mt-1">
+                        Valor padrão: <strong className="text-text-primary">R$ {(tipo.valorPadrao ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                      </p>
                     </div>
                     <div className="flex gap-1">
                       <TooltipProvider delayDuration={200}>
