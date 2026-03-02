@@ -10,6 +10,7 @@ export const COLLECTIONS = {
   TIPO_EVENTOS: 'tipo_eventos',
   TIPO_CUSTOS: 'tipo_custos',
   TIPO_SERVICOS: 'tipo_servicos',
+  SERVICOS_CATALOGO: 'tipo_servicos',
   CANAIS_ENTRADA: 'canais_entrada',
   RELATORIOS_CACHE: 'relatorios_cache',
   RELATORIOS_DIARIOS: 'relatorios',

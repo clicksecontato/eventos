@@ -499,10 +499,14 @@ export interface TipoServico {
   dataCadastro: Date;
 }
 
+// Alias semântico para migração de nomenclatura (tipo_servico -> servico)
+export type ServicoCatalogo = TipoServico;
+
 export interface ServicoEvento {
   id: string;
   eventoId: string;
   tipoServicoId: string;
+  servicoId?: string;
   tipoServico: TipoServico;
   quantidade?: number;
   valorUnitario?: number;

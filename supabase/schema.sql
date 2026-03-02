@@ -83,8 +83,8 @@ CREATE TABLE IF NOT EXISTS tipo_custos (
 CREATE INDEX IF NOT EXISTS idx_tipo_custos_user_id ON tipo_custos(user_id);
 CREATE INDEX IF NOT EXISTS idx_tipo_custos_ativo ON tipo_custos(user_id, ativo) WHERE ativo = true;
 
--- Tipos de serviços
-CREATE TABLE IF NOT EXISTS tipo_servicos (
+-- Serviços (catálogo)
+CREATE TABLE IF NOT EXISTS servicos (
     id VARCHAR(255) PRIMARY KEY, -- Firestore ID
     user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     nome VARCHAR(255) NOT NULL,
@@ -96,8 +96,13 @@ CREATE TABLE IF NOT EXISTS tipo_servicos (
     UNIQUE(user_id, nome)
 );
 
-CREATE INDEX IF NOT EXISTS idx_tipo_servicos_user_id ON tipo_servicos(user_id);
-CREATE INDEX IF NOT EXISTS idx_tipo_servicos_ativo ON tipo_servicos(user_id, ativo) WHERE ativo = true;
+CREATE INDEX IF NOT EXISTS idx_servicos_user_id ON servicos(user_id);
+CREATE INDEX IF NOT EXISTS idx_servicos_ativo ON servicos(user_id, ativo) WHERE ativo = true;
+
+-- Compatibilidade legada durante transição de nomenclatura
+DROP VIEW IF EXISTS tipo_servicos;
+CREATE VIEW tipo_servicos AS
+SELECT * FROM servicos;
 
 -- ============================================
 -- TABELAS DE DADOS PRINCIPAIS
@@ -262,7 +267,8 @@ CREATE TABLE IF NOT EXISTS servicos_evento (
     id VARCHAR(255) PRIMARY KEY, -- Firestore ID
     user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     evento_id VARCHAR(255) NOT NULL REFERENCES eventos(id) ON DELETE CASCADE,
-    tipo_servico_id VARCHAR(255) NOT NULL REFERENCES tipo_servicos(id) ON DELETE RESTRICT,
+    servico_id VARCHAR(255) NOT NULL REFERENCES servicos(id) ON DELETE RESTRICT,
+    tipo_servico_id VARCHAR(255) NOT NULL,
     quantidade INTEGER NOT NULL DEFAULT 1,
     valor_unitario DECIMAL(10, 2) NOT NULL DEFAULT 0,
     valor_total_item DECIMAL(10, 2) NOT NULL DEFAULT 0,
@@ -278,6 +284,7 @@ CREATE TABLE IF NOT EXISTS servicos_evento (
 CREATE INDEX IF NOT EXISTS idx_servicos_evento_user_id ON servicos_evento(user_id);
 CREATE INDEX IF NOT EXISTS idx_servicos_evento_evento_id ON servicos_evento(evento_id);
 CREATE INDEX IF NOT EXISTS idx_servicos_evento_removido ON servicos_evento(evento_id, removido) WHERE removido = false;
+CREATE INDEX IF NOT EXISTS idx_servicos_evento_servico_id ON servicos_evento(servico_id);
 
 -- Histórico de alterações de serviços por evento
 CREATE TABLE IF NOT EXISTS servicos_evento_historico (
@@ -371,7 +378,8 @@ CREATE TABLE IF NOT EXISTS pre_cadastros_servicos (
     id VARCHAR(255) PRIMARY KEY,
     user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     pre_cadastro_id VARCHAR(255) NOT NULL REFERENCES pre_cadastros_eventos(id) ON DELETE CASCADE,
-    tipo_servico_id VARCHAR(255) NOT NULL REFERENCES tipo_servicos(id) ON DELETE RESTRICT,
+    servico_id VARCHAR(255) NOT NULL REFERENCES servicos(id) ON DELETE RESTRICT,
+    tipo_servico_id VARCHAR(255) NOT NULL,
     observacoes TEXT,
     removido BOOLEAN NOT NULL DEFAULT false,
     data_remocao TIMESTAMP WITH TIME ZONE,
@@ -382,6 +390,37 @@ CREATE TABLE IF NOT EXISTS pre_cadastros_servicos (
 CREATE INDEX IF NOT EXISTS idx_pre_cadastros_servicos_user_id ON pre_cadastros_servicos(user_id);
 CREATE INDEX IF NOT EXISTS idx_pre_cadastros_servicos_pre_cadastro_id ON pre_cadastros_servicos(pre_cadastro_id);
 CREATE INDEX IF NOT EXISTS idx_pre_cadastros_servicos_removido ON pre_cadastros_servicos(pre_cadastro_id, removido) WHERE removido = false;
+CREATE INDEX IF NOT EXISTS idx_pre_cadastros_servicos_servico_id ON pre_cadastros_servicos(servico_id);
+
+-- Sincroniza nomenclatura legada/canônica durante transição
+CREATE OR REPLACE FUNCTION sync_servico_ids()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.servico_id IS NULL AND NEW.tipo_servico_id IS NOT NULL THEN
+        NEW.servico_id := NEW.tipo_servico_id;
+    ELSIF NEW.tipo_servico_id IS NULL AND NEW.servico_id IS NOT NULL THEN
+        NEW.tipo_servico_id := NEW.servico_id;
+    END IF;
+
+    IF NEW.servico_id IS DISTINCT FROM NEW.tipo_servico_id THEN
+        NEW.tipo_servico_id := NEW.servico_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_sync_servico_ids_servicos_evento ON servicos_evento;
+CREATE TRIGGER trg_sync_servico_ids_servicos_evento
+BEFORE INSERT OR UPDATE ON servicos_evento
+FOR EACH ROW
+EXECUTE FUNCTION sync_servico_ids();
+
+DROP TRIGGER IF EXISTS trg_sync_servico_ids_pre_cadastros_servicos ON pre_cadastros_servicos;
+CREATE TRIGGER trg_sync_servico_ids_pre_cadastros_servicos
+BEFORE INSERT OR UPDATE ON pre_cadastros_servicos
+FOR EACH ROW
+EXECUTE FUNCTION sync_servico_ids();
 
 -- Anexos de eventos
 CREATE TABLE IF NOT EXISTS anexos_eventos (

@@ -993,6 +993,45 @@ export class DataService {
     return this.tipoServicoRepo.getAtivos(userId);
   }
 
+  /**
+   * Alias canônico: Serviços (catálogo) - manter compatibilidade com Tipos de Serviço
+   */
+  async getServicosCatalogo(userId: string): Promise<TipoServico[]> {
+    return this.getTiposServico(userId);
+  }
+
+  async getAllServicosCatalogo(userId: string): Promise<TipoServico[]> {
+    return this.getAllTiposServico(userId);
+  }
+
+  async getServicoCatalogoById(id: string, userId: string): Promise<TipoServico | null> {
+    return this.getTipoServicoById(id, userId);
+  }
+
+  async createServicoCatalogo(servico: Omit<TipoServico, 'id' | 'dataCadastro'>, userId: string): Promise<TipoServico> {
+    return this.createTipoServico(servico, userId);
+  }
+
+  async updateServicoCatalogo(id: string, servico: Partial<TipoServico>, userId: string): Promise<TipoServico> {
+    return this.updateTipoServico(id, servico, userId);
+  }
+
+  async deleteServicoCatalogo(id: string, userId: string): Promise<void> {
+    return this.deleteTipoServico(id, userId);
+  }
+
+  async reativarServicoCatalogo(id: string, userId: string): Promise<void> {
+    return this.reativarTipoServico(id, userId);
+  }
+
+  async getServicosCatalogoAtivos(userId: string): Promise<TipoServico[]> {
+    return this.getTiposServicoAtivos(userId);
+  }
+
+  async getServicosCatalogoInativos(userId: string): Promise<TipoServico[]> {
+    return this.getTiposServicoInativos(userId);
+  }
+
   // Métodos para Serviços de Evento
   async getServicosEvento(userId: string, eventoId: string): Promise<ServicoEvento[]> {
     return this.servicoEventoRepo.findByEventoId(userId, eventoId);

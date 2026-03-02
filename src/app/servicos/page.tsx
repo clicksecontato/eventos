@@ -41,7 +41,7 @@ export default function ServicosPage() {
   const [editandoTipo, setEditandoTipo] = useState({ nome: '', descricao: '', valorPadrao: 0, ativo: true });
   const [mostrarFormNovo, setMostrarFormNovo] = useState(false);
 
-  // Carregar tipos de serviço
+  // Carregar serviços (catálogo)
   useEffect(() => {
     const carregarTiposServico = async () => {
       if (!userId) {
@@ -49,8 +49,8 @@ export default function ServicosPage() {
       }
 
       try {
-        const tipos = await dataService.getTiposServicoAtivos(userId);
-        const inativos = await dataService.getTiposServicoInativos(userId);
+        const tipos = await dataService.getServicosCatalogoAtivos(userId);
+        const inativos = await dataService.getServicosCatalogoInativos(userId);
         setTiposServico(tipos);
         setTiposInativos(inativos);
       } catch (error) {
@@ -66,8 +66,8 @@ export default function ServicosPage() {
   const recarregarTipos = async () => {
     if (!userId) return;
     try {
-      const tipos = await dataService.getTiposServicoAtivos(userId);
-      const inativos = await dataService.getTiposServicoInativos(userId);
+      const tipos = await dataService.getServicosCatalogoAtivos(userId);
+      const inativos = await dataService.getServicosCatalogoInativos(userId);
       setTiposServico(tipos);
       setTiposInativos(inativos);
     } catch (error) {
@@ -86,14 +86,14 @@ export default function ServicosPage() {
     if (!userId || !novoTipo.nome.trim()) return;
 
     try {
-      await dataService.createTipoServico({
+      await dataService.createServicoCatalogo({
         nome: novoTipo.nome.trim(),
         descricao: novoTipo.descricao.trim() || '',
         valorPadrao: Number(novoTipo.valorPadrao || 0),
         ativo: true
       }, userId);
       
-      showToast('Tipo de serviço criado com sucesso!', 'success');
+      showToast('Serviço criado com sucesso!', 'success');
       await recarregarTipos();
       setNovoTipo({ nome: '', descricao: '', valorPadrao: 0 });
       setMostrarFormNovo(false);
@@ -102,7 +102,7 @@ export default function ServicosPage() {
       const erroTratado = handlePlanoError(error, showToast, () => router.push('/planos'));
       
       if (!erroTratado) {
-        showToast(error.message || 'Erro ao criar tipo de serviço. Tente novamente.', 'error');
+        showToast(error.message || 'Erro ao criar serviço. Tente novamente.', 'error');
       }
     }
   };
@@ -111,18 +111,18 @@ export default function ServicosPage() {
     if (!userId || !editandoTipo.nome.trim()) return;
 
     try {
-      await dataService.updateTipoServico(tipo.id, {
+      await dataService.updateServicoCatalogo(tipo.id, {
         nome: editandoTipo.nome.trim(),
         descricao: editandoTipo.descricao.trim() || '',
         valorPadrao: Number(editandoTipo.valorPadrao || 0),
         ativo: editandoTipo.ativo
       }, userId);
       
-      showToast('Tipo de serviço atualizado com sucesso!', 'success');
+      showToast('Serviço atualizado com sucesso!', 'success');
       await recarregarTipos();
       setEditandoId(null);
     } catch (error) {
-      showToast('Erro ao atualizar tipo de serviço', 'error');
+      showToast('Erro ao atualizar serviço', 'error');
     }
   };
 
@@ -135,12 +135,12 @@ export default function ServicosPage() {
     if (!tipoParaExcluir || !userId) return;
 
     try {
-      await dataService.deleteTipoServico(tipoParaExcluir.id, userId);
-      showToast('Tipo de serviço inativado com sucesso!', 'success');
+      await dataService.deleteServicoCatalogo(tipoParaExcluir.id, userId);
+      showToast('Serviço inativado com sucesso!', 'success');
       await recarregarTipos();
       setTipoParaExcluir(null);
     } catch (error) {
-      showToast('Erro ao inativar tipo de serviço', 'error');
+      showToast('Erro ao inativar serviço', 'error');
     }
   };
 
@@ -148,11 +148,11 @@ export default function ServicosPage() {
     if (!userId) return;
 
     try {
-      await dataService.reativarTipoServico(tipo.id, userId);
-      showToast('Tipo de serviço reativado com sucesso!', 'success');
+      await dataService.reativarServicoCatalogo(tipo.id, userId);
+      showToast('Serviço reativado com sucesso!', 'success');
       await recarregarTipos();
     } catch (error) {
-      showToast('Erro ao reativar tipo de serviço', 'error');
+      showToast('Erro ao reativar serviço', 'error');
     }
   };
 
@@ -209,10 +209,10 @@ export default function ServicosPage() {
           <div>
             <h1 className="text-2xl font-bold text-text-primary flex items-center gap-2">
               <TagIcon className="h-6 w-6" />
-              Tipos de Serviço
+              Serviços
             </h1>
             <p className="text-text-secondary">
-              Gerencie os tipos de serviços disponíveis
+              Gerencie os serviços disponíveis
             </p>
           </div>
           <TooltipProvider delayDuration={200}>
@@ -227,7 +227,7 @@ export default function ServicosPage() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="font-medium">
-                <p>Novo tipo de serviço</p>
+                <p>Novo serviço</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -277,18 +277,18 @@ export default function ServicosPage() {
         {mostrarFormNovo && (
           <Card>
             <CardHeader>
-              <CardTitle>Novo Tipo de Serviço</CardTitle>
+              <CardTitle>Novo Serviço</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <Input
                 label="Nome"
-                placeholder="Nome do tipo de serviço"
+                placeholder="Nome do serviço"
                 value={novoTipo.nome}
                 onChange={(e) => setNovoTipo(prev => ({ ...prev, nome: e.target.value }))}
               />
               <Textarea
                 label="Descrição"
-                placeholder="Descrição do tipo de serviço (opcional)"
+                placeholder="Descrição do serviço (opcional)"
                 value={novoTipo.descricao}
                 onChange={(e) => setNovoTipo(prev => ({ ...prev, descricao: e.target.value }))}
                 rows={3}
@@ -316,7 +316,7 @@ export default function ServicosPage() {
                   onClick={handleNovoTipo}
                   disabled={!novoTipo.nome.trim()}
                 >
-                  Criar Tipo
+                  Criar Serviço
                 </Button>
               </div>
             </CardContent>
@@ -359,7 +359,7 @@ export default function ServicosPage() {
                         onChange={(e) => setEditandoTipo(prev => ({ ...prev, ativo: e.target.checked }))}
                       />
                       <label htmlFor={`ativo-${tipo.id}`} className="text-sm text-text-primary">
-                        Tipo de serviço ativo
+                        Serviço ativo
                       </label>
                     </div>
                     <div className="flex justify-end gap-2">
@@ -416,7 +416,7 @@ export default function ServicosPage() {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent side="top" className="font-medium">
-                            <p>Editar tipo de serviço</p>
+                            <p>Editar serviço</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -433,7 +433,7 @@ export default function ServicosPage() {
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="font-medium">
-                              <p>Inativar tipo de serviço</p>
+                              <p>Inativar serviço</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -450,7 +450,7 @@ export default function ServicosPage() {
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="font-medium">
-                              <p>Reativar tipo de serviço</p>
+                              <p>Reativar serviço</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
@@ -471,14 +471,14 @@ export default function ServicosPage() {
                 {searchTerm 
                   ? 'Nenhum tipo encontrado' 
                   : abaAtiva === 'ativos' 
-                    ? 'Nenhum tipo de serviço ativo' 
-                    : 'Nenhum tipo de serviço inativo'}
+                    ? 'Nenhum serviço ativo' 
+                    : 'Nenhum serviço inativo'}
               </h3>
               <p className="mt-1 text-sm text-text-secondary">
                 {searchTerm 
                   ? 'Tente ajustar o termo de busca.'
                   : abaAtiva === 'ativos'
-                    ? 'Comece criando um novo tipo de serviço.'
+                    ? 'Comece criando um novo serviço.'
                     : 'Não há tipos inativos no momento.'}
               </p>
               {!searchTerm && abaAtiva === 'ativos' && (
@@ -491,7 +491,7 @@ export default function ServicosPage() {
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="top" className="font-medium">
-                        <p>Novo tipo de serviço</p>
+                        <p>Novo serviço</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -505,11 +505,11 @@ export default function ServicosPage() {
         <ConfirmationDialog
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}
-          title="Inativar Tipo de Serviço"
+          title="Inativar Serviço"
           description={
             tipoParaExcluir
-              ? `Tem certeza que deseja inativar o tipo de serviço "${tipoParaExcluir.nome}"? Ele não aparecerá em listas de seleção, mas continuará disponível para eventos existentes.`
-              : 'Tem certeza que deseja inativar este tipo de serviço?'
+              ? `Tem certeza que deseja inativar o serviço "${tipoParaExcluir.nome}"? Ele não aparecerá em listas de seleção, mas continuará disponível para eventos existentes.`
+              : 'Tem certeza que deseja inativar este serviço?'
           }
           confirmText="Inativar"
           cancelText="Cancelar"

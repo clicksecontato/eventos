@@ -45,7 +45,7 @@ const navigation = [
   { name: 'Relatórios', href: '/relatorios', icon: ChartBarIcon },
   { name: 'Contratos', href: '/contratos', icon: DocumentTextIcon },
   { name: 'Pagamentos', href: '/pagamentos', icon: BanknotesIcon },
-  { name: 'Tipos de Serviços', href: '/servicos', icon: WrenchScrewdriverIcon },
+  { name: 'Serviços', href: '/servicos', icon: WrenchScrewdriverIcon },
   { name: 'Canais de Entrada', href: '/canais-entrada', icon: TagIcon },
   { name: 'Tipos de Evento', href: '/tipos-eventos', icon: CalendarDaysIcon },
   { name: 'Tipos de Custo', href: '/tipos-custos', icon: CalculatorIcon },

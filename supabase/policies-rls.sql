@@ -70,9 +70,9 @@ DROP POLICY IF EXISTS "Users can manage own tipo_custos" ON tipo_custos;
 CREATE POLICY "Users can manage own tipo_custos" ON tipo_custos
     FOR ALL USING (true) WITH CHECK (true);
 
--- Tipo Serviços
-DROP POLICY IF EXISTS "Users can manage own tipo_servicos" ON tipo_servicos;
-CREATE POLICY "Users can manage own tipo_servicos" ON tipo_servicos
+-- Serviços (catálogo)
+DROP POLICY IF EXISTS "Users can manage own servicos" ON servicos;
+CREATE POLICY "Users can manage own servicos" ON servicos
     FOR ALL USING (true) WITH CHECK (true);
 
 -- Configuração Contrato
