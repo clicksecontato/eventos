@@ -13,7 +13,9 @@ import {
   ResumoCustosEvento,
   ResumoServicosEvento,
   TipoEvento,
-  DEFAULT_TIPOS_EVENTO
+  DEFAULT_TIPOS_EVENTO,
+  HistoricoServicoEvento,
+  HistoricoValorEvento
 } from '@/types';
 import { initializeAllCollections, initializeTiposCusto } from './collections-init';
 import { FuncionalidadeService } from './services/funcionalidade-service';
@@ -1021,6 +1023,14 @@ export class DataService {
 
   async getResumoServicosPorEvento(userId: string, eventoId: string): Promise<ResumoServicosEvento> {
     return this.servicoEventoRepo.getResumoServicosPorEvento(userId, eventoId);
+  }
+
+  async getHistoricoServicosEvento(userId: string, eventoId: string): Promise<HistoricoServicoEvento[]> {
+    return this.servicoEventoRepo.getHistoricoServicosEvento(userId, eventoId);
+  }
+
+  async getHistoricoValorEvento(userId: string, eventoId: string): Promise<HistoricoValorEvento[]> {
+    return this.eventoRepo.getHistoricoValorEvento(userId, eventoId);
   }
 
   /**

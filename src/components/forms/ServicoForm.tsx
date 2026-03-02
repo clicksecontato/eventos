@@ -22,6 +22,10 @@ interface ServicoFormProps {
 
 interface FormData {
   tipoServicoId: string;
+  quantidade: number;
+  valorUnitario: number;
+  origemPreco: 'padrao' | 'editado_manual';
+  motivoAjuste?: string;
   observacoes?: string;
 }
 
@@ -36,6 +40,10 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
   const { userId } = useCurrentUser();
   const [formData, setFormData] = useState<FormData>({
     tipoServicoId: '',
+    quantidade: 1,
+    valorUnitario: 0,
+    origemPreco: 'padrao',
+    motivoAjuste: '',
     observacoes: ''
   });
 
@@ -76,6 +84,10 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
     if (servico) {
       setFormData({
         tipoServicoId: servico.tipoServicoId,
+        quantidade: servico.quantidade ?? 1,
+        valorUnitario: servico.valorUnitario ?? servico.tipoServico?.valorPadrao ?? 0,
+        origemPreco: servico.origemPreco || 'padrao',
+        motivoAjuste: servico.motivoAjuste || '',
         observacoes: servico.observacoes || ''
       });
     }
@@ -101,6 +113,12 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
 
     if (!formData.tipoServicoId) {
       newErrors.tipoServicoId = 'Tipo de serviço é obrigatório';
+    }
+    if (!formData.quantidade || formData.quantidade <= 0) {
+      newErrors.quantidade = 'Quantidade deve ser maior que zero';
+    }
+    if (formData.valorUnitario < 0) {
+      newErrors.valorUnitario = 'Valor unitário não pode ser negativo';
     }
 
     setErrors(newErrors);
@@ -131,6 +149,11 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
         eventoId: evento.id,
         tipoServicoId: formData.tipoServicoId,
         tipoServico: tipoServico,
+        quantidade: formData.quantidade,
+        valorUnitario: formData.valorUnitario,
+        valorTotalItem: formData.quantidade * formData.valorUnitario,
+        origemPreco: formData.origemPreco,
+        motivoAjuste: formData.motivoAjuste || undefined,
         observacoes: formData.observacoes,
         dataCadastro: servico?.dataCadastro || new Date()
       };
@@ -164,7 +187,8 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
       // Definir o novo tipo como selecionado
       setFormData(prev => ({
         ...prev,
-        tipoServicoId: novoTipo.id
+        tipoServicoId: novoTipo.id,
+        valorUnitario: novoTipo.valorPadrao ?? prev.valorUnitario
       }));
 
       // Limpar erro se existir
@@ -221,6 +245,48 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
                   error={errors.tipoServicoId}
                 />
           </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input
+              label="Quantidade"
+              type="number"
+              min="1"
+              step="1"
+              value={formData.quantidade}
+              onChange={(e) => handleInputChange('quantidade', Number(e.target.value || 1))}
+              error={errors.quantidade}
+              hideSpinner
+            />
+            <Input
+              label="Valor unitário (R$)"
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.valorUnitario}
+              onChange={(e) => {
+                handleInputChange('valorUnitario', Number(e.target.value || 0));
+                handleInputChange('origemPreco', 'editado_manual');
+              }}
+              error={errors.valorUnitario}
+              hideSpinner
+            />
+          </div>
+
+          <Input
+            label="Total do item"
+            type="number"
+            value={Number((formData.quantidade * formData.valorUnitario).toFixed(2))}
+            disabled
+            hideSpinner
+          />
+
+          <Textarea
+            label="Motivo do ajuste de preço"
+            placeholder="Opcional, mas recomendado quando o valor divergir do padrão"
+            value={formData.motivoAjuste || ''}
+            onChange={(e) => handleInputChange('motivoAjuste', e.target.value)}
+            rows={2}
+          />
 
           <div>
             <Textarea

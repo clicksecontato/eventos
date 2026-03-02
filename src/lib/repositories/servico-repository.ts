@@ -23,6 +23,11 @@ export class ServicoEventoRepository extends SubcollectionRepository<ServicoEven
     // Criar dados simplificados para salvar no Firestore
     const servicoData = {
       tipoServicoId: servico.tipoServicoId,
+      quantidade: servico.quantidade ?? 1,
+      valorUnitario: servico.valorUnitario ?? 0,
+      valorTotalItem: servico.valorTotalItem ?? (servico.quantidade ?? 1) * (servico.valorUnitario ?? 0),
+      origemPreco: servico.origemPreco || 'padrao',
+      motivoAjuste: servico.motivoAjuste || null,
       observacoes: servico.observacoes || '',
       dataCadastro: new Date()
     };
@@ -34,6 +39,11 @@ export class ServicoEventoRepository extends SubcollectionRepository<ServicoEven
       eventoId: servico.eventoId,
       tipoServicoId: servico.tipoServicoId,
       tipoServico: servico.tipoServico,
+      quantidade: servico.quantidade ?? 1,
+      valorUnitario: servico.valorUnitario ?? 0,
+      valorTotalItem: servico.valorTotalItem ?? (servico.quantidade ?? 1) * (servico.valorUnitario ?? 0),
+      origemPreco: servico.origemPreco || 'padrao',
+      motivoAjuste: servico.motivoAjuste,
       observacoes: servico.observacoes,
       dataCadastro: new Date()
     } as ServicoEvento;
@@ -47,6 +57,11 @@ export class ServicoEventoRepository extends SubcollectionRepository<ServicoEven
     // Criar dados simplificados para atualizar no Firestore
     const updateData: any = {};
     if (servico.tipoServicoId !== undefined) updateData.tipoServicoId = servico.tipoServicoId;
+    if (servico.quantidade !== undefined) updateData.quantidade = servico.quantidade;
+    if (servico.valorUnitario !== undefined) updateData.valorUnitario = servico.valorUnitario;
+    if (servico.valorTotalItem !== undefined) updateData.valorTotalItem = servico.valorTotalItem;
+    if (servico.origemPreco !== undefined) updateData.origemPreco = servico.origemPreco;
+    if (servico.motivoAjuste !== undefined) updateData.motivoAjuste = servico.motivoAjuste;
     if (servico.observacoes !== undefined) updateData.observacoes = servico.observacoes;
     
     await updateDoc(servicoRef, updateData);
@@ -56,6 +71,11 @@ export class ServicoEventoRepository extends SubcollectionRepository<ServicoEven
       eventoId: servico.eventoId || '',
       tipoServicoId: servico.tipoServicoId || '',
       tipoServico: servico.tipoServico || {} as TipoServico,
+      quantidade: servico.quantidade ?? 1,
+      valorUnitario: servico.valorUnitario ?? 0,
+      valorTotalItem: servico.valorTotalItem ?? (servico.quantidade ?? 1) * (servico.valorUnitario ?? 0),
+      origemPreco: servico.origemPreco || 'padrao',
+      motivoAjuste: servico.motivoAjuste,
       observacoes: servico.observacoes,
       dataCadastro: servico.dataCadastro || new Date()
     } as ServicoEvento;
@@ -98,6 +118,11 @@ export class ServicoEventoRepository extends SubcollectionRepository<ServicoEven
           eventoId: eventoId,
           tipoServicoId: data.tipoServicoId,
           tipoServico: tipoServico,
+          quantidade: data.quantidade ?? 1,
+          valorUnitario: data.valorUnitario ?? 0,
+          valorTotalItem: data.valorTotalItem ?? (data.quantidade ?? 1) * (data.valorUnitario ?? 0),
+          origemPreco: data.origemPreco || 'padrao',
+          motivoAjuste: data.motivoAjuste,
           observacoes: data.observacoes,
           dataCadastro: data.dataCadastro?.toDate ? data.dataCadastro.toDate() : new Date(data.dataCadastro)
         };
@@ -150,6 +175,7 @@ export class TipoServicoRepository extends SubcollectionRepository<TipoServico> 
       const tempDoc = {
         nome: '_temp_init',
         descricao: 'Documento temporário para inicializar subcollection',
+        valorPadrao: 0,
         ativo: false,
         dataCadastro: new Date()
       };

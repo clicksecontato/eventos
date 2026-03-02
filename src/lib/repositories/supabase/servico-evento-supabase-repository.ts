@@ -1,6 +1,6 @@
 import { BaseSupabaseRepository } from './base-supabase-repository';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { ServicoEvento } from '@/types';
+import { HistoricoServicoEvento, ServicoEvento } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
 import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
@@ -10,10 +10,22 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
   }
 
   protected convertFromSupabase(row: any): ServicoEvento {
+    const quantidade = row.quantidade ?? 1;
+    const valorUnitario = row.valor_unitario !== null && row.valor_unitario !== undefined
+      ? parseFloat(row.valor_unitario)
+      : 0;
+
     return {
       id: row.id,
       eventoId: row.evento_id,
       tipoServicoId: row.tipo_servico_id,
+      quantidade,
+      valorUnitario,
+      valorTotalItem: row.valor_total_item !== null && row.valor_total_item !== undefined
+        ? parseFloat(row.valor_total_item)
+        : quantidade * valorUnitario,
+      origemPreco: row.origem_preco || 'padrao',
+      motivoAjuste: row.motivo_ajuste || undefined,
       observacoes: row.observacoes,
       removido: row.removido || false,
       dataRemocao: row.data_remocao ? new Date(row.data_remocao) : undefined,
@@ -29,6 +41,11 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     
     if (entity.eventoId !== undefined) data.evento_id = entity.eventoId;
     if (entity.tipoServicoId !== undefined) data.tipo_servico_id = entity.tipoServicoId;
+    if (entity.quantidade !== undefined) data.quantidade = entity.quantidade;
+    if (entity.valorUnitario !== undefined) data.valor_unitario = entity.valorUnitario;
+    if (entity.valorTotalItem !== undefined) data.valor_total_item = entity.valorTotalItem;
+    if (entity.origemPreco !== undefined) data.origem_preco = entity.origemPreco;
+    if (entity.motivoAjuste !== undefined) data.motivo_ajuste = entity.motivoAjuste || null;
     if (entity.observacoes !== undefined) data.observacoes = entity.observacoes || null;
     if (entity.removido !== undefined) data.removido = entity.removido;
     if (entity.dataRemocao !== undefined) data.data_remocao = entity.dataRemocao instanceof Date ? entity.dataRemocao.toISOString() : entity.dataRemocao || null;
@@ -63,6 +80,9 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
           id: rowData.tipo_servicos.id,
           nome: rowData.tipo_servicos.nome,
           descricao: rowData.tipo_servicos.descricao,
+          valorPadrao: rowData.tipo_servicos.valor_padrao !== null && rowData.tipo_servicos.valor_padrao !== undefined
+            ? parseFloat(rowData.tipo_servicos.valor_padrao)
+            : 0,
           ativo: rowData.tipo_servicos.ativo,
           dataCadastro: new Date(rowData.tipo_servicos.data_cadastro),
         };
@@ -106,6 +126,9 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
         id: dataRow.tipo_servicos.id,
         nome: dataRow.tipo_servicos.nome,
         descricao: dataRow.tipo_servicos.descricao,
+        valorPadrao: dataRow.tipo_servicos.valor_padrao !== null && dataRow.tipo_servicos.valor_padrao !== undefined
+          ? parseFloat(dataRow.tipo_servicos.valor_padrao)
+          : 0,
         ativo: dataRow.tipo_servicos.ativo,
         dataCadastro: new Date(dataRow.tipo_servicos.data_cadastro),
       };
@@ -117,6 +140,14 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
   async updateServicoEvento(userId: string, eventoId: string, servicoId: string, servico: Partial<ServicoEvento>): Promise<ServicoEvento> {
     const empresaId = getEmpresaIdPadrao();
     const supabaseData = this.convertToSupabase(servico);
+    const { data: anteriorData } = await this.supabase
+      .from(this.tableName)
+      .select('*')
+      .eq('id', servicoId)
+      .eq('empresa_id', empresaId)
+      .eq('evento_id', eventoId)
+      .maybeSingle();
+    const anterior = anteriorData as any;
 
     const { data, error } = await this.supabase
       .from(this.tableName)
@@ -140,9 +171,54 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
         id: dataRow.tipo_servicos.id,
         nome: dataRow.tipo_servicos.nome,
         descricao: dataRow.tipo_servicos.descricao,
+        valorPadrao: dataRow.tipo_servicos.valor_padrao !== null && dataRow.tipo_servicos.valor_padrao !== undefined
+          ? parseFloat(dataRow.tipo_servicos.valor_padrao)
+          : 0,
         ativo: dataRow.tipo_servicos.ativo,
         dataCadastro: new Date(dataRow.tipo_servicos.data_cadastro),
       };
+    }
+
+    if (anterior) {
+      const quantidadeAnterior = anterior.quantidade ?? 1;
+      const quantidadeNova = dataRow.quantidade ?? quantidadeAnterior;
+      const valorUnitarioAnterior = anterior.valor_unitario !== null && anterior.valor_unitario !== undefined
+        ? parseFloat(anterior.valor_unitario)
+        : 0;
+      const valorUnitarioNovo = dataRow.valor_unitario !== null && dataRow.valor_unitario !== undefined
+        ? parseFloat(dataRow.valor_unitario)
+        : valorUnitarioAnterior;
+      const totalAnterior = anterior.valor_total_item !== null && anterior.valor_total_item !== undefined
+        ? parseFloat(anterior.valor_total_item)
+        : quantidadeAnterior * valorUnitarioAnterior;
+      const totalNovo = dataRow.valor_total_item !== null && dataRow.valor_total_item !== undefined
+        ? parseFloat(dataRow.valor_total_item)
+        : quantidadeNova * valorUnitarioNovo;
+
+      const houveMudancaFinanceira =
+        quantidadeAnterior !== quantidadeNova ||
+        valorUnitarioAnterior !== valorUnitarioNovo ||
+        totalAnterior !== totalNovo;
+
+      if (houveMudancaFinanceira) {
+        try {
+          await this.supabase.from('servicos_evento_historico').insert({
+            empresa_id: empresaId,
+            evento_id: eventoId,
+            servico_evento_id: servicoId,
+            user_id: userId,
+            valor_unitario_anterior: valorUnitarioAnterior,
+            valor_unitario_novo: valorUnitarioNovo,
+            quantidade_anterior: quantidadeAnterior,
+            quantidade_nova: quantidadeNova,
+            valor_total_item_anterior: totalAnterior,
+            valor_total_item_novo: totalNovo,
+            motivo_ajuste: dataRow.motivo_ajuste || anterior.motivo_ajuste || null
+          });
+        } catch {
+          // Histórico é complementar; não deve bloquear o fluxo principal.
+        }
+      }
     }
 
     return servicoAtualizado;
@@ -181,6 +257,9 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
           id: rowData.tipo_servicos.id,
           nome: rowData.tipo_servicos.nome,
           descricao: rowData.tipo_servicos.descricao,
+          valorPadrao: rowData.tipo_servicos.valor_padrao !== null && rowData.tipo_servicos.valor_padrao !== undefined
+            ? parseFloat(rowData.tipo_servicos.valor_padrao)
+            : 0,
           ativo: rowData.tipo_servicos.ativo,
           dataCadastro: new Date(rowData.tipo_servicos.data_cadastro),
         };
@@ -217,6 +296,9 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
         id: dataRow.tipo_servicos.id,
         nome: dataRow.tipo_servicos.nome,
         descricao: dataRow.tipo_servicos.descricao,
+        valorPadrao: dataRow.tipo_servicos.valor_padrao !== null && dataRow.tipo_servicos.valor_padrao !== undefined
+          ? parseFloat(dataRow.tipo_servicos.valor_padrao)
+          : 0,
         ativo: dataRow.tipo_servicos.ativo,
         dataCadastro: new Date(dataRow.tipo_servicos.data_cadastro),
       };
@@ -253,6 +335,9 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
           id: rowData.tipo_servicos.id,
           nome: rowData.tipo_servicos.nome,
           descricao: rowData.tipo_servicos.descricao,
+          valorPadrao: rowData.tipo_servicos.valor_padrao !== null && rowData.tipo_servicos.valor_padrao !== undefined
+            ? parseFloat(rowData.tipo_servicos.valor_padrao)
+            : 0,
           ativo: rowData.tipo_servicos.ativo,
           dataCadastro: new Date(rowData.tipo_servicos.data_cadastro),
         };
@@ -324,6 +409,9 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
             id: rowData.tipo_servicos.id,
             nome: rowData.tipo_servicos.nome,
             descricao: rowData.tipo_servicos.descricao,
+            valorPadrao: rowData.tipo_servicos.valor_padrao !== null && rowData.tipo_servicos.valor_padrao !== undefined
+              ? parseFloat(rowData.tipo_servicos.valor_padrao)
+              : 0,
             ativo: rowData.tipo_servicos.ativo,
             dataCadastro: new Date(rowData.tipo_servicos.data_cadastro),
           };
@@ -354,6 +442,43 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     console.log(`[ServicoEventoSupabaseRepository] Total de eventos com serviços: ${Array.from(servicosPorEvento.values()).filter(s => s.length > 0).length} de ${eventoIds.length}`);
 
     return servicosPorEvento;
+  }
+
+  async getHistoricoServicosEvento(userId: string, eventoId: string): Promise<HistoricoServicoEvento[]> {
+    const empresaId = getEmpresaIdPadrao();
+    const { data, error } = await this.supabase
+      .from('servicos_evento_historico')
+      .select('*')
+      .eq('empresa_id', empresaId)
+      .eq('evento_id', eventoId)
+      .order('data_alteracao', { ascending: false });
+
+    if (error) {
+      throw new Error(`Erro ao buscar histórico de serviços: ${error.message}`);
+    }
+
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      eventoId: row.evento_id,
+      servicoEventoId: row.servico_evento_id,
+      userId: row.user_id || undefined,
+      valorUnitarioAnterior: row.valor_unitario_anterior !== null && row.valor_unitario_anterior !== undefined
+        ? parseFloat(row.valor_unitario_anterior)
+        : undefined,
+      valorUnitarioNovo: row.valor_unitario_novo !== null && row.valor_unitario_novo !== undefined
+        ? parseFloat(row.valor_unitario_novo)
+        : undefined,
+      quantidadeAnterior: row.quantidade_anterior ?? undefined,
+      quantidadeNova: row.quantidade_nova ?? undefined,
+      valorTotalItemAnterior: row.valor_total_item_anterior !== null && row.valor_total_item_anterior !== undefined
+        ? parseFloat(row.valor_total_item_anterior)
+        : undefined,
+      valorTotalItemNovo: row.valor_total_item_novo !== null && row.valor_total_item_novo !== undefined
+        ? parseFloat(row.valor_total_item_novo)
+        : undefined,
+      motivoAjuste: row.motivo_ajuste || undefined,
+      dataAlteracao: new Date(row.data_alteracao)
+    }));
   }
 }
 

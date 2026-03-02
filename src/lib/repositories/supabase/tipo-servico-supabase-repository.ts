@@ -14,6 +14,9 @@ export class TipoServicoSupabaseRepository extends BaseSupabaseRepository<TipoSe
       id: row.id,
       nome: row.nome,
       descricao: row.descricao,
+      valorPadrao: row.valor_padrao !== null && row.valor_padrao !== undefined
+        ? parseFloat(row.valor_padrao)
+        : 0,
       ativo: row.ativo,
       dataCadastro: new Date(row.data_cadastro),
     };
@@ -24,6 +27,7 @@ export class TipoServicoSupabaseRepository extends BaseSupabaseRepository<TipoSe
     
     if (entity.nome !== undefined) data.nome = entity.nome;
     if (entity.descricao !== undefined) data.descricao = entity.descricao || null;
+    if (entity.valorPadrao !== undefined) data.valor_padrao = entity.valorPadrao;
     if (entity.ativo !== undefined) data.ativo = entity.ativo;
     if (entity.dataCadastro !== undefined) data.data_cadastro = entity.dataCadastro.toISOString();
     

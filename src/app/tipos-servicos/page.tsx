@@ -42,6 +42,7 @@ export default function TiposServicosPage() {
   const [formData, setFormData] = useState({
     nome: '',
     descricao: '',
+    valorPadrao: 0,
     ativo: true
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -89,7 +90,7 @@ export default function TiposServicosPage() {
 
   const handleNovoTipo = () => {
     setTipoEditando(null);
-    setFormData({ nome: '', descricao: '', ativo: true });
+    setFormData({ nome: '', descricao: '', valorPadrao: 0, ativo: true });
     setErrors({});
     setShowForm(true);
   };
@@ -99,6 +100,7 @@ export default function TiposServicosPage() {
     setFormData({
       nome: tipo.nome,
       descricao: tipo.descricao,
+      valorPadrao: tipo.valorPadrao ?? 0,
       ativo: tipo.ativo
     });
     setErrors({});
@@ -171,7 +173,7 @@ export default function TiposServicosPage() {
       await recarregarTipos();
       setShowForm(false);
       setTipoEditando(null);
-      setFormData({ nome: '', descricao: '', ativo: true });
+      setFormData({ nome: '', descricao: '', valorPadrao: 0, ativo: true });
     } catch (error: any) {
       // Tratar erros de plano
       const erroTratado = handlePlanoError(error, showToast, () => router.push('/planos'));
@@ -185,7 +187,7 @@ export default function TiposServicosPage() {
   const handleCancelar = () => {
     setShowForm(false);
     setTipoEditando(null);
-    setFormData({ nome: '', descricao: '', ativo: true });
+    setFormData({ nome: '', descricao: '', valorPadrao: 0, ativo: true });
     setErrors({});
   };
 
@@ -267,6 +269,22 @@ export default function TiposServicosPage() {
                   <label htmlFor="ativo" className="text-sm text-text-primary">
                     Ativo
                   </label>
+                </div>
+                <div>
+                  <Input
+                    label="Valor padrão (R$)"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.valorPadrao}
+                    onChange={(e) =>
+                      setFormData(prev => ({
+                        ...prev,
+                        valorPadrao: Number(e.target.value || 0)
+                      }))
+                    }
+                    hideSpinner
+                  />
                 </div>
                 <div className="flex justify-end space-x-2">
                   <Button

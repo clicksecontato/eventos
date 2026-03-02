@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS tipo_servicos (
     user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     nome VARCHAR(255) NOT NULL,
     descricao TEXT,
+    valor_padrao DECIMAL(10, 2) NOT NULL DEFAULT 0,
     ativo BOOLEAN NOT NULL DEFAULT true,
     data_cadastro TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     
@@ -153,7 +154,12 @@ CREATE TABLE IF NOT EXISTS eventos (
     cerimonialista JSONB, -- { nome, telefone }
     observacoes TEXT,
     status VARCHAR(50) NOT NULL DEFAULT 'Agendado' CHECK (status IN ('Agendado', 'Confirmado', 'Em andamento', 'Concluído', 'Cancelado')),
+    modo_valor_total VARCHAR(20) NOT NULL DEFAULT 'manual' CHECK (modo_valor_total IN ('automatico', 'manual')),
+    valor_total_servicos_calculado DECIMAL(10, 2),
     valor_total DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    motivo_ajuste_valor_total TEXT,
+    valor_total_ajustado_por VARCHAR(255),
+    valor_total_ajustado_em TIMESTAMP WITH TIME ZONE,
     dia_final_pagamento TIMESTAMP WITH TIME ZONE,
     arquivado BOOLEAN NOT NULL DEFAULT false,
     data_arquivamento TIMESTAMP WITH TIME ZONE,
@@ -257,6 +263,11 @@ CREATE TABLE IF NOT EXISTS servicos_evento (
     user_id VARCHAR(255) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     evento_id VARCHAR(255) NOT NULL REFERENCES eventos(id) ON DELETE CASCADE,
     tipo_servico_id VARCHAR(255) NOT NULL REFERENCES tipo_servicos(id) ON DELETE RESTRICT,
+    quantidade INTEGER NOT NULL DEFAULT 1,
+    valor_unitario DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    valor_total_item DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    origem_preco VARCHAR(20) NOT NULL DEFAULT 'padrao' CHECK (origem_preco IN ('padrao', 'editado_manual')),
+    motivo_ajuste TEXT,
     observacoes TEXT,
     removido BOOLEAN NOT NULL DEFAULT false,
     data_remocao TIMESTAMP WITH TIME ZONE,
@@ -267,6 +278,44 @@ CREATE TABLE IF NOT EXISTS servicos_evento (
 CREATE INDEX IF NOT EXISTS idx_servicos_evento_user_id ON servicos_evento(user_id);
 CREATE INDEX IF NOT EXISTS idx_servicos_evento_evento_id ON servicos_evento(evento_id);
 CREATE INDEX IF NOT EXISTS idx_servicos_evento_removido ON servicos_evento(evento_id, removido) WHERE removido = false;
+
+-- Histórico de alterações de serviços por evento
+CREATE TABLE IF NOT EXISTS servicos_evento_historico (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    empresa_id VARCHAR(255) NOT NULL DEFAULT 'default',
+    evento_id VARCHAR(255) NOT NULL REFERENCES eventos(id) ON DELETE CASCADE,
+    servico_evento_id VARCHAR(255) NOT NULL REFERENCES servicos_evento(id) ON DELETE CASCADE,
+    user_id VARCHAR(255),
+    valor_unitario_anterior DECIMAL(10, 2),
+    valor_unitario_novo DECIMAL(10, 2),
+    quantidade_anterior INTEGER,
+    quantidade_nova INTEGER,
+    valor_total_item_anterior DECIMAL(10, 2),
+    valor_total_item_novo DECIMAL(10, 2),
+    motivo_ajuste TEXT,
+    data_alteracao TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_servicos_evento_hist_evento ON servicos_evento_historico(evento_id, data_alteracao DESC);
+CREATE INDEX IF NOT EXISTS idx_servicos_evento_hist_servico ON servicos_evento_historico(servico_evento_id, data_alteracao DESC);
+
+-- Histórico de alterações de valor total do evento
+CREATE TABLE IF NOT EXISTS eventos_valor_historico (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    empresa_id VARCHAR(255) NOT NULL DEFAULT 'default',
+    evento_id VARCHAR(255) NOT NULL REFERENCES eventos(id) ON DELETE CASCADE,
+    user_id VARCHAR(255),
+    modo_valor_anterior VARCHAR(20),
+    modo_valor_novo VARCHAR(20),
+    valor_total_anterior DECIMAL(10, 2),
+    valor_total_novo DECIMAL(10, 2),
+    valor_total_servicos_anterior DECIMAL(10, 2),
+    valor_total_servicos_novo DECIMAL(10, 2),
+    motivo_ajuste TEXT,
+    data_alteracao TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_eventos_valor_hist_evento ON eventos_valor_historico(evento_id, data_alteracao DESC);
 
 -- Pré-Cadastros de Eventos
 CREATE TABLE IF NOT EXISTS pre_cadastros_eventos (

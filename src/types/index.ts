@@ -91,7 +91,12 @@ export interface Evento {
   };
   observacoes?: string;
   status: 'Agendado' | 'Confirmado' | 'Em andamento' | 'Concluído' | 'Cancelado';
+  modoValorTotal?: 'automatico' | 'manual';
+  valorTotalServicosCalculado?: number;
   valorTotal: number; // Valor total a ser pago pelo evento
+  motivoAjusteValorTotal?: string;
+  valorTotalAjustadoPor?: string;
+  valorTotalAjustadoEm?: Date;
   diaFinalPagamento: Date; // Dia final para pagamento completo
   arquivado?: boolean;
   dataArquivamento?: Date;
@@ -489,6 +494,7 @@ export interface TipoServico {
   id: string;
   nome: string;
   descricao: string;
+  valorPadrao?: number;
   ativo: boolean;
   dataCadastro: Date;
 }
@@ -498,6 +504,11 @@ export interface ServicoEvento {
   eventoId: string;
   tipoServicoId: string;
   tipoServico: TipoServico;
+  quantidade?: number;
+  valorUnitario?: number;
+  valorTotalItem?: number;
+  origemPreco?: 'padrao' | 'editado_manual';
+  motivoAjuste?: string;
   observacoes?: string;
   removido?: boolean;
   dataRemocao?: Date;
@@ -509,6 +520,35 @@ export interface ResumoServicosEvento {
   servicos: ServicoEvento[];
   quantidadeItens: number;
   porCategoria: Record<string, number>;
+}
+
+export interface HistoricoServicoEvento {
+  id: string;
+  eventoId: string;
+  servicoEventoId: string;
+  userId?: string;
+  valorUnitarioAnterior?: number;
+  valorUnitarioNovo?: number;
+  quantidadeAnterior?: number;
+  quantidadeNova?: number;
+  valorTotalItemAnterior?: number;
+  valorTotalItemNovo?: number;
+  motivoAjuste?: string;
+  dataAlteracao: Date;
+}
+
+export interface HistoricoValorEvento {
+  id: string;
+  eventoId: string;
+  userId?: string;
+  modoValorAnterior?: 'automatico' | 'manual';
+  modoValorNovo?: 'automatico' | 'manual';
+  valorTotalAnterior?: number;
+  valorTotalNovo?: number;
+  valorTotalServicosAnterior?: number;
+  valorTotalServicosNovo?: number;
+  motivoAjuste?: string;
+  dataAlteracao: Date;
 }
 
 export interface RelatorioPerformanceEventos {

@@ -67,8 +67,18 @@ interface FormData {
   };
   observacoes?: string;
   status: StatusEvento;
+  modoValorTotal: 'automatico' | 'manual';
+  valorTotalServicosCalculado: number;
+  motivoAjusteValorTotal?: string;
   valorTotal: number;
   diaFinalPagamento: string;
+}
+
+interface ServicoConfiguracao {
+  quantidade: number;
+  valorUnitario: number;
+  observacoes?: string;
+  origemPreco: 'padrao' | 'editado_manual';
 }
 
 const statusOptions = [
@@ -121,6 +131,9 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
     },
     observacoes: '',
     status: StatusEvento.AGENDADO,
+    modoValorTotal: 'automatico',
+    valorTotalServicosCalculado: 0,
+    motivoAjusteValorTotal: '',
     valorTotal: 0,
     diaFinalPagamento: ''
   });
@@ -138,6 +151,7 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
 
   const [tiposServico, setTiposServico] = useState<TipoServico[]>([]);
   const [selectedTiposServicoIds, setSelectedTiposServicoIds] = useState<Set<string>>(new Set());
+  const [servicosConfigurados, setServicosConfigurados] = useState<Record<string, ServicoConfiguracao>>({});
   const [servicosEventoOriginais, setServicosEventoOriginais] = useState<ServicoEvento[]>([]);
   const [loadingTiposServico, setLoadingTiposServico] = useState(false);
   const [criandoTipoServico, setCriandoTipoServico] = useState(false);
@@ -208,6 +222,9 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
         cerimonialista: evento.cerimonialista || { nome: '', telefone: '' },
         observacoes: evento.observacoes || '',
         status: statusInicial,
+        modoValorTotal: evento.modoValorTotal || 'manual',
+        valorTotalServicosCalculado: evento.valorTotalServicosCalculado || 0,
+        motivoAjusteValorTotal: evento.motivoAjusteValorTotal || '',
         valorTotal: evento.valorTotal,
         diaFinalPagamento: evento.diaFinalPagamento 
           ? new Date(evento.diaFinalPagamento.getTime() - evento.diaFinalPagamento.getTimezoneOffset() * 60000).toISOString().split('T')[0]
@@ -327,6 +344,16 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
         const servicos = await dataService.getServicosEvento(userId, evento.id);
         setServicosEventoOriginais(servicos);
         setSelectedTiposServicoIds(new Set(servicos.map(servico => servico.tipoServicoId)));
+        const configuracoes: Record<string, ServicoConfiguracao> = {};
+        servicos.forEach((servico) => {
+          configuracoes[servico.tipoServicoId] = {
+            quantidade: servico.quantidade ?? 1,
+            valorUnitario: servico.valorUnitario ?? servico.tipoServico?.valorPadrao ?? 0,
+            observacoes: servico.observacoes || '',
+            origemPreco: servico.origemPreco || 'padrao'
+          };
+        });
+        setServicosConfigurados(configuracoes);
       } catch (error) {
         // Erro silencioso
       }
@@ -334,6 +361,32 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
 
     carregarServicosEvento();
   }, [userId, evento?.id]);
+
+  useEffect(() => {
+    if (selectedTiposServicoIds.size === 0 || tiposServico.length === 0) {
+      return;
+    }
+
+    setServicosConfigurados(prev => {
+      const atualizado = { ...prev };
+      let alterou = false;
+
+      selectedTiposServicoIds.forEach((tipoId) => {
+        if (!atualizado[tipoId]) {
+          const tipo = tiposServico.find(t => t.id === tipoId);
+          atualizado[tipoId] = {
+            quantidade: 1,
+            valorUnitario: tipo?.valorPadrao ?? 0,
+            observacoes: '',
+            origemPreco: 'padrao'
+          };
+          alterou = true;
+        }
+      });
+
+      return alterou ? atualizado : prev;
+    });
+  }, [selectedTiposServicoIds, tiposServico]);
 
   const handleInputChange = (field: string, value: string | number | undefined) => {
     setFormData(prev => ({
@@ -458,8 +511,23 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
       const atualizados = new Set(prev);
       if (atualizados.has(tipoId)) {
         atualizados.delete(tipoId);
+        setServicosConfigurados(configs => {
+          const copia = { ...configs };
+          delete copia[tipoId];
+          return copia;
+        });
       } else {
         atualizados.add(tipoId);
+        const tipo = tiposServico.find(t => t.id === tipoId);
+        setServicosConfigurados(configs => ({
+          ...configs,
+          [tipoId]: configs[tipoId] || {
+            quantidade: 1,
+            valorUnitario: tipo?.valorPadrao ?? 0,
+            observacoes: '',
+            origemPreco: 'padrao'
+          }
+        }));
       }
       return atualizados;
     });
@@ -472,9 +540,20 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
       }
 
       if (prev.size === tiposServico.length) {
+        setServicosConfigurados({});
         return new Set();
       }
 
+      const configs: Record<string, ServicoConfiguracao> = {};
+      tiposServico.forEach((tipo) => {
+        configs[tipo.id] = {
+          quantidade: 1,
+          valorUnitario: tipo.valorPadrao ?? 0,
+          observacoes: '',
+          origemPreco: 'padrao'
+        };
+      });
+      setServicosConfigurados(configs);
       return new Set(tiposServico.map(tipo => tipo.id));
     });
   };
@@ -506,12 +585,77 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
         atualizado.add(novoTipo.id);
         return atualizado;
       });
+      setServicosConfigurados(prev => ({
+        ...prev,
+        [novoTipo.id]: {
+          quantidade: 1,
+          valorUnitario: novoTipo.valorPadrao ?? 0,
+          observacoes: '',
+          origemPreco: 'padrao'
+        }
+      }));
     } catch (error) {
       setErroTiposServico('Não foi possível criar o novo tipo de serviço.');
       throw error;
     } finally {
       setCriandoTipoServico(false);
     }
+  };
+
+  const valorTotalServicosCalculado = React.useMemo(() => {
+    return Array.from(selectedTiposServicoIds).reduce((total, tipoId) => {
+      const config = servicosConfigurados[tipoId];
+      if (!config) return total;
+      return total + (config.quantidade || 0) * (config.valorUnitario || 0);
+    }, 0);
+  }, [selectedTiposServicoIds, servicosConfigurados]);
+
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      valorTotalServicosCalculado
+    }));
+  }, [valorTotalServicosCalculado]);
+
+  useEffect(() => {
+    if (formData.modoValorTotal !== 'automatico') {
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      valorTotal: valorTotalServicosCalculado
+    }));
+    setValorTotalInput(valorTotalServicosCalculado === 0 ? '' : String(valorTotalServicosCalculado));
+  }, [formData.modoValorTotal, valorTotalServicosCalculado]);
+
+  const atualizarConfiguracaoServico = (
+    tipoId: string,
+    campo: keyof ServicoConfiguracao,
+    valor: string | number
+  ) => {
+    setServicosConfigurados(prev => {
+      const atual = prev[tipoId] || {
+        quantidade: 1,
+        valorUnitario: 0,
+        observacoes: '',
+        origemPreco: 'padrao' as const
+      };
+
+      const proximo: ServicoConfiguracao = {
+        ...atual,
+        [campo]: valor as never
+      };
+
+      if (campo === 'valorUnitario') {
+        proximo.origemPreco = 'editado_manual';
+      }
+
+      return {
+        ...prev,
+        [tipoId]: proximo
+      };
+    });
   };
 
   const sincronizarServicosEvento = async (eventoId: string) => {
@@ -539,21 +683,41 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
 
         for (const tipoId of selecionados) {
           const tipo = tiposMap.get(tipoId);
+          const config = servicosConfigurados[tipoId];
           if (!tipo) {
             continue;
           }
 
           if (mapaOriginais.has(tipoId)) {
-            atualizados.push(mapaOriginais.get(tipoId)!);
+            const servicoExistente = mapaOriginais.get(tipoId)!;
+            const quantidade = config?.quantidade ?? servicoExistente.quantidade ?? 1;
+            const valorUnitario = config?.valorUnitario ?? servicoExistente.valorUnitario ?? tipo.valorPadrao ?? 0;
+            const observacoes = config?.observacoes ?? servicoExistente.observacoes ?? '';
+            const origemPreco = config?.origemPreco ?? servicoExistente.origemPreco ?? 'padrao';
+
+            const servicoAtualizado = await dataService.updateServicoEvento(userId, eventoId, servicoExistente.id, {
+              quantidade,
+              valorUnitario,
+              valorTotalItem: quantidade * valorUnitario,
+              origemPreco,
+              observacoes
+            });
+            atualizados.push(servicoAtualizado);
             mapaOriginais.delete(tipoId);
             continue;
           }
 
+          const quantidade = config?.quantidade ?? 1;
+          const valorUnitario = config?.valorUnitario ?? tipo.valorPadrao ?? 0;
           const novoServico = await dataService.createServicoEvento(userId, eventoId, {
             eventoId,
             tipoServicoId: tipoId,
             tipoServico: tipo,
-            observacoes: '',
+            quantidade,
+            valorUnitario,
+            valorTotalItem: quantidade * valorUnitario,
+            origemPreco: config?.origemPreco || 'padrao',
+            observacoes: config?.observacoes || '',
             dataCadastro: new Date()
           });
 
@@ -575,15 +739,22 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
 
         for (const tipoId of selecionados) {
           const tipo = tiposMap.get(tipoId);
+          const config = servicosConfigurados[tipoId];
           if (!tipo) {
             continue;
           }
 
+          const quantidade = config?.quantidade ?? 1;
+          const valorUnitario = config?.valorUnitario ?? tipo.valorPadrao ?? 0;
           const novoServico = await dataService.createServicoEvento(userId, eventoId, {
             eventoId,
             tipoServicoId: tipoId,
             tipoServico: tipo,
-            observacoes: '',
+            quantidade,
+            valorUnitario,
+            valorTotalItem: quantidade * valorUnitario,
+            origemPreco: config?.origemPreco || 'padrao',
+            observacoes: config?.observacoes || '',
             dataCadastro: new Date()
           });
 
@@ -695,6 +866,13 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
     if (!formData.numeroConvidados || formData.numeroConvidados <= 0) newErrors.numeroConvidados = 'Número de convidados deve ser maior que zero';
     if (!formData.valorTotal || formData.valorTotal <= 0) newErrors.valorTotal = 'Valor total deve ser maior que zero';
     if (!formData.diaFinalPagamento) newErrors.diaFinalPagamento = 'Dia final de pagamento é obrigatório';
+    if (
+      formData.modoValorTotal === 'manual' &&
+      Math.abs((formData.valorTotal || 0) - (formData.valorTotalServicosCalculado || 0)) > 0.01 &&
+      !formData.motivoAjusteValorTotal?.trim()
+    ) {
+      newErrors.motivoAjusteValorTotal = 'Informe o motivo do ajuste manual do valor total';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -762,7 +940,12 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
         } : undefined,
         observacoes: formData.observacoes || undefined,
         status: (typeof formData.status === 'string' ? formData.status : String(formData.status)) as Evento['status'],
+        modoValorTotal: formData.modoValorTotal,
+        valorTotalServicosCalculado: valorTotalServicosCalculado,
         valorTotal: formData.valorTotal,
+        motivoAjusteValorTotal: formData.modoValorTotal === 'manual' ? (formData.motivoAjusteValorTotal || undefined) : undefined,
+        valorTotalAjustadoPor: formData.modoValorTotal === 'manual' ? userId : undefined,
+        valorTotalAjustadoEm: formData.modoValorTotal === 'manual' ? new Date() : undefined,
         diaFinalPagamento: parseLocalDate(formData.diaFinalPagamento),
         dataCadastro: new Date(),
         dataAtualizacao: new Date()
@@ -1042,12 +1225,32 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
           />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Select
+              label="Modo do valor total"
+              value={formData.modoValorTotal}
+              onValueChange={(value) => handleInputChange('modoValorTotal', value as 'automatico' | 'manual')}
+              options={[
+                { value: 'automatico', label: 'Automático (soma dos serviços)' },
+                { value: 'manual', label: 'Manual (valor negociado)' }
+              ]}
+            />
+            <Input
+              label="Total calculado pelos serviços"
+              type="number"
+              value={Number(valorTotalServicosCalculado.toFixed(2))}
+              disabled
+              hideSpinner
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
               label="Valor Total *"
               type="number"
               step="0.01"
               min="0"
               value={valorTotalInput}
+              disabled={formData.modoValorTotal === 'automatico'}
               onChange={(e) => {
                 const value = e.target.value;
                 setValorTotalInput(value);
@@ -1077,6 +1280,16 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
               error={errors.diaFinalPagamento}
             />
           </div>
+
+          {formData.modoValorTotal === 'manual' && (
+            <Textarea
+              label="Motivo do ajuste manual"
+              value={formData.motivoAjusteValorTotal || ''}
+              onChange={(e) => handleInputChange('motivoAjusteValorTotal', e.target.value)}
+              error={errors.motivoAjusteValorTotal}
+              rows={2}
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -1179,6 +1392,62 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
         criandoTipo={criandoTipoServico}
         errorMessage={erroTiposServico}
       />
+
+      {selectedTiposServicoIds.size > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Precificação dos Serviços</CardTitle>
+            <CardDescription>
+              Defina quantidade e valor unitário por serviço. O total é usado no modo automático.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Array.from(selectedTiposServicoIds).map((tipoId) => {
+              const tipo = tiposServico.find(t => t.id === tipoId);
+              if (!tipo) return null;
+              const config = servicosConfigurados[tipoId] || {
+                quantidade: 1,
+                valorUnitario: tipo.valorPadrao ?? 0,
+                observacoes: '',
+                origemPreco: 'padrao' as const
+              };
+              const totalItem = config.quantidade * config.valorUnitario;
+
+              return (
+                <div key={tipoId} className="grid grid-cols-1 gap-3 rounded-lg border border-border p-3 sm:grid-cols-4">
+                  <div className="sm:col-span-2">
+                    <p className="text-sm font-medium text-text-primary">{tipo.nome}</p>
+                    <p className="text-xs text-text-secondary">
+                      Valor padrão: R$ {(tipo.valorPadrao ?? 0).toFixed(2)}
+                    </p>
+                  </div>
+                  <Input
+                    label="Qtd."
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={config.quantidade}
+                    onChange={(e) => atualizarConfiguracaoServico(tipoId, 'quantidade', Number(e.target.value || 1))}
+                    hideSpinner
+                  />
+                  <Input
+                    label="Valor unit. (R$)"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={config.valorUnitario}
+                    onChange={(e) => atualizarConfiguracaoServico(tipoId, 'valorUnitario', Number(e.target.value || 0))}
+                    hideSpinner
+                  />
+                  <div className="sm:col-span-4 text-xs text-text-secondary">
+                    Total do item: <strong>R$ {totalItem.toFixed(2)}</strong>
+                  </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Botões de Ação */}
       <div className="flex justify-end space-x-4">

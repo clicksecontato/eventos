@@ -121,7 +121,12 @@ export interface Database {
           cerimonialista: Json | null;
           observacoes: string | null;
           status: 'Agendado' | 'Confirmado' | 'Em andamento' | 'Concluído' | 'Cancelado';
+          modo_valor_total: 'automatico' | 'manual';
+          valor_total_servicos_calculado: number | null;
           valor_total: number;
+          motivo_ajuste_valor_total: string | null;
+          valor_total_ajustado_por: string | null;
+          valor_total_ajustado_em: string | null;
           dia_final_pagamento: string | null;
           arquivado: boolean;
           data_arquivamento: string | null;
@@ -155,7 +160,12 @@ export interface Database {
           cerimonialista?: Json | null;
           observacoes?: string | null;
           status?: 'Agendado' | 'Confirmado' | 'Em andamento' | 'Concluído' | 'Cancelado';
+          modo_valor_total?: 'automatico' | 'manual';
+          valor_total_servicos_calculado?: number | null;
           valor_total?: number;
+          motivo_ajuste_valor_total?: string | null;
+          valor_total_ajustado_por?: string | null;
+          valor_total_ajustado_em?: string | null;
           dia_final_pagamento?: string | null;
           arquivado?: boolean;
           data_arquivamento?: string | null;
@@ -189,7 +199,12 @@ export interface Database {
           cerimonialista?: Json | null;
           observacoes?: string | null;
           status?: 'Agendado' | 'Confirmado' | 'Em andamento' | 'Concluído' | 'Cancelado';
+          modo_valor_total?: 'automatico' | 'manual';
+          valor_total_servicos_calculado?: number | null;
           valor_total?: number;
+          motivo_ajuste_valor_total?: string | null;
+          valor_total_ajustado_por?: string | null;
+          valor_total_ajustado_em?: string | null;
           dia_final_pagamento?: string | null;
           arquivado?: boolean;
           data_arquivamento?: string | null;

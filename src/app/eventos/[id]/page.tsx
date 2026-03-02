@@ -159,6 +159,7 @@ export default function EventoViewPage() {
   const handleServicosChange = () => {
     // Função para recarregar serviços quando houver mudanças
     refetchServicos();
+    refetchEvento();
   };
 
   const handleAnexosChange = () => {
@@ -422,6 +423,19 @@ export default function EventoViewPage() {
       </Layout>
     );
   }
+
+  const totalCustos = custos?.filter(custo => !custo.removido).reduce((total, custo) => total + (custo.valor * (custo.quantidade || 1)), 0) || 0;
+  const valorTotalCobrado = eventoLocal?.valorTotal ?? evento.valorTotal ?? 0;
+  const totalServicosCalculado = (eventoLocal?.valorTotalServicosCalculado ?? evento.valorTotalServicosCalculado)
+    ?? (servicos?.filter((servico) => !servico.removido).reduce((total, servico) => {
+      const quantidade = servico.quantidade || 1;
+      const valorUnitario = servico.valorUnitario ?? servico.tipoServico?.valorPadrao ?? 0;
+      const totalItem = servico.valorTotalItem ?? quantidade * valorUnitario;
+      return total + totalItem;
+    }, 0) || 0);
+  const modoValorTotal = eventoLocal?.modoValorTotal || evento.modoValorTotal || 'manual';
+  const divergenciaTotal = valorTotalCobrado - totalServicosCalculado;
+  const temDivergencia = Math.abs(divergenciaTotal) > 0.01;
 
   return (
     <Layout>
@@ -979,22 +993,44 @@ export default function EventoViewPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="text-center p-4 bg-surface/50 rounded-lg">
                   <div className="text-2xl font-bold text-primary">
-                    R$ {evento.valorTotal?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+                    R$ {valorTotalCobrado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </div>
                   <div className="text-sm text-text-secondary">Valor Total Cobrado</div>
                 </div>
                 <div className="text-center p-4 bg-surface/50 rounded-lg">
                   <div className="text-2xl font-bold text-error">
-                    R$ {custos?.filter(custo => !custo.removido).reduce((total, custo) => total + (custo.valor * (custo.quantidade || 1)), 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+                    R$ {totalCustos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </div>
                   <div className="text-sm text-text-secondary">Total de Custos</div>
                 </div>
                 <div className="text-center p-4 bg-surface/50 rounded-lg">
-                  <div className={`text-2xl font-bold ${(evento.valorTotal || 0) - (custos?.filter(custo => !custo.removido).reduce((total, custo) => total + (custo.valor * (custo.quantidade || 1)), 0) || 0) >= 0 ? 'text-success' : 'text-error'}`}>
-                    R$ {((evento.valorTotal || 0) - (custos?.filter(custo => !custo.removido).reduce((total, custo) => total + (custo.valor * (custo.quantidade || 1)), 0) || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  <div className={`text-2xl font-bold ${valorTotalCobrado - totalCustos >= 0 ? 'text-success' : 'text-error'}`}>
+                    R$ {(valorTotalCobrado - totalCustos).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </div>
                   <div className="text-sm text-text-secondary">Estimativa de Lucro</div>
                 </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="rounded-lg border border-border p-3 text-sm">
+                  <div className="text-text-secondary">Modo do valor total</div>
+                  <div className="font-semibold text-text-primary capitalize">{modoValorTotal}</div>
+                  <div className="mt-1 text-text-secondary">
+                    Total calculado pelos serviços: <strong>R$ {totalServicosCalculado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                  </div>
+                </div>
+                {temDivergencia && (
+                  <div className={`rounded-lg border p-3 text-sm ${modoValorTotal === 'manual' ? 'border-warning text-warning-text bg-warning-bg/30' : 'border-error text-error-text bg-error-bg/30'}`}>
+                    <div className="font-semibold">
+                      {modoValorTotal === 'manual'
+                        ? 'Diferença intencional (modo manual)'
+                        : 'Atenção: divergência no modo automático'}
+                    </div>
+                    <div>
+                      Diferença entre cobrado e calculado: <strong>R$ {divergenciaTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

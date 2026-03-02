@@ -1,5 +1,5 @@
 import { BaseSupabaseRepository } from './base-supabase-repository';
-import { Evento, StatusEvento } from '@/types';
+import { Evento, HistoricoValorEvento, StatusEvento } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
 import { getDiaSemana, dateToUTCMidnight, dateToLocalMidnight } from '@/lib/utils/date-helpers';
 import { getEmpresaIdPadrao } from '@/lib/tenant-config';
@@ -38,7 +38,14 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
       cerimonialista: row.cerimonialista as { nome?: string; telefone?: string } | undefined,
       observacoes: row.observacoes,
       status: row.status as Evento['status'],
+      modoValorTotal: row.modo_valor_total || 'manual',
+      valorTotalServicosCalculado: row.valor_total_servicos_calculado !== null && row.valor_total_servicos_calculado !== undefined
+        ? parseFloat(row.valor_total_servicos_calculado)
+        : undefined,
       valorTotal: parseFloat(row.valor_total) || 0,
+      motivoAjusteValorTotal: row.motivo_ajuste_valor_total || undefined,
+      valorTotalAjustadoPor: row.valor_total_ajustado_por || undefined,
+      valorTotalAjustadoEm: row.valor_total_ajustado_em ? new Date(row.valor_total_ajustado_em) : undefined,
       diaFinalPagamento: row.dia_final_pagamento ? new Date(row.dia_final_pagamento) : undefined as any,
       arquivado: row.arquivado || false,
       dataArquivamento: row.data_arquivamento ? new Date(row.data_arquivamento) : undefined,
@@ -107,6 +114,11 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
       }
     }
     if (entity.valorTotal !== undefined) data.valor_total = entity.valorTotal;
+    if (entity.modoValorTotal !== undefined) data.modo_valor_total = entity.modoValorTotal;
+    if (entity.valorTotalServicosCalculado !== undefined) data.valor_total_servicos_calculado = entity.valorTotalServicosCalculado;
+    if (entity.motivoAjusteValorTotal !== undefined) data.motivo_ajuste_valor_total = entity.motivoAjusteValorTotal || null;
+    if (entity.valorTotalAjustadoPor !== undefined) data.valor_total_ajustado_por = entity.valorTotalAjustadoPor || null;
+    if (entity.valorTotalAjustadoEm !== undefined) data.valor_total_ajustado_em = entity.valorTotalAjustadoEm instanceof Date ? entity.valorTotalAjustadoEm.toISOString() : entity.valorTotalAjustadoEm || null;
     if (entity.diaFinalPagamento !== undefined) data.dia_final_pagamento = entity.diaFinalPagamento instanceof Date ? entity.diaFinalPagamento.toISOString() : entity.diaFinalPagamento || null;
     if (entity.arquivado !== undefined) data.arquivado = entity.arquivado;
     if (entity.dataArquivamento !== undefined) data.data_arquivamento = entity.dataArquivamento instanceof Date ? entity.dataArquivamento.toISOString() : entity.dataArquivamento || null;
@@ -238,6 +250,13 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
   async updateEvento(id: string, evento: Partial<Evento>, userId: string): Promise<Evento> {
     const empresaId = getEmpresaIdPadrao();
     const supabaseData = this.convertToSupabase(evento);
+    const { data: anteriorData } = await this.supabase
+      .from(this.tableName)
+      .select('*')
+      .eq('id', id)
+      .eq('empresa_id', empresaId)
+      .maybeSingle();
+    const anterior = anteriorData as any;
 
     const { data, error } = await this.supabase
       .from(this.tableName)
@@ -249,6 +268,47 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
 
     if (error) {
       throw new Error(`Erro ao atualizar evento: ${error.message}`);
+    }
+
+    if (anterior) {
+      const dataRow = data as any;
+      const valorAnterior = anterior.valor_total !== null && anterior.valor_total !== undefined
+        ? parseFloat(anterior.valor_total)
+        : 0;
+      const valorNovo = dataRow.valor_total !== null && dataRow.valor_total !== undefined
+        ? parseFloat(dataRow.valor_total)
+        : valorAnterior;
+      const calculadoAnterior = anterior.valor_total_servicos_calculado !== null && anterior.valor_total_servicos_calculado !== undefined
+        ? parseFloat(anterior.valor_total_servicos_calculado)
+        : 0;
+      const calculadoNovo = dataRow.valor_total_servicos_calculado !== null && dataRow.valor_total_servicos_calculado !== undefined
+        ? parseFloat(dataRow.valor_total_servicos_calculado)
+        : calculadoAnterior;
+      const modoAnterior = anterior.modo_valor_total || 'manual';
+      const modoNovo = dataRow.modo_valor_total || modoAnterior;
+
+      if (
+        valorAnterior !== valorNovo ||
+        calculadoAnterior !== calculadoNovo ||
+        modoAnterior !== modoNovo
+      ) {
+        try {
+          await this.supabase.from('eventos_valor_historico').insert({
+            empresa_id: empresaId,
+            evento_id: id,
+            user_id: userId,
+            modo_valor_anterior: modoAnterior,
+            modo_valor_novo: modoNovo,
+            valor_total_anterior: valorAnterior,
+            valor_total_novo: valorNovo,
+            valor_total_servicos_anterior: calculadoAnterior,
+            valor_total_servicos_novo: calculadoNovo,
+            motivo_ajuste: dataRow.motivo_ajuste_valor_total || anterior.motivo_ajuste_valor_total || null
+          });
+        } catch {
+          // Histórico é complementar; não deve bloquear o fluxo principal.
+        }
+      }
     }
 
     return this.convertFromSupabase(data);
@@ -416,6 +476,42 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
       throw new Error('userId é obrigatório para buscar evento');
     }
     return this.getEventoById(id, userId);
+  }
+
+  async getHistoricoValorEvento(userId: string, eventoId: string): Promise<HistoricoValorEvento[]> {
+    const empresaId = getEmpresaIdPadrao();
+    const { data, error } = await this.supabase
+      .from('eventos_valor_historico')
+      .select('*')
+      .eq('empresa_id', empresaId)
+      .eq('evento_id', eventoId)
+      .order('data_alteracao', { ascending: false });
+
+    if (error) {
+      throw new Error(`Erro ao buscar histórico de valor do evento: ${error.message}`);
+    }
+
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      eventoId: row.evento_id,
+      userId: row.user_id || undefined,
+      modoValorAnterior: row.modo_valor_anterior || undefined,
+      modoValorNovo: row.modo_valor_novo || undefined,
+      valorTotalAnterior: row.valor_total_anterior !== null && row.valor_total_anterior !== undefined
+        ? parseFloat(row.valor_total_anterior)
+        : undefined,
+      valorTotalNovo: row.valor_total_novo !== null && row.valor_total_novo !== undefined
+        ? parseFloat(row.valor_total_novo)
+        : undefined,
+      valorTotalServicosAnterior: row.valor_total_servicos_anterior !== null && row.valor_total_servicos_anterior !== undefined
+        ? parseFloat(row.valor_total_servicos_anterior)
+        : undefined,
+      valorTotalServicosNovo: row.valor_total_servicos_novo !== null && row.valor_total_servicos_novo !== undefined
+        ? parseFloat(row.valor_total_servicos_novo)
+        : undefined,
+      motivoAjuste: row.motivo_ajuste || undefined,
+      dataAlteracao: new Date(row.data_alteracao)
+    }));
   }
 }
 
