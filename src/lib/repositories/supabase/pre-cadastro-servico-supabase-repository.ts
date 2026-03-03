@@ -31,14 +31,8 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
     
     if (entity.userId !== undefined) data.user_id = entity.userId;
     if (entity.preCadastroId !== undefined) data.pre_cadastro_id = entity.preCadastroId;
-    if (entity.tipoServicoId !== undefined) {
-      data.servico_id = entity.tipoServicoId;
-      data.tipo_servico_id = entity.tipoServicoId; // compatibilidade legada
-    }
-    if ((entity as any).servicoId !== undefined) {
-      data.servico_id = (entity as any).servicoId;
-      data.tipo_servico_id = (entity as any).servicoId; // compatibilidade legada
-    }
+    if (entity.tipoServicoId !== undefined) data.servico_id = entity.tipoServicoId;
+    if ((entity as any).servicoId !== undefined) data.servico_id = (entity as any).servicoId;
     if (entity.observacoes !== undefined) data.observacoes = entity.observacoes || null;
     if (entity.removido !== undefined) data.removido = entity.removido;
     if (entity.dataRemocao !== undefined) data.data_remocao = entity.dataRemocao instanceof Date ? entity.dataRemocao.toISOString() : entity.dataRemocao || null;

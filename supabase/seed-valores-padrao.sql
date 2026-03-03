@@ -37,9 +37,9 @@ CROSS JOIN (
 ON CONFLICT (user_id, nome) DO NOTHING;
 
 -- ============================================
--- TIPOS DE SERVICO
+-- SERVICOS (CATALOGO)
 -- ============================================
-INSERT INTO tipo_servicos (id, user_id, nome, descricao, ativo, data_cadastro)
+INSERT INTO servicos (id, user_id, nome, descricao, ativo, data_cadastro)
 SELECT
   uuid_generate_v4()::text,
   u.id,

@@ -41,14 +41,8 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     const data: any = {};
     
     if (entity.eventoId !== undefined) data.evento_id = entity.eventoId;
-    if (entity.tipoServicoId !== undefined) {
-      data.servico_id = entity.tipoServicoId;
-      data.tipo_servico_id = entity.tipoServicoId; // compatibilidade legada
-    }
-    if (entity.servicoId !== undefined) {
-      data.servico_id = entity.servicoId;
-      data.tipo_servico_id = entity.servicoId; // compatibilidade legada
-    }
+    if (entity.tipoServicoId !== undefined) data.servico_id = entity.tipoServicoId;
+    if (entity.servicoId !== undefined) data.servico_id = entity.servicoId;
     if (entity.quantidade !== undefined) data.quantidade = entity.quantidade;
     if (entity.valorUnitario !== undefined) data.valor_unitario = entity.valorUnitario;
     if (entity.valorTotalItem !== undefined) data.valor_total_item = entity.valorTotalItem;

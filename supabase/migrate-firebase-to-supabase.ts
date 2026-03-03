@@ -201,7 +201,7 @@ async function migrateTipos() {
             data_cadastro: convertTimestamp(data.dataCadastro) || new Date().toISOString(),
           };
           
-          await supabase.from('tipo_servicos').upsert(supabaseData, { onConflict: 'id' });
+          await supabase.from('servicos').upsert(supabaseData, { onConflict: 'id' });
           stats.tipos.migrated++;
         } catch (error: any) {
           console.error(`  ❌ Erro ao migrar tipo_servico ${doc.id}:`, error.message);
@@ -573,7 +573,7 @@ async function migrateServicos() {
           id: doc.id, // VARCHAR(255) - Firestore ID
           user_id: data.userId || null, // VARCHAR(255) - Firebase UID
           evento_id: data.eventoId || null, // VARCHAR(255) - Firestore ID
-          tipo_servico_id: data.tipoServicoId || null, // VARCHAR(255) - Firestore ID
+            servico_id: data.servicoId || data.tipoServicoId || null, // VARCHAR(255) - Firestore ID
           observacoes: data.observacoes || null,
           removido: data.removido || false,
           data_remocao: convertTimestamp(data.dataRemocao) || null,

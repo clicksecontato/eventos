@@ -618,7 +618,7 @@ async function migrateServicos(userId: string) {
             id: doc.id,
             user_id: userId,
             evento_id: eventoId,
-            tipo_servico_id: data.tipoServicoId || null,
+            servico_id: data.servicoId || data.tipoServicoId || null,
             observacoes: data.observacoes || null,
             removido: data.removido || false,
             data_remocao: convertTimestamp(data.dataRemocao) || null,

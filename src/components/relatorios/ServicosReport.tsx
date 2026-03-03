@@ -399,7 +399,7 @@ export default function ServicosReport({ eventos, servicos, tiposServicos }: Ser
         titleTooltip={{
           title: "Serviços por Tipo",
           description: "Distribuição visual dos serviços agrupados por tipo (Totem Fotográfico, Álbum de Assinaturas, etc.) no período selecionado.",
-          calculation: "Cada serviço é contabilizado uma vez de acordo com seu tipoServicoId. O gráfico mostra a quantidade e percentual de cada tipo de serviço."
+          calculation: "Cada serviço é contabilizado uma vez de acordo com seu servicoId (com fallback legado quando necessário). O gráfico mostra a quantidade e percentual de cada serviço."
         }}
         tabs={[
           {

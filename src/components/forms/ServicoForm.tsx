@@ -21,7 +21,6 @@ interface ServicoFormProps {
 }
 
 interface FormData {
-  tipoServicoId: string;
   servicoId: string;
   quantidade: number;
   valorUnitario: number;
@@ -40,7 +39,6 @@ interface TipoServicoOption {
 export default function ServicoForm({ servico, evento, onSave, onCancel }: ServicoFormProps) {
   const { userId } = useCurrentUser();
   const [formData, setFormData] = useState<FormData>({
-    tipoServicoId: '',
     servicoId: '',
     quantidade: 1,
     valorUnitario: 0,
@@ -85,7 +83,6 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
   useEffect(() => {
     if (servico) {
       setFormData({
-        tipoServicoId: servico.servicoId || servico.tipoServicoId,
         servicoId: servico.servicoId || servico.tipoServicoId,
         quantidade: servico.quantidade ?? 1,
         valorUnitario: servico.valorUnitario ?? servico.tipoServico?.valorPadrao ?? 0,
@@ -114,8 +111,8 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.tipoServicoId) {
-      newErrors.tipoServicoId = 'Serviço é obrigatório';
+    if (!formData.servicoId) {
+      newErrors.servicoId = 'Serviço é obrigatório';
     }
     if (!formData.quantidade || formData.quantidade <= 0) {
       newErrors.quantidade = 'Quantidade deve ser maior que zero';
@@ -141,7 +138,7 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
 
     try {
       // Buscar dados completos do tipo de serviço
-      const tipoServico = await dataService.getServicoCatalogoById(formData.servicoId || formData.tipoServicoId, userId);
+      const tipoServico = await dataService.getServicoCatalogoById(formData.servicoId, userId);
       
       if (!tipoServico) {
         return;
@@ -150,8 +147,8 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
       const servicoData: ServicoEvento = {
         id: servico?.id || '',
         eventoId: evento.id,
-        tipoServicoId: formData.servicoId || formData.tipoServicoId,
-        servicoId: formData.servicoId || formData.tipoServicoId,
+        tipoServicoId: formData.servicoId,
+        servicoId: formData.servicoId,
         tipoServico: tipoServico,
         quantidade: formData.quantidade,
         valorUnitario: formData.valorUnitario,
@@ -191,16 +188,15 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
       // Definir o novo tipo como selecionado
       setFormData(prev => ({
         ...prev,
-        tipoServicoId: novoTipo.id,
         servicoId: novoTipo.id,
         valorUnitario: novoTipo.valorPadrao ?? prev.valorUnitario
       }));
 
       // Limpar erro se existir
-      if (errors.tipoServicoId) {
+      if (errors.servicoId) {
         setErrors(prev => ({
           ...prev,
-        tipoServicoId: ''
+        servicoId: ''
       }));
     }
 
@@ -238,9 +234,8 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
                 <SelectWithSearch
                   label="Serviço"
                   placeholder="Selecione ou crie um serviço"
-                  value={formData.tipoServicoId}
+                  value={formData.servicoId}
                   onChange={(value) => {
-                    handleInputChange('tipoServicoId', value);
                     handleInputChange('servicoId', value);
                   }}
                   options={tiposServico.map(tipo => ({
@@ -250,7 +245,7 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
                   }))}
                   onCreateNew={handleCreateNewTipoServico}
                   allowCreate={true}
-                  error={errors.tipoServicoId}
+                  error={errors.servicoId}
                 />
           </div>
 

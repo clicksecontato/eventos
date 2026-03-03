@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const tiposServico = await dataService.getTiposServicoAtivos(userId);
+    const tiposServico = await dataService.getServicosCatalogoAtivos(userId);
     if (tiposServico.length < 2) {
       return NextResponse.json(
         { error: 'Usuário precisa ter pelo menos 2 serviços cadastrados' },
