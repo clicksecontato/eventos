@@ -291,7 +291,7 @@ export default function AdminUsersPage() {
                 </select>
               </div>
               <div className="md:col-span-2">
-                <Button type="submit" disabled={criandoUsuario}>
+                <Button type="submit" data-testid="admin-criar-usuario" disabled={criandoUsuario}>
                   {criandoUsuario ? 'Criando usuário...' : 'Criar usuário'}
                 </Button>
               </div>

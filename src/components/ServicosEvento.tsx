@@ -395,7 +395,7 @@ export default function ServicosEvento({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button onClick={handleNovoServico} className="btn-add p-2">
+                  <Button onClick={handleNovoServico} data-testid="servicos-novo" className="btn-add p-2">
                     <PlusIcon className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
@@ -418,7 +418,7 @@ export default function ServicosEvento({
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button onClick={handleNovoServico} className="btn-add p-2">
+                      <Button onClick={handleNovoServico} data-testid="servicos-novo-empty" className="btn-add p-2">
                         <PlusIcon className="h-4 w-4" />
                       </Button>
                     </TooltipTrigger>
@@ -625,6 +625,7 @@ export default function ServicosEvento({
               </Button>
               <Button
                 onClick={handleSalvarServicosSelecionados}
+                data-testid="servicos-modal-salvar"
                 disabled={servicosSelecionados.size === 0 || loadingTipos}
               >
                 Salvar ({servicosSelecionados.size})

@@ -138,6 +138,7 @@ export default function LoginPage() {
               <Button
                 variant="outline"
                 type="submit"
+                data-testid="login-submit"
                 className="w-full"
                 disabled={!email || !senha || loading}
               >

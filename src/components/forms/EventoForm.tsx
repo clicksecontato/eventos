@@ -1467,6 +1467,7 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
         <Button
           type="submit"
           variant="outline"
+          data-testid="evento-submit"
           disabled={submitting}
         >
           {submitting ? (
