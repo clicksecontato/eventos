@@ -18,7 +18,8 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     return {
       id: row.id,
       eventoId: row.evento_id,
-      tipoServicoId: row.tipo_servico_id,
+      tipoServicoId: row.servico_id || row.tipo_servico_id,
+      servicoId: row.servico_id || row.tipo_servico_id,
       quantidade,
       valorUnitario,
       valorTotalItem: row.valor_total_item !== null && row.valor_total_item !== undefined
@@ -40,7 +41,14 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     const data: any = {};
     
     if (entity.eventoId !== undefined) data.evento_id = entity.eventoId;
-    if (entity.tipoServicoId !== undefined) data.tipo_servico_id = entity.tipoServicoId;
+    if (entity.tipoServicoId !== undefined) {
+      data.servico_id = entity.tipoServicoId;
+      data.tipo_servico_id = entity.tipoServicoId; // compatibilidade legada
+    }
+    if (entity.servicoId !== undefined) {
+      data.servico_id = entity.servicoId;
+      data.tipo_servico_id = entity.servicoId; // compatibilidade legada
+    }
     if (entity.quantidade !== undefined) data.quantidade = entity.quantidade;
     if (entity.valorUnitario !== undefined) data.valor_unitario = entity.valorUnitario;
     if (entity.valorTotalItem !== undefined) data.valor_total_item = entity.valorTotalItem;
@@ -59,7 +67,7 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .select('*, tipo_servicos(*)')
+      .select('*, servicos(*)')
       .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .eq('removido', false)
@@ -75,16 +83,16 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
       // Popular tipo de serviço se disponível
       // Type assertion para resolver problema de inferência de tipos do Supabase
       const rowData = row as any;
-      if (rowData.tipo_servicos) {
+      if (rowData.servicos) {
         servico.tipoServico = {
-          id: rowData.tipo_servicos.id,
-          nome: rowData.tipo_servicos.nome,
-          descricao: rowData.tipo_servicos.descricao,
-          valorPadrao: rowData.tipo_servicos.valor_padrao !== null && rowData.tipo_servicos.valor_padrao !== undefined
-            ? parseFloat(rowData.tipo_servicos.valor_padrao)
+          id: rowData.servicos.id,
+          nome: rowData.servicos.nome,
+          descricao: rowData.servicos.descricao,
+          valorPadrao: rowData.servicos.valor_padrao !== null && rowData.servicos.valor_padrao !== undefined
+            ? parseFloat(rowData.servicos.valor_padrao)
             : 0,
-          ativo: rowData.tipo_servicos.ativo,
-          dataCadastro: new Date(rowData.tipo_servicos.data_cadastro),
+          ativo: rowData.servicos.ativo,
+          dataCadastro: new Date(rowData.servicos.data_cadastro),
         };
       }
       
@@ -110,7 +118,7 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     const { data, error } = await this.supabase
       .from(this.tableName)
       .insert(supabaseData)
-      .select('*, tipo_servicos(*)')
+      .select('*, servicos(*)')
       .single();
 
     if (error) {
@@ -121,16 +129,16 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     
     // Type assertion para resolver problema de inferência de tipos do Supabase
     const dataRow = data as any;
-    if (dataRow.tipo_servicos) {
+    if (dataRow.servicos) {
       servicoCriado.tipoServico = {
-        id: dataRow.tipo_servicos.id,
-        nome: dataRow.tipo_servicos.nome,
-        descricao: dataRow.tipo_servicos.descricao,
-        valorPadrao: dataRow.tipo_servicos.valor_padrao !== null && dataRow.tipo_servicos.valor_padrao !== undefined
-          ? parseFloat(dataRow.tipo_servicos.valor_padrao)
+        id: dataRow.servicos.id,
+        nome: dataRow.servicos.nome,
+        descricao: dataRow.servicos.descricao,
+        valorPadrao: dataRow.servicos.valor_padrao !== null && dataRow.servicos.valor_padrao !== undefined
+          ? parseFloat(dataRow.servicos.valor_padrao)
           : 0,
-        ativo: dataRow.tipo_servicos.ativo,
-        dataCadastro: new Date(dataRow.tipo_servicos.data_cadastro),
+        ativo: dataRow.servicos.ativo,
+        dataCadastro: new Date(dataRow.servicos.data_cadastro),
       };
     }
 
@@ -155,7 +163,7 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
       .eq('id', servicoId)
       .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
-      .select('*, tipo_servicos(*)')
+      .select('*, servicos(*)')
       .single();
 
     if (error) {
@@ -166,16 +174,16 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     
     // Type assertion para resolver problema de inferência de tipos do Supabase
     const dataRow = data as any;
-    if (dataRow.tipo_servicos) {
+    if (dataRow.servicos) {
       servicoAtualizado.tipoServico = {
-        id: dataRow.tipo_servicos.id,
-        nome: dataRow.tipo_servicos.nome,
-        descricao: dataRow.tipo_servicos.descricao,
-        valorPadrao: dataRow.tipo_servicos.valor_padrao !== null && dataRow.tipo_servicos.valor_padrao !== undefined
-          ? parseFloat(dataRow.tipo_servicos.valor_padrao)
+        id: dataRow.servicos.id,
+        nome: dataRow.servicos.nome,
+        descricao: dataRow.servicos.descricao,
+        valorPadrao: dataRow.servicos.valor_padrao !== null && dataRow.servicos.valor_padrao !== undefined
+          ? parseFloat(dataRow.servicos.valor_padrao)
           : 0,
-        ativo: dataRow.tipo_servicos.ativo,
-        dataCadastro: new Date(dataRow.tipo_servicos.data_cadastro),
+        ativo: dataRow.servicos.ativo,
+        dataCadastro: new Date(dataRow.servicos.data_cadastro),
       };
     }
 
@@ -239,7 +247,7 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .select('*, tipo_servicos(*)')
+      .select('*, servicos(*)')
       .eq('empresa_id', empresaId)
       .order('data_cadastro', { ascending: false });
 
@@ -252,16 +260,16 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
       
       // Type assertion para resolver problema de inferência de tipos do Supabase
       const rowData = row as any;
-      if (rowData.tipo_servicos) {
+      if (rowData.servicos) {
         servico.tipoServico = {
-          id: rowData.tipo_servicos.id,
-          nome: rowData.tipo_servicos.nome,
-          descricao: rowData.tipo_servicos.descricao,
-          valorPadrao: rowData.tipo_servicos.valor_padrao !== null && rowData.tipo_servicos.valor_padrao !== undefined
-            ? parseFloat(rowData.tipo_servicos.valor_padrao)
+          id: rowData.servicos.id,
+          nome: rowData.servicos.nome,
+          descricao: rowData.servicos.descricao,
+          valorPadrao: rowData.servicos.valor_padrao !== null && rowData.servicos.valor_padrao !== undefined
+            ? parseFloat(rowData.servicos.valor_padrao)
             : 0,
-          ativo: rowData.tipo_servicos.ativo,
-          dataCadastro: new Date(rowData.tipo_servicos.data_cadastro),
+          ativo: rowData.servicos.ativo,
+          dataCadastro: new Date(rowData.servicos.data_cadastro),
         };
       }
       
@@ -276,7 +284,7 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .select('*, tipo_servicos(*)')
+      .select('*, servicos(*)')
       .eq('id', id)
       .eq('empresa_id', empresaId)
       .maybeSingle();
@@ -291,16 +299,16 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     
     // Type assertion para resolver problema de inferência de tipos do Supabase
     const dataRow = data as any;
-    if (dataRow.tipo_servicos) {
+    if (dataRow.servicos) {
       servico.tipoServico = {
-        id: dataRow.tipo_servicos.id,
-        nome: dataRow.tipo_servicos.nome,
-        descricao: dataRow.tipo_servicos.descricao,
-        valorPadrao: dataRow.tipo_servicos.valor_padrao !== null && dataRow.tipo_servicos.valor_padrao !== undefined
-          ? parseFloat(dataRow.tipo_servicos.valor_padrao)
+        id: dataRow.servicos.id,
+        nome: dataRow.servicos.nome,
+        descricao: dataRow.servicos.descricao,
+        valorPadrao: dataRow.servicos.valor_padrao !== null && dataRow.servicos.valor_padrao !== undefined
+          ? parseFloat(dataRow.servicos.valor_padrao)
           : 0,
-        ativo: dataRow.tipo_servicos.ativo,
-        dataCadastro: new Date(dataRow.tipo_servicos.data_cadastro),
+        ativo: dataRow.servicos.ativo,
+        dataCadastro: new Date(dataRow.servicos.data_cadastro),
       };
     }
 
@@ -316,7 +324,7 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .select('*, tipo_servicos(*)')
+      .select('*, servicos(*)')
       .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .order('data_cadastro', { ascending: false });
@@ -330,16 +338,16 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
       
       // Type assertion para resolver problema de inferência de tipos do Supabase
       const rowData = row as any;
-      if (rowData.tipo_servicos) {
+      if (rowData.servicos) {
         servico.tipoServico = {
-          id: rowData.tipo_servicos.id,
-          nome: rowData.tipo_servicos.nome,
-          descricao: rowData.tipo_servicos.descricao,
-          valorPadrao: rowData.tipo_servicos.valor_padrao !== null && rowData.tipo_servicos.valor_padrao !== undefined
-            ? parseFloat(rowData.tipo_servicos.valor_padrao)
+          id: rowData.servicos.id,
+          nome: rowData.servicos.nome,
+          descricao: rowData.servicos.descricao,
+          valorPadrao: rowData.servicos.valor_padrao !== null && rowData.servicos.valor_padrao !== undefined
+            ? parseFloat(rowData.servicos.valor_padrao)
             : 0,
-          ativo: rowData.tipo_servicos.ativo,
-          dataCadastro: new Date(rowData.tipo_servicos.data_cadastro),
+          ativo: rowData.servicos.ativo,
+          dataCadastro: new Date(rowData.servicos.data_cadastro),
         };
       }
       
@@ -386,7 +394,7 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     for (const chunk of chunks) {
       const { data, error } = await this.supabase
         .from(this.tableName)
-        .select('*, tipo_servicos(*)')
+      .select('*, servicos(*)')
         .eq('empresa_id', empresaId)
         .in('evento_id', chunk)
         .eq('removido', false)
@@ -404,16 +412,16 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
         
         // Type assertion para resolver problema de inferência de tipos do Supabase
         const rowData = row as any;
-        if (rowData.tipo_servicos) {
+        if (rowData.servicos) {
           servico.tipoServico = {
-            id: rowData.tipo_servicos.id,
-            nome: rowData.tipo_servicos.nome,
-            descricao: rowData.tipo_servicos.descricao,
-            valorPadrao: rowData.tipo_servicos.valor_padrao !== null && rowData.tipo_servicos.valor_padrao !== undefined
-              ? parseFloat(rowData.tipo_servicos.valor_padrao)
+            id: rowData.servicos.id,
+            nome: rowData.servicos.nome,
+            descricao: rowData.servicos.descricao,
+            valorPadrao: rowData.servicos.valor_padrao !== null && rowData.servicos.valor_padrao !== undefined
+              ? parseFloat(rowData.servicos.valor_padrao)
               : 0,
-            ativo: rowData.tipo_servicos.ativo,
-            dataCadastro: new Date(rowData.tipo_servicos.data_cadastro),
+            ativo: rowData.servicos.ativo,
+            dataCadastro: new Date(rowData.servicos.data_cadastro),
           };
         }
         

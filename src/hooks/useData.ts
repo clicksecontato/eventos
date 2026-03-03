@@ -470,7 +470,7 @@ export function useAllServicos(): UseDataResult<ServicoEvento[]> {
   return { data, loading, error, refetch: fetchData };
 }
 
-// Hook para tipos de serviços
+// Hook para serviços de catálogo
 export function useTiposServicos(): UseDataResult<TipoServico[]> {
   const [data, setData] = useState<TipoServico[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -487,10 +487,10 @@ export function useTiposServicos(): UseDataResult<TipoServico[]> {
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getTiposServicos(userId);
+      const result = await dataService.getAllServicosCatalogo(userId);
       setData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao carregar tipos de serviços');
+      setError(err instanceof Error ? err.message : 'Erro ao carregar serviços');
     } finally {
       setLoading(false);
     }

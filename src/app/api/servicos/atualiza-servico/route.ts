@@ -62,7 +62,8 @@ export async function POST(request: NextRequest) {
                 servico.id,
                 {
                   eventoId: evento.id,
-                  tipoServicoId: servico.tipoServicoId,
+                  tipoServicoId: servico.servicoId || servico.tipoServicoId,
+                  servicoId: servico.servicoId || servico.tipoServicoId,
                   observacoes: servico.observacoes,
                   removido: servico.removido,
                   dataRemocao: servico.dataRemocao,

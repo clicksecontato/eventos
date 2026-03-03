@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     const tiposServico = await dataService.getTiposServicoAtivos(userId);
     if (tiposServico.length < 2) {
       return NextResponse.json(
-        { error: 'Usuário precisa ter pelo menos 2 tipos de serviço cadastrados' },
+        { error: 'Usuário precisa ter pelo menos 2 serviços cadastrados' },
         { status: 400 }
       );
     }
@@ -177,6 +177,7 @@ export async function POST(request: NextRequest) {
           const servicoEvento: Omit<ServicoEvento, 'id'> = {
             eventoId: evento.id,
             tipoServicoId: tipoServico.id,
+            servicoId: tipoServico.id,
             tipoServico: tipoServico,
             observacoes: '',
             dataCadastro: new Date()

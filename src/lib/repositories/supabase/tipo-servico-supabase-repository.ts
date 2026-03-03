@@ -6,7 +6,7 @@ import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
 export class TipoServicoSupabaseRepository extends BaseSupabaseRepository<TipoServico> {
   constructor() {
-    super('tipo_servicos', undefined, true); // Usar service role para bypassar RLS
+    super('servicos', undefined, true); // Usar service role para bypassar RLS
   }
 
   protected convertFromSupabase(row: any): TipoServico {

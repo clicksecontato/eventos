@@ -671,6 +671,7 @@ export interface PreCadastroServico {
   userId: string;
   preCadastroId: string;
   tipoServicoId: string;
+  servicoId?: string;
   tipoServico?: TipoServico;
   observacoes?: string;
   removido?: boolean;

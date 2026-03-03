@@ -6,7 +6,7 @@ import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { randomUUID } from 'crypto';
 
 /**
- * API route para inicializar tipos de serviço padrão
+ * API route para inicializar serviços padrão
  * Usa o cliente admin do Supabase para contornar RLS
  */
 export async function POST(request: NextRequest) {
@@ -22,12 +22,12 @@ export async function POST(request: NextRequest) {
     // Usar repository factory para obter o repositório correto
     const tipoServicoRepo = repositoryFactory.getTipoServicoRepository();
 
-    // Verificar se já existem tipos de serviço para este usuário
+    // Verificar se já existem serviços para este usuário
     const existentes = await tipoServicoRepo.findAll(userId);
 
     if (existentes.length > 0) {
       return NextResponse.json({
-        message: 'Tipos de serviço já inicializados',
+        message: 'Serviços já inicializados',
         tipos: existentes.length
       });
     }
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       const id = randomUUID();
       
       const { data, error } = await supabaseAdmin
-        .from('tipo_servicos')
+        .from('servicos')
         .insert({
           id: id,
           nome: item.nome,
@@ -63,10 +63,10 @@ export async function POST(request: NextRequest) {
       if (error) {
         // Se for erro de duplicação, ignorar silenciosamente
         if (error.code === '23505') {
-          console.log(`Tipo de serviço "${item.nome}" já existe, ignorando...`);
+          console.log(`Serviço "${item.nome}" já existe, ignorando...`);
           tiposCriados.push({ id, nome: item.nome }); // Contar como criado
         } else {
-          console.error(`Erro ao criar tipo de serviço "${item.nome}":`, error);
+          console.error(`Erro ao criar serviço "${item.nome}":`, error);
         }
       } else {
         tiposCriados.push(data);
@@ -74,14 +74,14 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({
-      message: 'Tipos de serviço inicializados com sucesso',
+      message: 'Serviços inicializados com sucesso',
       tipos: tiposCriados.length
     });
   } catch (error: any) {
-    console.error('Erro ao inicializar tipos de serviço:', error);
+    console.error('Erro ao inicializar serviços:', error);
     return NextResponse.json(
       {
-        error: error.message || 'Erro ao inicializar tipos de serviço',
+        error: error.message || 'Erro ao inicializar serviços',
         details: error.toString()
       },
       { status: 500 }

@@ -14,7 +14,8 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
       id: row.id,
       userId: row.user_id,
       preCadastroId: row.pre_cadastro_id,
-      tipoServicoId: row.tipo_servico_id,
+      tipoServicoId: row.servico_id || row.tipo_servico_id,
+      servicoId: row.servico_id || row.tipo_servico_id,
       observacoes: row.observacoes,
       removido: row.removido || false,
       dataRemocao: row.data_remocao ? new Date(row.data_remocao) : undefined,
@@ -30,7 +31,14 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
     
     if (entity.userId !== undefined) data.user_id = entity.userId;
     if (entity.preCadastroId !== undefined) data.pre_cadastro_id = entity.preCadastroId;
-    if (entity.tipoServicoId !== undefined) data.tipo_servico_id = entity.tipoServicoId;
+    if (entity.tipoServicoId !== undefined) {
+      data.servico_id = entity.tipoServicoId;
+      data.tipo_servico_id = entity.tipoServicoId; // compatibilidade legada
+    }
+    if ((entity as any).servicoId !== undefined) {
+      data.servico_id = (entity as any).servicoId;
+      data.tipo_servico_id = (entity as any).servicoId; // compatibilidade legada
+    }
     if (entity.observacoes !== undefined) data.observacoes = entity.observacoes || null;
     if (entity.removido !== undefined) data.removido = entity.removido;
     if (entity.dataRemocao !== undefined) data.data_remocao = entity.dataRemocao instanceof Date ? entity.dataRemocao.toISOString() : entity.dataRemocao || null;
@@ -47,7 +55,7 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
     const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .select('*, tipo_servicos(*)')
+      .select('*, servicos(*)')
       .eq('empresa_id', empresaId)
       .eq('pre_cadastro_id', preCadastroId)
       .eq('removido', false)
@@ -62,13 +70,13 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
       
       // Popular tipo de serviço se disponível
       const rowData = row as any;
-      if (rowData.tipo_servicos) {
+      if (rowData.servicos) {
         servico.tipoServico = {
-          id: rowData.tipo_servicos.id,
-          nome: rowData.tipo_servicos.nome,
-          descricao: rowData.tipo_servicos.descricao,
-          ativo: rowData.tipo_servicos.ativo,
-          dataCadastro: new Date(rowData.tipo_servicos.data_cadastro),
+          id: rowData.servicos.id,
+          nome: rowData.servicos.nome,
+          descricao: rowData.servicos.descricao,
+          ativo: rowData.servicos.ativo,
+          dataCadastro: new Date(rowData.servicos.data_cadastro),
         };
       }
       
@@ -82,7 +90,7 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
   async findByPreCadastroIdPublic(preCadastroId: string): Promise<PreCadastroServico[]> {
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .select('*, tipo_servicos(*)')
+      .select('*, servicos(*)')
       .eq('pre_cadastro_id', preCadastroId)
       .eq('removido', false)
       .order('data_cadastro', { ascending: false });
@@ -96,13 +104,13 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
       
       // Popular tipo de serviço se disponível
       const rowData = row as any;
-      if (rowData.tipo_servicos) {
+      if (rowData.servicos) {
         servico.tipoServico = {
-          id: rowData.tipo_servicos.id,
-          nome: rowData.tipo_servicos.nome,
-          descricao: rowData.tipo_servicos.descricao,
-          ativo: rowData.tipo_servicos.ativo,
-          dataCadastro: new Date(rowData.tipo_servicos.data_cadastro),
+          id: rowData.servicos.id,
+          nome: rowData.servicos.nome,
+          descricao: rowData.servicos.descricao,
+          ativo: rowData.servicos.ativo,
+          dataCadastro: new Date(rowData.servicos.data_cadastro),
         };
       }
       
@@ -135,7 +143,7 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
     const { data, error } = await this.supabase
       .from(this.tableName)
       .insert(servicosParaInserir)
-      .select('*, tipo_servicos(*)');
+      .select('*, servicos(*)');
 
     if (error) {
       throw new Error(`Erro ao criar serviços: ${error.message}`);
@@ -145,13 +153,13 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
       const servico = this.convertFromSupabase(row);
       
       const rowData = row as any;
-      if (rowData.tipo_servicos) {
+      if (rowData.servicos) {
         servico.tipoServico = {
-          id: rowData.tipo_servicos.id,
-          nome: rowData.tipo_servicos.nome,
-          descricao: rowData.tipo_servicos.descricao,
-          ativo: rowData.tipo_servicos.ativo,
-          dataCadastro: new Date(rowData.tipo_servicos.data_cadastro),
+          id: rowData.servicos.id,
+          nome: rowData.servicos.nome,
+          descricao: rowData.servicos.descricao,
+          ativo: rowData.servicos.ativo,
+          dataCadastro: new Date(rowData.servicos.data_cadastro),
         };
       }
       
@@ -195,7 +203,7 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
     const { data, error } = await this.supabase
       .from(this.tableName)
       .insert(supabaseData)
-      .select('*, tipo_servicos(*)')
+      .select('*, servicos(*)')
       .single();
 
     if (error) {
@@ -205,13 +213,13 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
     const servicoCriado = this.convertFromSupabase(data);
     
     const dataRow = data as any;
-    if (dataRow.tipo_servicos) {
+    if (dataRow.servicos) {
       servicoCriado.tipoServico = {
-        id: dataRow.tipo_servicos.id,
-        nome: dataRow.tipo_servicos.nome,
-        descricao: dataRow.tipo_servicos.descricao,
-        ativo: dataRow.tipo_servicos.ativo,
-        dataCadastro: new Date(dataRow.tipo_servicos.data_cadastro),
+        id: dataRow.servicos.id,
+        nome: dataRow.servicos.nome,
+        descricao: dataRow.servicos.descricao,
+        ativo: dataRow.servicos.ativo,
+        dataCadastro: new Date(dataRow.servicos.data_cadastro),
       };
     }
 

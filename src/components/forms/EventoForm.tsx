@@ -303,7 +303,7 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
       setErroTiposServico(null);
 
       try {
-        const tipos = await dataService.getTiposServicoAtivos(userId);
+        const tipos = await dataService.getServicosCatalogoAtivos(userId);
         const tiposOrdenados = tipos.sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
         setTiposServico(tiposOrdenados);
         setSelectedTiposServicoIds(prev => {
@@ -325,7 +325,7 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
           return validIds;
         });
       } catch (error) {
-        setErroTiposServico('Não foi possível carregar os tipos de serviço.');
+        setErroTiposServico('Não foi possível carregar os serviços.');
       } finally {
         setLoadingTiposServico(false);
       }
@@ -343,10 +343,11 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
       try {
         const servicos = await dataService.getServicosEvento(userId, evento.id);
         setServicosEventoOriginais(servicos);
-        setSelectedTiposServicoIds(new Set(servicos.map(servico => servico.tipoServicoId)));
+        setSelectedTiposServicoIds(new Set(servicos.map(servico => servico.servicoId || servico.tipoServicoId)));
         const configuracoes: Record<string, ServicoConfiguracao> = {};
         servicos.forEach((servico) => {
-          configuracoes[servico.tipoServicoId] = {
+          const chaveServico = servico.servicoId || servico.tipoServicoId;
+          configuracoes[chaveServico] = {
             quantidade: servico.quantidade ?? 1,
             valorUnitario: servico.valorUnitario ?? servico.tipoServico?.valorPadrao ?? 0,
             observacoes: servico.observacoes || '',
@@ -567,7 +568,7 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
     setErroTiposServico(null);
 
     try {
-      const novoTipo = await dataService.createTipoServico({
+      const novoTipo = await dataService.createServicoCatalogo({
         nome,
         descricao: '',
         ativo: true
@@ -595,7 +596,7 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
         }
       }));
     } catch (error) {
-      setErroTiposServico('Não foi possível criar o novo tipo de serviço.');
+      setErroTiposServico('Não foi possível criar o novo serviço.');
       throw error;
     } finally {
       setCriandoTipoServico(false);
@@ -678,7 +679,7 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
           }
         }
 
-        const mapaOriginais = new Map(servicosAtuais.map(servico => [servico.tipoServicoId, servico]));
+        const mapaOriginais = new Map(servicosAtuais.map(servico => [servico.servicoId || servico.tipoServicoId, servico]));
         const atualizados: ServicoEvento[] = [];
 
         for (const tipoId of selecionados) {
@@ -712,6 +713,7 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
           const novoServico = await dataService.createServicoEvento(userId, eventoId, {
             eventoId,
             tipoServicoId: tipoId,
+            servicoId: tipoId,
             tipoServico: tipo,
             quantidade,
             valorUnitario,
@@ -749,6 +751,7 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
           const novoServico = await dataService.createServicoEvento(userId, eventoId, {
             eventoId,
             tipoServicoId: tipoId,
+            servicoId: tipoId,
             tipoServico: tipo,
             quantidade,
             valorUnitario,

@@ -92,8 +92,8 @@ export class RelatoriosReportService {
     const tiposServicosMap = new Map(tiposServicos.map(tipo => [tipo.id, tipo]));
     const servicos = todosServicos.map(servico => ({
       ...servico,
-      tipoServico: tiposServicosMap.get(servico.tipoServicoId) || {
-        id: servico.tipoServicoId,
+      tipoServico: tiposServicosMap.get(servico.servicoId || servico.tipoServicoId) || {
+        id: servico.servicoId || servico.tipoServicoId,
         nome: 'Tipo não encontrado',
         descricao: '',
         ativo: false,
@@ -491,7 +491,7 @@ export class RelatoriosReportService {
     const servicosPorEvento: Record<string, string[]> = {};
     eventosValidos.forEach(evento => {
       const servicosEvento = servicos.filter(s => s.eventoId === evento.id);
-      servicosPorEvento[evento.id] = servicosEvento.map(s => s.tipoServicoId);
+      servicosPorEvento[evento.id] = servicosEvento.map(s => s.servicoId || s.tipoServicoId);
     });
 
     // Filtrar serviços apenas de eventos válidos
@@ -502,7 +502,7 @@ export class RelatoriosReportService {
 
     const servicosPorTipo: Record<string, number> = {};
     servicosValidos.forEach(servico => {
-      const tipoId = servico.tipoServicoId;
+      const tipoId = servico.servicoId || servico.tipoServicoId;
       servicosPorTipo[tipoId] = (servicosPorTipo[tipoId] || 0) + 1;
     });
 
@@ -513,7 +513,7 @@ export class RelatoriosReportService {
         if (!servicosPorTipoEvento[evento.tipoEvento]) {
           servicosPorTipoEvento[evento.tipoEvento] = {};
         }
-        const tipoId = servico.tipoServicoId;
+        const tipoId = servico.servicoId || servico.tipoServicoId;
         servicosPorTipoEvento[evento.tipoEvento][tipoId] =
           (servicosPorTipoEvento[evento.tipoEvento][tipoId] || 0) + 1;
       });

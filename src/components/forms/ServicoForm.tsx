@@ -22,6 +22,7 @@ interface ServicoFormProps {
 
 interface FormData {
   tipoServicoId: string;
+  servicoId: string;
   quantidade: number;
   valorUnitario: number;
   origemPreco: 'padrao' | 'editado_manual';
@@ -40,6 +41,7 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
   const { userId } = useCurrentUser();
   const [formData, setFormData] = useState<FormData>({
     tipoServicoId: '',
+    servicoId: '',
     quantidade: 1,
     valorUnitario: 0,
     origemPreco: 'padrao',
@@ -59,7 +61,7 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
       }
 
       try {
-        const tipos = await dataService.getTiposServicoAtivos(userId);
+        const tipos = await dataService.getServicosCatalogoAtivos(userId);
         
         const opcoes = tipos.map(tipo => ({
           id: tipo.id,
@@ -83,7 +85,8 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
   useEffect(() => {
     if (servico) {
       setFormData({
-        tipoServicoId: servico.tipoServicoId,
+        tipoServicoId: servico.servicoId || servico.tipoServicoId,
+        servicoId: servico.servicoId || servico.tipoServicoId,
         quantidade: servico.quantidade ?? 1,
         valorUnitario: servico.valorUnitario ?? servico.tipoServico?.valorPadrao ?? 0,
         origemPreco: servico.origemPreco || 'padrao',
@@ -112,7 +115,7 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
     const newErrors: Record<string, string> = {};
 
     if (!formData.tipoServicoId) {
-      newErrors.tipoServicoId = 'Tipo de serviço é obrigatório';
+      newErrors.tipoServicoId = 'Serviço é obrigatório';
     }
     if (!formData.quantidade || formData.quantidade <= 0) {
       newErrors.quantidade = 'Quantidade deve ser maior que zero';
@@ -138,7 +141,7 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
 
     try {
       // Buscar dados completos do tipo de serviço
-      const tipoServico = await dataService.getTipoServicoById(formData.tipoServicoId, userId);
+      const tipoServico = await dataService.getServicoCatalogoById(formData.servicoId || formData.tipoServicoId, userId);
       
       if (!tipoServico) {
         return;
@@ -147,7 +150,8 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
       const servicoData: ServicoEvento = {
         id: servico?.id || '',
         eventoId: evento.id,
-        tipoServicoId: formData.tipoServicoId,
+        tipoServicoId: formData.servicoId || formData.tipoServicoId,
+        servicoId: formData.servicoId || formData.tipoServicoId,
         tipoServico: tipoServico,
         quantidade: formData.quantidade,
         valorUnitario: formData.valorUnitario,
@@ -170,7 +174,7 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
     }
 
     try {
-      const novoTipo = await dataService.createTipoServico({
+      const novoTipo = await dataService.createServicoCatalogo({
         nome,
         descricao: '',
         ativo: true
@@ -188,6 +192,7 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
       setFormData(prev => ({
         ...prev,
         tipoServicoId: novoTipo.id,
+        servicoId: novoTipo.id,
         valorUnitario: novoTipo.valorPadrao ?? prev.valorUnitario
       }));
 
@@ -210,7 +215,7 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
       <Card>
         <CardContent className="p-6">
           <div className="text-center">
-            <div className="text-text-secondary">Carregando tipos de serviço...</div>
+            <div className="text-text-secondary">Carregando serviços...</div>
           </div>
         </CardContent>
       </Card>
@@ -231,10 +236,13 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
                 <SelectWithSearch
-                  label="Tipo de Serviço"
-                  placeholder="Selecione ou crie um tipo de serviço"
+                  label="Serviço"
+                  placeholder="Selecione ou crie um serviço"
                   value={formData.tipoServicoId}
-                  onChange={(value) => handleInputChange('tipoServicoId', value)}
+                  onChange={(value) => {
+                    handleInputChange('tipoServicoId', value);
+                    handleInputChange('servicoId', value);
+                  }}
                   options={tiposServico.map(tipo => ({
                     value: tipo.id,
                     label: tipo.nome,
