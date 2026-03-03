@@ -1,0 +1,45 @@
+---
+description: Diretrizes de orquestração de subagents por tipo de tarefa
+globs:
+alwaysApply: true
+---
+
+# Orquestração de Subagents
+
+Use os subagents nativos conforme o objetivo:
+
+## 1) Explore
+Quando precisar de mapeamento amplo do código, impacto de refactor, rastreamento de nomenclatura legada ou levantamento multi-arquivo.
+
+Entregar:
+- arquivos por camada (banco/backend/frontend),
+- risco por item,
+- ordem segura de execução.
+
+## 2) Shell
+Quando precisar executar validações técnicas, migrações, typecheck, lint e comandos de terminal.
+
+Entregar:
+- status por etapa (`feito/falhou/pendente`),
+- próximos passos objetivos.
+
+## 3) Browser-use
+Quando precisar validar comportamento real de UI/fluxos de usuário após alteração.
+
+Entregar:
+- checklist de cenários executados (✅/❌),
+- evidências de falha/sucesso,
+- risco de regressão.
+
+## 4) GeneralPurpose
+Quando precisar orquestrar tarefas multi-etapas (PRs, rollout, rollback, plano executivo).
+
+Entregar:
+- plano por etapas com critérios de aceite,
+- risco e mitigação,
+- dependências e ordem.
+
+## Regras gerais
+- Priorizar compatibilidade retroativa em migrações.
+- Evitar mudanças big-bang quando houver alternativa incremental.
+- Sempre explicitar validação pós-implementação.
