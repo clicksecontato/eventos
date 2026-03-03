@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { HotmartWebhookService } from '@/lib/services/hotmart-webhook-service';
-import { AdminUserRepository } from '@/lib/repositories/admin-user-repository';
-import { AdminAssinaturaRepository } from '@/lib/repositories/admin-assinatura-repository';
-import { AdminPlanoRepository } from '@/lib/repositories/admin-plano-repository';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { PlanoService } from '@/lib/services/plano-service';
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
 
 function isHotmartEnabled(): boolean {
   return process.env.HOTMART_ENABLED === 'true';
@@ -38,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     // Obter o body como texto primeiro (para validação HMAC)
     const bodyText = await request.text();
-    let payload: any;
+    let payload: unknown;
     
     try {
       payload = JSON.parse(bodyText);
@@ -51,9 +53,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Usar repositórios Admin que bypassam as regras de segurança do Firestore
-    const userRepo = new AdminUserRepository();
-    const planoRepo = new AdminPlanoRepository();
-    const assinaturaRepo = new AdminAssinaturaRepository();
+    const userRepo = repositoryFactory.getAdminUserRepository();
+    const planoRepo = repositoryFactory.getAdminPlanoRepository();
+    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
     const assinaturaService = new AssinaturaService(assinaturaRepo, planoRepo, userRepo);
     const planoService = new PlanoService(planoRepo, undefined, assinaturaRepo, undefined, assinaturaService);
     const service = new HotmartWebhookService(assinaturaRepo, planoRepo, userRepo, planoService, assinaturaService);
@@ -64,7 +66,6 @@ export async function POST(request: NextRequest) {
     // Obter secret da variável de ambiente (pode ser diferente para sandbox)
     const secret = process.env.HOTMART_WEBHOOK_SECRET_SANDBOX || process.env.HOTMART_WEBHOOK_SECRET || '';
     const validateHmac = process.env.HOTMART_VALIDATE_HMAC_SANDBOX === 'true';
-    const isDevelopment = process.env.NODE_ENV === 'development';
 
 
     // Validar HMAC apenas se explicitamente habilitado para sandbox
@@ -113,11 +114,11 @@ export async function POST(request: NextRequest) {
       environment: 'sandbox',
       timestamp: new Date().toISOString()
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ [SANDBOX] Erro ao processar webhook:', error);
     return NextResponse.json(
       { 
-        error: error.message || 'Erro ao processar webhook',
+        error: getErrorMessage(error) || 'Erro ao processar webhook',
         environment: 'sandbox'
       },
       { status: 500 }
@@ -189,9 +190,9 @@ export async function GET(request: NextRequest) {
     };
 
     // Usar repositórios Admin que bypassam as regras de segurança do Firestore
-    const userRepo = new AdminUserRepository();
-    const planoRepo = new AdminPlanoRepository();
-    const assinaturaRepo = new AdminAssinaturaRepository();
+    const userRepo = repositoryFactory.getAdminUserRepository();
+    const planoRepo = repositoryFactory.getAdminPlanoRepository();
+    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
     const assinaturaService = new AssinaturaService(assinaturaRepo, planoRepo, userRepo);
     const planoService = new PlanoService(planoRepo, undefined, assinaturaRepo, undefined, assinaturaService);
     const service = new HotmartWebhookService(assinaturaRepo, planoRepo, userRepo, planoService, assinaturaService);
@@ -204,11 +205,11 @@ export async function GET(request: NextRequest) {
       payloadEnviado: mockPayload,
       timestamp: new Date().toISOString()
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ [SANDBOX] Erro ao processar webhook mockado:', error);
     return NextResponse.json(
       { 
-        error: error.message || 'Erro ao processar webhook',
+        error: getErrorMessage(error) || 'Erro ao processar webhook',
         environment: 'sandbox'
       },
       { status: 500 }

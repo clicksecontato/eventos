@@ -1,32 +1,48 @@
-import { PlanoRepository } from '../repositories/plano-repository';
-import { AdminPlanoRepository } from '../repositories/admin-plano-repository';
-import { FuncionalidadeRepository } from '../repositories/funcionalidade-repository';
-import { AssinaturaRepository } from '../repositories/assinatura-repository';
-import { AdminAssinaturaRepository } from '../repositories/admin-assinatura-repository';
-import { UserRepository } from '../repositories/user-repository';
-import { AdminUserRepository } from '../repositories/admin-user-repository';
+import { repositoryFactory } from '../repositories/repository-factory';
 import { AssinaturaService } from './assinatura-service';
-import { Plano, PlanoComFuncionalidades, StatusAssinatura } from '@/types/funcionalidades';
+import { Assinatura, Funcionalidade, Plano, PlanoComFuncionalidades, StatusAssinatura } from '@/types/funcionalidades';
+import { User } from '@/types';
+
+interface PlanoRepositoryPort {
+  findAtivos(): Promise<Plano[]>;
+  findById(id: string): Promise<Plano | null>;
+  findDestaque(): Promise<Plano[]>;
+}
+
+interface FuncionalidadeRepositoryPort {
+  findById(id: string): Promise<Funcionalidade | null>;
+}
+
+interface AssinaturaRepositoryPort {
+  findByHotmartId(hotmartSubscriptionId: string): Promise<Assinatura | null>;
+  update(id: string, data: Partial<Assinatura>): Promise<Assinatura>;
+  create(data: Omit<Assinatura, 'id'>): Promise<Assinatura>;
+  findByUserId(userId: string): Promise<Assinatura | null>;
+}
+
+interface UserRepositoryPort {
+  findById(id: string): Promise<User | null>;
+}
 
 export class PlanoService {
-  private planoRepo: PlanoRepository | AdminPlanoRepository;
-  private funcionalidadeRepo: FuncionalidadeRepository;
-  private assinaturaRepo: AssinaturaRepository | AdminAssinaturaRepository;
-  private userRepo: UserRepository | AdminUserRepository;
+  private planoRepo: PlanoRepositoryPort;
+  private funcionalidadeRepo: FuncionalidadeRepositoryPort;
+  private assinaturaRepo: AssinaturaRepositoryPort;
+  private userRepo: UserRepositoryPort;
   private assinaturaService: AssinaturaService;
 
   constructor(
-    planoRepo?: PlanoRepository | AdminPlanoRepository,
-    funcionalidadeRepo?: FuncionalidadeRepository,
-    assinaturaRepo?: AssinaturaRepository | AdminAssinaturaRepository,
-    userRepo?: UserRepository | AdminUserRepository,
+    planoRepo?: PlanoRepositoryPort,
+    funcionalidadeRepo?: FuncionalidadeRepositoryPort,
+    assinaturaRepo?: AssinaturaRepositoryPort,
+    userRepo?: UserRepositoryPort,
     assinaturaService?: AssinaturaService
   ) {
-    // Manter compatibilidade: se não passar dependências, criar novas instâncias
-    this.planoRepo = planoRepo || new PlanoRepository();
-    this.funcionalidadeRepo = funcionalidadeRepo || new FuncionalidadeRepository();
-    this.assinaturaRepo = assinaturaRepo || new AssinaturaRepository();
-    this.userRepo = userRepo || new UserRepository();
+    // Resolver dependências pelo composition root (factory), sem acoplar a classes concretas
+    this.planoRepo = planoRepo || (repositoryFactory.getPlanoRepository() as unknown as PlanoRepositoryPort);
+    this.funcionalidadeRepo = funcionalidadeRepo || (repositoryFactory.getFuncionalidadeRepository() as unknown as FuncionalidadeRepositoryPort);
+    this.assinaturaRepo = assinaturaRepo || (repositoryFactory.getAssinaturaRepository() as unknown as AssinaturaRepositoryPort);
+    this.userRepo = userRepo || (repositoryFactory.getUserRepository() as unknown as UserRepositoryPort);
     this.assinaturaService = assinaturaService || new AssinaturaService();
   }
 

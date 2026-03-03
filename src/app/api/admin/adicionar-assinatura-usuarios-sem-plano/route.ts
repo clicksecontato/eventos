@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
-import { AdminUserRepository } from '@/lib/repositories/admin-user-repository';
-import { AdminPlanoRepository } from '@/lib/repositories/admin-plano-repository';
-import { AdminAssinaturaRepository } from '@/lib/repositories/admin-assinatura-repository';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { StatusAssinatura } from '@/types/funcionalidades';
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
 
 /**
  * Endpoint para adicionar assinatura para usuários que não têm nenhuma assinatura
@@ -44,9 +46,9 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Usar repositórios Admin que bypassam as regras de segurança do Firestore
-    const userRepo = new AdminUserRepository();
-    const planoRepo = new AdminPlanoRepository();
-    const assinaturaRepo = new AdminAssinaturaRepository();
+    const userRepo = repositoryFactory.getAdminUserRepository();
+    const planoRepo = repositoryFactory.getAdminPlanoRepository();
+    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
     const assinaturaService = new AssinaturaService(assinaturaRepo, planoRepo, userRepo);
 
     // Buscar plano padrão
@@ -129,7 +131,7 @@ export async function POST(request: NextRequest) {
       try {
         resultados.usuariosProcessados++;
         // Criar assinatura para o usuário
-        const assinatura = await assinaturaService.criarAssinaturaUsuario(
+        await assinaturaService.criarAssinaturaUsuario(
           usuario.id,
           plano.id,
           statusPadrao
@@ -157,13 +159,13 @@ export async function POST(request: NextRequest) {
           });
         }
 
-      } catch (error: any) {
+      } catch (error: unknown) {
         resultados.erros++;
         resultados.detalhes.push({
           userId: usuario.id,
           email: usuario.email,
           status: 'erro',
-          mensagem: error.message || 'Erro desconhecido'
+          mensagem: getErrorMessage(error)
         });
       }
     }
@@ -183,9 +185,9 @@ export async function POST(request: NextRequest) {
       statusPadrao
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error.message || 'Erro ao adicionar assinaturas para usuários sem plano' },
+      { error: getErrorMessage(error) || 'Erro ao adicionar assinaturas para usuários sem plano' },
       { status: 500 }
     );
   }

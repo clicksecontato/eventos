@@ -2,9 +2,6 @@ import { NextRequest } from 'next/server';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { s3Service } from '@/lib/s3-service';
 import { FuncionalidadeService } from '@/lib/services/funcionalidade-service';
-import { AdminFuncionalidadeRepository } from '@/lib/repositories/admin-funcionalidade-repository';
-import { AdminAssinaturaRepository } from '@/lib/repositories/admin-assinatura-repository';
-import { AdminUserRepository } from '@/lib/repositories/admin-user-repository';
 import {
   getAuthenticatedUser,
   handleApiError,
@@ -17,9 +14,9 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
 
-    const funcionalidadeRepo = new AdminFuncionalidadeRepository();
-    const assinaturaRepo = new AdminAssinaturaRepository();
-    const userRepo = new AdminUserRepository();
+    const funcionalidadeRepo = repositoryFactory.getAdminFuncionalidadeRepository();
+    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
+    const userRepo = repositoryFactory.getAdminUserRepository();
     const funcionalidadeService = new FuncionalidadeService(funcionalidadeRepo, assinaturaRepo, userRepo);
     const temPermissao = await funcionalidadeService.verificarPermissao(user.id, 'ANEXOS_CUSTO');
     if (!temPermissao) {
@@ -73,9 +70,9 @@ export async function DELETE(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
 
-    const funcionalidadeRepo = new AdminFuncionalidadeRepository();
-    const assinaturaRepo = new AdminAssinaturaRepository();
-    const userRepo = new AdminUserRepository();
+    const funcionalidadeRepo = repositoryFactory.getAdminFuncionalidadeRepository();
+    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
+    const userRepo = repositoryFactory.getAdminUserRepository();
     const funcionalidadeService = new FuncionalidadeService(funcionalidadeRepo, assinaturaRepo, userRepo);
     const temPermissao = await funcionalidadeService.verificarPermissao(user.id, 'ANEXOS_CUSTO');
     if (!temPermissao) {

@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
-import { AssinaturaRepository } from '@/lib/repositories/assinatura-repository';
-import { PlanoRepository } from '@/lib/repositories/plano-repository';
-import { UserRepository } from '@/lib/repositories/user-repository';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
 
 /**
  * Endpoint para migrar usuários de ENTERPRISE_MENSAL para PREMIUM_MENSAL
@@ -38,10 +36,10 @@ export async function POST(request: NextRequest) {
 
     const { dryRun = false } = await request.json().catch(() => ({}));
 
-    const assinaturaService = new AssinaturaService();
-    const assinaturaRepo = new AssinaturaRepository();
-    const planoRepo = new PlanoRepository();
-    const userRepo = new UserRepository();
+    const assinaturaRepo = repositoryFactory.getAssinaturaRepository();
+    const planoRepo = repositoryFactory.getPlanoRepository();
+    const userRepo = repositoryFactory.getUserRepository();
+    const assinaturaService = new AssinaturaService(assinaturaRepo, planoRepo, userRepo);
 
     // Buscar plano antigo (ENTERPRISE_MENSAL)
     const planoAntigo = await planoRepo.findByCodigoHotmart('ENTERPRISE_MENSAL');

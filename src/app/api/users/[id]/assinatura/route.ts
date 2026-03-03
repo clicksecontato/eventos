@@ -1,4 +1,6 @@
 import { NextRequest } from 'next/server';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
+import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { 
   getAuthenticatedUser,
   requireAdmin,
@@ -22,16 +24,10 @@ export async function GET(
       return createErrorResponse('Não autorizado', 403);
     }
 
-    // Usar repositórios Admin para bypassar regras do Firestore (evita "Missing or insufficient permissions")
-    const { AdminAssinaturaRepository } = await import('@/lib/repositories/admin-assinatura-repository');
-    const { AdminPlanoRepository } = await import('@/lib/repositories/admin-plano-repository');
-    const { AdminUserRepository } = await import('@/lib/repositories/admin-user-repository');
-    const { AssinaturaService } = await import('@/lib/services/assinatura-service');
-
     const assinaturaService = new AssinaturaService(
-      new AdminAssinaturaRepository(),
-      new AdminPlanoRepository(),
-      new AdminUserRepository()
+      repositoryFactory.getAdminAssinaturaRepository(),
+      repositoryFactory.getAdminPlanoRepository(),
+      repositoryFactory.getAdminUserRepository()
     );
     const statusPlano = await assinaturaService.obterStatusPlanoUsuario(userId);
 

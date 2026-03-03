@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { AdminAssinaturaRepository } from '@/lib/repositories/admin-assinatura-repository';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { isFirebaseAdminInitialized, getFirebaseAdminInitializationError } from '@/lib/firebase-admin';
 import { 
   getAuthenticatedUser,
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     });
     
     // Usar AdminAssinaturaRepository no servidor para bypassar regras de segurança do Firebase
-    const repo = new AdminAssinaturaRepository();
+    const repo = repositoryFactory.getAdminAssinaturaRepository();
     console.log('[API /assinaturas] AdminAssinaturaRepository criado com sucesso');
     
     // Admin pode ver todas, usuário apenas a sua

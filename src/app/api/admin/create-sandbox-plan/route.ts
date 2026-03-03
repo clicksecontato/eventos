@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
-import { PlanoRepository } from '@/lib/repositories/plano-repository';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const newCode = (searchParams.get('code') || '123').trim();
     const newName = (searchParams.get('name') || 'Basico Sandbox').trim();
 
-    const repo = new PlanoRepository();
+    const repo = repositoryFactory.getPlanoRepository();
 
     // Check if target already exists
     const existingTarget = await repo.findByCodigoHotmart(newCode);

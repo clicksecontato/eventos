@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
-import { UserRepository } from '@/lib/repositories/user-repository';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +27,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { dryRun = false } = body;
 
-    const userRepo = new UserRepository();
+    const userRepo = repositoryFactory.getUserRepository();
     const clienteRepo = repositoryFactory.getClienteRepository();
     const eventoRepo = repositoryFactory.getEventoRepository();
     const tipoServicoRepo = repositoryFactory.getTipoServicoRepository();

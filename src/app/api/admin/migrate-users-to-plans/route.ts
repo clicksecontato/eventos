@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
-import { UserRepository } from '@/lib/repositories/user-repository';
-import { PlanoRepository } from '@/lib/repositories/plano-repository';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { StatusAssinatura } from '@/types/funcionalidades';
 
@@ -41,9 +40,13 @@ export async function POST(request: NextRequest) {
       dryRun = false
     } = body;
 
-    const userRepo = new UserRepository();
-    const planoRepo = new PlanoRepository();
-    const assinaturaService = new AssinaturaService();
+    const userRepo = repositoryFactory.getUserRepository();
+    const planoRepo = repositoryFactory.getPlanoRepository();
+    const assinaturaService = new AssinaturaService(
+      repositoryFactory.getAssinaturaRepository(),
+      planoRepo,
+      userRepo
+    );
 
     // Buscar plano padrão
     const plano = await planoRepo.findByCodigoHotmart(planoPadrao);

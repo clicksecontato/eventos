@@ -10,6 +10,7 @@
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
+import { repositoryFactory } from '../src/lib/repositories/repository-factory';
 import { Funcionalidade, Plano, Assinatura } from '../src/types/funcionalidades';
 
 dotenv.config({ path: path.join(process.cwd(), '.env.local') });
@@ -35,11 +36,8 @@ const FUNCIONALIDADES_INICIAIS: Omit<Funcionalidade, 'id' | 'dataCadastro'>[] = 
 ];
 
 async function seedFuncionalidadesEPlanos(): Promise<{ premium: Plano }> {
-  const { AdminFuncionalidadeRepository } = await import('../src/lib/repositories/admin-funcionalidade-repository');
-  const { AdminPlanoRepository } = await import('../src/lib/repositories/admin-plano-repository');
-
-  const funcionalidadeRepo = new AdminFuncionalidadeRepository();
-  const planoRepo = new AdminPlanoRepository();
+  const funcionalidadeRepo = repositoryFactory.getAdminFuncionalidadeRepository();
+  const planoRepo = repositoryFactory.getAdminPlanoRepository();
 
   const funcionalidadesExistentes = await funcionalidadeRepo.findAll();
   const funcionalidadesPorCodigo = new Map(funcionalidadesExistentes.map(f => [f.codigo, f]));
@@ -195,14 +193,11 @@ async function seedFuncionalidadesEPlanos(): Promise<{ premium: Plano }> {
 }
 
 async function aplicarPremiumEmControleUsers(premium: Plano): Promise<void> {
-  const { AdminUserRepository } = await import('../src/lib/repositories/admin-user-repository');
-  const { AdminAssinaturaRepository } = await import('../src/lib/repositories/admin-assinatura-repository');
-  const { AdminPlanoRepository } = await import('../src/lib/repositories/admin-plano-repository');
   const { AssinaturaService } = await import('../src/lib/services/assinatura-service');
 
-  const userRepo = new AdminUserRepository();
-  const assinaturaRepo = new AdminAssinaturaRepository();
-  const planoRepo = new AdminPlanoRepository();
+  const userRepo = repositoryFactory.getAdminUserRepository();
+  const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
+  const planoRepo = repositoryFactory.getAdminPlanoRepository();
   const assinaturaService = new AssinaturaService(assinaturaRepo, planoRepo, userRepo);
 
   const todosUsuarios = await userRepo.findAll();

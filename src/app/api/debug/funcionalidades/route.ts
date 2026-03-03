@@ -1,11 +1,19 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { FuncionalidadeRepository } from '@/lib/repositories/funcionalidade-repository';
+import { NextResponse } from 'next/server';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-export async function GET(request: NextRequest) {
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
+function getErrorStack(error: unknown): string | undefined {
+  return error instanceof Error ? error.stack : undefined;
+}
+
+export async function GET() {
   try {
-    const repo = new FuncionalidadeRepository();
+    const repo = repositoryFactory.getFuncionalidadeRepository();
     
     // Testar busca direta no Firestore
     const collectionRef = collection(db, 'funcionalidades');
@@ -17,10 +25,10 @@ export async function GET(request: NextRequest) {
     }));
 
     // Testar repositório
-    let repoFuncs: any[] = [];
+    let repoFuncs: unknown[] = [];
     try {
       repoFuncs = await repo.findAll();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro no repositório:', error);
     }
 
@@ -35,10 +43,10 @@ export async function GET(request: NextRequest) {
       },
       collection_exists: snapshot.size > 0
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json({
-      error: error.message,
-      stack: error.stack
+      error: getErrorMessage(error),
+      stack: getErrorStack(error)
     }, { status: 500 });
   }
 }

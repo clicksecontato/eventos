@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
-import { AdminAssinaturaRepository } from '@/lib/repositories/admin-assinatura-repository';
-import { AdminPlanoRepository } from '@/lib/repositories/admin-plano-repository';
-import { AdminUserRepository } from '@/lib/repositories/admin-user-repository';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
 
 /**
  * Endpoint para atualizar planos e funcionalidades de todos os usuários
@@ -38,9 +36,9 @@ export async function POST(request: NextRequest) {
 
     const { apenasAtivas = true, dryRun = false } = await request.json().catch(() => ({}));
 
-    const assinaturaRepo = new AdminAssinaturaRepository();
-    const planoRepo = new AdminPlanoRepository();
-    const userRepo = new AdminUserRepository();
+    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
+    const planoRepo = repositoryFactory.getAdminPlanoRepository();
+    const userRepo = repositoryFactory.getAdminUserRepository();
     const assinaturaService = new AssinaturaService(assinaturaRepo, planoRepo, userRepo);
 
     // Buscar assinaturas

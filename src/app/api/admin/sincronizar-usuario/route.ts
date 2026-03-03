@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
-import { AdminAssinaturaRepository } from '@/lib/repositories/admin-assinatura-repository';
-import { AdminPlanoRepository } from '@/lib/repositories/admin-plano-repository';
-import { AdminUserRepository } from '@/lib/repositories/admin-user-repository';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
 
 /**
  * Endpoint para sincronizar plano/assinatura de um usuário específico.
@@ -45,9 +47,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userRepo = new AdminUserRepository();
-    const assinaturaRepo = new AdminAssinaturaRepository();
-    const planoRepo = new AdminPlanoRepository();
+    const userRepo = repositoryFactory.getAdminUserRepository();
+    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
+    const planoRepo = repositoryFactory.getAdminPlanoRepository();
     const assinaturaService = new AssinaturaService(assinaturaRepo, planoRepo, userRepo);
 
     const user = await userRepo.findByEmail(email.toLowerCase().trim());
@@ -62,7 +64,6 @@ export async function POST(request: NextRequest) {
 
     const todasAssinaturas = await assinaturaRepo.findAllByUserId(user.id);
     const assinaturaAtiva = todasAssinaturas.find(a => a.status === 'active' || a.status === 'trial');
-    const assinaturaMaisRecente = todasAssinaturas.length > 0 ? todasAssinaturas[0] : null;
 
     let cancelamentoRealizado = false;
 
@@ -115,10 +116,10 @@ export async function POST(request: NextRequest) {
       })),
       cancelamentoRealizado
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Admin] Erro ao sincronizar usuário:', error);
     return NextResponse.json(
-      { error: error.message || 'Erro ao sincronizar usuário' },
+      { error: getErrorMessage(error) || 'Erro ao sincronizar usuário' },
       { status: 500 }
     );
   }

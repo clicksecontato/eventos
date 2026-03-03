@@ -1,38 +1,58 @@
-import { FuncionalidadeRepository } from '../repositories/funcionalidade-repository';
-import { AdminFuncionalidadeRepository } from '../repositories/admin-funcionalidade-repository';
-import { AssinaturaRepository } from '../repositories/assinatura-repository';
-import { AdminAssinaturaRepository } from '../repositories/admin-assinatura-repository';
-import { UserRepository } from '../repositories/user-repository';
-import { AdminUserRepository } from '../repositories/admin-user-repository';
-import { Funcionalidade, LimitesUsuario } from '@/types/funcionalidades';
-import { EventoRepository } from '../repositories/evento-repository';
-import { ClienteRepository } from '../repositories/cliente-repository';
-import { EventoSupabaseRepository } from '../repositories/supabase/evento-supabase-repository';
-import { ClienteSupabaseRepository } from '../repositories/supabase/cliente-supabase-repository';
+import { repositoryFactory } from '../repositories/repository-factory';
+import { Assinatura, Funcionalidade, LimitesUsuario, Plano } from '@/types/funcionalidades';
+import { Evento, User } from '@/types';
 import { AssinaturaService, PlanoStatus } from './assinatura-service';
 
+interface FuncionalidadeRepositoryPort {
+  findByCodigo(codigo: string): Promise<Funcionalidade | null>;
+  findById(id: string): Promise<Funcionalidade | null>;
+}
+
+interface AssinaturaRepositoryPort {
+  findByUserId(userId: string): Promise<Assinatura | null>;
+}
+
+interface UserRepositoryPort {
+  findById(id: string): Promise<User | null>;
+}
+
+interface EventoRepositoryPort {
+  findAll(userId: string): Promise<Evento[]>;
+}
+
+interface ClienteRepositoryPort {
+  countClientesPorAno(ano: number, userId: string): Promise<number>;
+}
+
+interface PlanoRepositoryPort {
+  findById(id: string): Promise<Plano | null>;
+}
+
 export class FuncionalidadeService {
-  private funcionalidadeRepo: FuncionalidadeRepository | AdminFuncionalidadeRepository;
-  private assinaturaRepo: AssinaturaRepository | AdminAssinaturaRepository;
-  private userRepo: UserRepository | AdminUserRepository;
-  private eventoRepo: EventoRepository | EventoSupabaseRepository;
-  private clienteRepo: ClienteRepository | ClienteSupabaseRepository;
+  private funcionalidadeRepo: FuncionalidadeRepositoryPort;
+  private assinaturaRepo: AssinaturaRepositoryPort;
+  private userRepo: UserRepositoryPort;
+  private eventoRepo: EventoRepositoryPort;
+  private clienteRepo: ClienteRepositoryPort;
+  private planoRepo: PlanoRepositoryPort;
   private assinaturaService: AssinaturaService;
 
   constructor(
-    funcionalidadeRepo?: FuncionalidadeRepository | AdminFuncionalidadeRepository,
-    assinaturaRepo?: AssinaturaRepository | AdminAssinaturaRepository,
-    userRepo?: UserRepository | AdminUserRepository,
-    eventoRepo?: EventoRepository | EventoSupabaseRepository,
-    clienteRepo?: ClienteRepository | ClienteSupabaseRepository,
+    funcionalidadeRepo?: FuncionalidadeRepositoryPort,
+    assinaturaRepo?: AssinaturaRepositoryPort,
+    userRepo?: UserRepositoryPort,
+    eventoRepo?: EventoRepositoryPort,
+    clienteRepo?: ClienteRepositoryPort,
+    planoRepo?: PlanoRepositoryPort,
     assinaturaService?: AssinaturaService
   ) {
-    // Manter compatibilidade: se não passar dependências, criar novas instâncias
-    this.funcionalidadeRepo = funcionalidadeRepo || new FuncionalidadeRepository();
-    this.assinaturaRepo = assinaturaRepo || new AssinaturaRepository();
-    this.userRepo = userRepo || new UserRepository();
-    this.eventoRepo = eventoRepo || new EventoRepository();
-    this.clienteRepo = clienteRepo || new ClienteRepository();
+    // Resolver dependências pelo composition root (factory), sem acoplar a classes concretas
+    this.funcionalidadeRepo = funcionalidadeRepo || (repositoryFactory.getFuncionalidadeRepository() as unknown as FuncionalidadeRepositoryPort);
+    this.assinaturaRepo = assinaturaRepo || (repositoryFactory.getAssinaturaRepository() as unknown as AssinaturaRepositoryPort);
+    this.userRepo = userRepo || (repositoryFactory.getUserRepository() as unknown as UserRepositoryPort);
+    this.eventoRepo = eventoRepo || (repositoryFactory.getEventoRepository() as unknown as EventoRepositoryPort);
+    this.clienteRepo = clienteRepo || (repositoryFactory.getClienteRepository() as unknown as ClienteRepositoryPort);
+    this.planoRepo = planoRepo || (repositoryFactory.getPlanoRepository() as unknown as PlanoRepositoryPort);
     this.assinaturaService = assinaturaService || new AssinaturaService();
   }
 
@@ -113,9 +133,7 @@ export class FuncionalidadeService {
       let limiteUsuarios: number | undefined;
 
       if (assinatura.planoId) {
-        const { PlanoRepository } = await import('../repositories/plano-repository');
-        const planoRepo = new PlanoRepository();
-        const plano = await planoRepo.findById(assinatura.planoId);
+        const plano = await this.planoRepo.findById(assinatura.planoId);
         limiteEventos = plano?.limiteEventos;
         limiteClientes = plano?.limiteClientes;
         limiteUsuarios = plano?.limiteUsuarios;

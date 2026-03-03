@@ -1,15 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
-import { getSupabaseClient } from '@/lib/supabase/client';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
-import { randomUUID } from 'crypto';
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
 
 /**
  * API route para inicializar canais de entrada padrão
  * Usa o cliente admin do Supabase para contornar RLS
  */
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     // Verificar autenticação
     const session = await getServerSession(authOptions);
@@ -32,9 +34,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Usar cliente admin para contornar RLS
-    const supabaseAdmin = getSupabaseClient(true);
-
     const defaults = [
       { nome: 'instagram', descricao: 'Origem: Instagram', ativo: true },
       { nome: 'indicação', descricao: 'Origem: Indicação', ativo: true },
@@ -44,45 +43,25 @@ export async function POST(request: NextRequest) {
     const canaisCriados = [];
 
     for (const item of defaults) {
-      // Gerar ID único usando UUID
-      const id = randomUUID();
-      
-      const { data, error } = await supabaseAdmin
-        .from('canais_entrada')
-        .insert({
-          id: id,
-          nome: item.nome,
-          descricao: item.descricao,
-          ativo: item.ativo,
-          user_id: userId,
-          data_cadastro: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (error) {
-        // Se for erro de duplicação, ignorar silenciosamente
-        if (error.code === '23505') {
-          console.log(`Canal de entrada "${item.nome}" já existe, ignorando...`);
-          canaisCriados.push({ id, nome: item.nome }); // Contar como criado
-        } else {
-          console.error(`Erro ao criar canal de entrada "${item.nome}":`, error);
-        }
-      } else {
-        canaisCriados.push(data);
-      }
+      const criado = await canalEntradaRepo.createCanalEntrada(userId, {
+        nome: item.nome,
+        descricao: item.descricao,
+        ativo: item.ativo,
+        dataCadastro: new Date()
+      });
+      canaisCriados.push(criado);
     }
 
     return NextResponse.json({
       message: 'Canais de entrada inicializados com sucesso',
       canais: canaisCriados.length
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao inicializar canais de entrada:', error);
     return NextResponse.json(
       {
-        error: error.message || 'Erro ao inicializar canais de entrada',
-        details: error.toString()
+        error: getErrorMessage(error) || 'Erro ao inicializar canais de entrada',
+        details: String(error)
       },
       { status: 500 }
     );

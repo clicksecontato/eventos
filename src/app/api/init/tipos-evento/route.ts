@@ -1,16 +1,18 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
-import { getSupabaseClient } from '@/lib/supabase/client';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { DEFAULT_TIPOS_EVENTO } from '@/types';
-import { randomUUID } from 'crypto';
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
 
 /**
  * API route para inicializar tipos de evento padrão
  * Usa o cliente admin do Supabase para contornar RLS
  */
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     // Verificar autenticação
     const session = await getServerSession(authOptions);
@@ -33,51 +35,28 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Usar cliente admin para contornar RLS
-    const supabaseAdmin = getSupabaseClient(true);
-
     const tiposCriados = [];
 
     for (const tipo of DEFAULT_TIPOS_EVENTO) {
-      // Gerar ID único usando UUID
-      const id = randomUUID();
-      
-      const { data, error } = await supabaseAdmin
-        .from('tipo_eventos')
-        .insert({
-          id: id,
-          nome: tipo.nome,
-          descricao: tipo.descricao ?? '',
-          ativo: true,
-          user_id: userId,
-          data_cadastro: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (error) {
-        // Se for erro de duplicação, ignorar silenciosamente
-        if (error.code === '23505') {
-          console.log(`Tipo de evento "${tipo.nome}" já existe, ignorando...`);
-          tiposCriados.push({ id, nome: tipo.nome }); // Contar como criado
-        } else {
-          console.error(`Erro ao criar tipo de evento "${tipo.nome}":`, error);
-        }
-      } else {
-        tiposCriados.push(data);
-      }
+      const criado = await tipoEventoRepo.createTipoEvento({
+        nome: tipo.nome,
+        descricao: tipo.descricao ?? '',
+        ativo: true,
+        dataCadastro: new Date()
+      }, userId);
+      tiposCriados.push(criado);
     }
 
     return NextResponse.json({
       message: 'Tipos de evento inicializados com sucesso',
       tipos: tiposCriados.length
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao inicializar tipos de evento:', error);
     return NextResponse.json(
       {
-        error: error.message || 'Erro ao inicializar tipos de evento',
-        details: error.toString()
+        error: getErrorMessage(error) || 'Erro ao inicializar tipos de evento',
+        details: String(error)
       },
       { status: 500 }
     );

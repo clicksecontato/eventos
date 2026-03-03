@@ -3,8 +3,7 @@
  * Uso: npx tsx scripts/executar-seed.ts
  */
 
-import { FuncionalidadeRepository } from '../src/lib/repositories/funcionalidade-repository';
-import { PlanoRepository } from '../src/lib/repositories/plano-repository';
+import { repositoryFactory } from '../src/lib/repositories/repository-factory';
 import { Funcionalidade, Plano } from '../src/types/funcionalidades';
 
 const FUNCIONALIDADES_INICIAIS: Omit<Funcionalidade, 'id' | 'dataCadastro'>[] = [
@@ -40,8 +39,8 @@ const FUNCIONALIDADES_INICIAIS: Omit<Funcionalidade, 'id' | 'dataCadastro'>[] = 
 async function executarSeed() {
   console.log('🔄 Iniciando seed de funcionalidades e planos...\n');
 
-  const funcionalidadeRepo = new FuncionalidadeRepository();
-  const planoRepo = new PlanoRepository();
+  const funcionalidadeRepo = repositoryFactory.getFuncionalidadeRepository();
+  const planoRepo = repositoryFactory.getPlanoRepository();
 
   try {
     // Remover todos os planos primeiro

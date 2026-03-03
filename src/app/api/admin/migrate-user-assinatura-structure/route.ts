@@ -2,12 +2,31 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
-import { AssinaturaRepository } from '@/lib/repositories/assinatura-repository';
-import { UserRepository } from '@/lib/repositories/user-repository';
-import { PlanoRepository } from '@/lib/repositories/plano-repository';
-import { User, UserAssinatura } from '@/types';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
+import type { UserAssinatura } from '@/types';
 import { doc, updateDoc, deleteField } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+
+type UsuarioComCamposLegados = {
+  id: string;
+  email: string;
+  role?: string;
+  assinatura?: unknown;
+  assinaturaId?: string;
+  planoId?: string;
+  planoNome?: string;
+  planoCodigoHotmart?: string;
+  funcionalidadesHabilitadas?: unknown;
+  assinaturaStatus?: string;
+  pagamentoEmDia?: unknown;
+  dataExpiraAssinatura?: unknown;
+  dataProximoPagamento?: unknown;
+  ultimaSincronizacaoPlano?: unknown;
+};
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
 
 /**
  * Endpoint para migrar estrutura de assinatura dos usuários
@@ -49,36 +68,40 @@ export async function POST(request: NextRequest) {
 
     const { dryRun = false } = await request.json().catch(() => ({}));
 
-    const assinaturaService = new AssinaturaService();
-    const assinaturaRepo = new AssinaturaRepository();
-    const userRepo = new UserRepository();
+    const assinaturaRepo = repositoryFactory.getAssinaturaRepository();
+    const userRepo = repositoryFactory.getUserRepository();
+    const assinaturaService = new AssinaturaService(
+      assinaturaRepo,
+      repositoryFactory.getPlanoRepository(),
+      userRepo
+    );
 
     // Buscar todos os usuários
     const todosUsuarios = await userRepo.findAll();
 
     // Filtrar usuários que precisam de migração
     // Usuários que têm campos antigos na raiz OU não têm objeto assinatura
-    const usuariosParaMigrar = todosUsuarios.filter((user: any) => {
+    const usuariosParaMigrar = todosUsuarios.filter((user) => {
+      const userLegado = user as unknown as UsuarioComCamposLegados;
       // Admin não precisa migrar (não tem assinatura)
-      if (user.role === 'admin') {
+      if (userLegado.role === 'admin') {
         return false;
       }
 
       // Verificar se tem campos antigos na raiz (estrutura antiga)
-      // Usar 'any' porque esses campos não estão mais no tipo User, mas podem existir no banco
       const temCamposAntigos = 
-        (user as any).assinaturaId !== undefined ||
-        (user as any).planoId !== undefined ||
-        (user as any).planoNome !== undefined ||
-        (user as any).planoCodigoHotmart !== undefined ||
-        (user as any).funcionalidadesHabilitadas !== undefined ||
-        (user as any).assinaturaStatus !== undefined ||
-        (user as any).pagamentoEmDia !== undefined ||
-        (user as any).dataExpiraAssinatura !== undefined ||
-        (user as any).dataProximoPagamento !== undefined;
+        userLegado.assinaturaId !== undefined ||
+        userLegado.planoId !== undefined ||
+        userLegado.planoNome !== undefined ||
+        userLegado.planoCodigoHotmart !== undefined ||
+        userLegado.funcionalidadesHabilitadas !== undefined ||
+        userLegado.assinaturaStatus !== undefined ||
+        userLegado.pagamentoEmDia !== undefined ||
+        userLegado.dataExpiraAssinatura !== undefined ||
+        userLegado.dataProximoPagamento !== undefined;
 
       // Verificar se não tem objeto assinatura (estrutura nova)
-      const naoTemObjetoAssinatura = !user.assinatura || typeof user.assinatura !== 'object';
+      const naoTemObjetoAssinatura = !userLegado.assinatura || typeof userLegado.assinatura !== 'object';
 
       // Precisa migrar se tem campos antigos OU não tem objeto assinatura
       return temCamposAntigos || naoTemObjetoAssinatura;
@@ -114,8 +137,7 @@ export async function POST(request: NextRequest) {
         resultados.usuariosProcessados++;
 
         // Buscar assinatura real na coleção assinaturas
-        // Usar 'any' porque user pode ter campos antigos que não estão no tipo
-        const userAny = user as any;
+        const userAny = user as unknown as UsuarioComCamposLegados;
         let assinaturaReal = null;
         if (userAny.assinaturaId) {
           // Tentar buscar pelo ID da assinatura
@@ -154,7 +176,7 @@ export async function POST(request: NextRequest) {
           
           // Remover campos antigos usando deleteField()
           const userRef = doc(db, 'controle_users', user.id);
-          const camposParaDeletar: any = {};
+          const camposParaDeletar: Record<string, unknown> = {};
           if (userAny.assinaturaId !== undefined) camposParaDeletar.assinaturaId = deleteField();
           if (userAny.planoId !== undefined) camposParaDeletar.planoId = deleteField();
           if (userAny.planoNome !== undefined) camposParaDeletar.planoNome = deleteField();
@@ -191,7 +213,7 @@ export async function POST(request: NextRequest) {
         if (!temObjetoAssinatura && (userAny.planoId || userAny.assinaturaId || userAny.planoCodigoHotmart)) {
           
           // Buscar plano se tiver planoId ou planoCodigoHotmart
-          const planoRepo = new PlanoRepository();
+          const planoRepo = repositoryFactory.getPlanoRepository();
           let plano = null;
           
           if (userAny.planoId) {
@@ -212,16 +234,16 @@ export async function POST(request: NextRequest) {
           }
           
           // Função auxiliar para remover campos undefined recursivamente
-          const removeUndefined = (obj: any): any => {
+          const removeUndefined = (obj: unknown): unknown => {
             if (obj === null || obj === undefined) return null;
             if (Array.isArray(obj)) {
               return obj.map(removeUndefined).filter(item => item !== undefined);
             }
             if (typeof obj === 'object') {
-              const cleaned: any = {};
-              for (const key in obj) {
-                if (obj[key] !== undefined) {
-                  cleaned[key] = removeUndefined(obj[key]);
+              const cleaned: Record<string, unknown> = {};
+              for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+                if (value !== undefined) {
+                  cleaned[key] = removeUndefined(value);
                 }
               }
               return cleaned;
@@ -231,7 +253,7 @@ export async function POST(request: NextRequest) {
 
           // Construir objeto assinatura a partir dos campos antigos
           // IMPORTANTE: Não incluir campos undefined para evitar erros no Firestore
-          const assinaturaMigrada: any = {
+          const assinaturaMigrada: Record<string, unknown> = {
             ultimaSincronizacao: new Date()
           };
           
@@ -256,11 +278,11 @@ export async function POST(request: NextRequest) {
               assinaturaMigrada.dataExpira = userAny.dataExpiraAssinatura;
             } else {
               try {
-                const dataExpira = new Date(userAny.dataExpiraAssinatura);
+                const dataExpira = new Date(String(userAny.dataExpiraAssinatura));
                 if (!isNaN(dataExpira.getTime())) {
                   assinaturaMigrada.dataExpira = dataExpira;
                 }
-              } catch (e) {
+              } catch {
                 // Ignorar se não conseguir converter
               }
             }
@@ -272,11 +294,11 @@ export async function POST(request: NextRequest) {
               assinaturaMigrada.dataProximoPagamento = userAny.dataProximoPagamento;
             } else {
               try {
-                const dataProximo = new Date(userAny.dataProximoPagamento);
+                const dataProximo = new Date(String(userAny.dataProximoPagamento));
                 if (!isNaN(dataProximo.getTime())) {
                   assinaturaMigrada.dataProximoPagamento = dataProximo;
                 }
-              } catch (e) {
+              } catch {
                 // Ignorar se não conseguir converter
               }
             }
@@ -287,7 +309,7 @@ export async function POST(request: NextRequest) {
           
           // Atualizar usuário com objeto assinatura criado (sem campos undefined)
           await userRepo.update(user.id, {
-            assinatura: assinaturaLimpa,
+            assinatura: assinaturaLimpa as UserAssinatura,
             dataAtualizacao: new Date()
           });
           
@@ -297,7 +319,7 @@ export async function POST(request: NextRequest) {
 
         // Agora que garantimos que o objeto assinatura existe (ou foi criado), remover campos antigos
         const userRef = doc(db, 'controle_users', user.id);
-        const camposParaDeletar: any = {};
+        const camposParaDeletar: Record<string, unknown> = {};
         if (userAny.assinaturaId !== undefined) camposParaDeletar.assinaturaId = deleteField();
         if (userAny.planoId !== undefined) camposParaDeletar.planoId = deleteField();
         if (userAny.planoNome !== undefined) camposParaDeletar.planoNome = deleteField();
@@ -322,9 +344,10 @@ export async function POST(request: NextRequest) {
 
         // Verificar resultado final
         const userVerificado = await userRepo.findById(user.id);
+        const userVerificadoLegado = userVerificado as unknown as UsuarioComCamposLegados | null;
         const aindaTemCamposAntigos = 
-          (userVerificado as any)?.assinaturaId !== undefined ||
-          (userVerificado as any)?.planoId !== undefined;
+          userVerificadoLegado?.assinaturaId !== undefined ||
+          userVerificadoLegado?.planoId !== undefined;
 
         if (userVerificado?.assinatura && !aindaTemCamposAntigos) {
           resultados.usuariosMigrados++;
@@ -352,13 +375,13 @@ export async function POST(request: NextRequest) {
           });
         }
 
-      } catch (error: any) {
+      } catch (error: unknown) {
         resultados.usuariosComErro++;
         resultados.detalhes.push({
           userId: user.id,
           email: user.email,
           status: 'erro',
-          mensagem: error.message || 'Erro desconhecido'
+          mensagem: getErrorMessage(error)
         });
       }
     }
@@ -379,9 +402,9 @@ export async function POST(request: NextRequest) {
       detalhes: resultados.detalhes
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error.message || 'Erro ao migrar estrutura de assinatura dos usuários' },
+      { error: getErrorMessage(error) || 'Erro ao migrar estrutura de assinatura dos usuários' },
       { status: 500 }
     );
   }

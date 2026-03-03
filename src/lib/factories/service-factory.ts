@@ -96,6 +96,7 @@ export class ServiceFactory {
       repoFactory.getUserRepository(),
       repoFactory.getEventoRepository(),
       repoFactory.getClienteRepository(),
+      repoFactory.getPlanoRepository(),
       this.assinaturaService
     );
 

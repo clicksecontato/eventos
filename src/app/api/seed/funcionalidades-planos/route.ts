@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
-import { AdminFuncionalidadeRepository } from '@/lib/repositories/admin-funcionalidade-repository';
-import { AdminPlanoRepository } from '@/lib/repositories/admin-plano-repository';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { Funcionalidade, Plano } from '@/types/funcionalidades';
 
 const FUNCIONALIDADES_INICIAIS: Omit<Funcionalidade, 'id' | 'dataCadastro'>[] = [
@@ -66,8 +65,8 @@ export async function POST(request: NextRequest) {
       // Em desenvolvimento, permitir sem autenticação
     }
 
-    const funcionalidadeRepo = new AdminFuncionalidadeRepository();
-    const planoRepo = new AdminPlanoRepository();
+    const funcionalidadeRepo = repositoryFactory.getAdminFuncionalidadeRepository();
+    const planoRepo = repositoryFactory.getAdminPlanoRepository();
 
     // Se reset=true, limpar tudo primeiro
     if (reset) {

@@ -3,8 +3,8 @@ import { adminAuth, isFirebaseAdminInitialized, getFirebaseAdminInitializationEr
 import { generatePasswordResetEmailTemplate } from '@/lib/services/email-service';
 import { createPasswordResetLink } from '@/lib/services/password-link-service';
 import { sendEmail, isEmailServiceConfigured } from '@/lib/services/resend-email-service';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { 
-  handleApiError,
   createApiResponse,
   createErrorResponse,
   getRequestBody
@@ -15,6 +15,18 @@ const resetAttempts = new Map<string, { count: number; lastAttempt: number }>();
 
 const MAX_ATTEMPTS = 5;
 const WINDOW_MS = 60 * 60 * 1000; // 1 hora
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function getErrorCode(error: unknown): string | undefined {
+  if (error && typeof error === 'object' && 'code' in error) {
+    const code = (error as { code?: unknown }).code;
+    return typeof code === 'string' ? code : undefined;
+  }
+  return undefined;
+}
 
 function checkRateLimit(email: string): boolean {
   const now = Date.now();
@@ -105,12 +117,11 @@ export async function POST(request: NextRequest) {
       // Buscar nome do usuário no Firestore (usar Admin para bypassar regras)
       let nome = '';
       try {
-        const { AdminUserRepository } = await import('@/lib/repositories/admin-user-repository');
-        const userRepo = new AdminUserRepository();
+        const userRepo = repositoryFactory.getAdminUserRepository();
         const userData = await userRepo.findById(user.uid);
         nome = userData?.nome || '';
         console.log('[reset-password] Nome do usuário:', nome || '(não encontrado)');
-      } catch (userRepoError: any) {
+      } catch (userRepoError: unknown) {
         console.error('[reset-password] Erro ao buscar dados do usuário:', userRepoError);
       }
 
@@ -151,15 +162,15 @@ export async function POST(request: NextRequest) {
         message: 'Email de redefinição enviado com sucesso'
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[reset-password] ❌ ERRO no processo de reset:');
-      console.error('[reset-password] Tipo do erro:', error?.constructor?.name);
-      console.error('[reset-password] Mensagem:', error?.message);
-      console.error('[reset-password] Código:', error?.code);
-      console.error('[reset-password] Stack:', error?.stack);
+      console.error('[reset-password] Tipo do erro:', error instanceof Error ? error.constructor.name : typeof error);
+      console.error('[reset-password] Mensagem:', getErrorMessage(error));
+      console.error('[reset-password] Código:', getErrorCode(error));
+      console.error('[reset-password] Stack:', error instanceof Error ? error.stack : undefined);
       
       // Se o erro for que o usuário não existe, não expor isso por segurança
-      if (error.code === 'auth/user-not-found') {
+      if (getErrorCode(error) === 'auth/user-not-found') {
         console.log('[reset-password] Usuário não encontrado (retornando mensagem genérica por segurança)');
         return createApiResponse({
           success: true,

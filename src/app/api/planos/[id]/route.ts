@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { 
   requireAdminOrPremium,
   handleApiError,
@@ -16,10 +17,8 @@ export async function GET(
     // Permitir acesso público para landing page
     const { id } = await getRouteParams(params);
     // Usar Admin diretamente para bypassar regras do Firestore
-    const { AdminPlanoRepository } = await import('@/lib/repositories/admin-plano-repository');
-    const { AdminFuncionalidadeRepository } = await import('@/lib/repositories/admin-funcionalidade-repository');
-    const planoRepo = new AdminPlanoRepository();
-    const funcionalidadeRepo = new AdminFuncionalidadeRepository();
+    const planoRepo = repositoryFactory.getAdminPlanoRepository();
+    const funcionalidadeRepo = repositoryFactory.getAdminFuncionalidadeRepository();
     
     const plano = await planoRepo.findById(id);
     if (!plano) {
@@ -54,8 +53,7 @@ export async function PUT(
 
     const { id } = await getRouteParams(params);
     const data = await getRequestBody(request);
-    const { AdminPlanoRepository } = await import('@/lib/repositories/admin-plano-repository');
-    const planoRepo = new AdminPlanoRepository();
+    const planoRepo = repositoryFactory.getAdminPlanoRepository();
     
     const plano = await planoRepo.update(id, {
       ...data,
@@ -76,8 +74,7 @@ export async function DELETE(
     await requireAdminOrPremium();
 
     const { id } = await getRouteParams(params);
-    const { AdminPlanoRepository } = await import('@/lib/repositories/admin-plano-repository');
-    const planoRepo = new AdminPlanoRepository();
+    const planoRepo = repositoryFactory.getAdminPlanoRepository();
     await planoRepo.delete(id);
 
     return createApiResponse({ success: true });

@@ -1,9 +1,7 @@
 import { NextRequest } from 'next/server';
-import { getServiceFactory } from '@/lib/factories/service-factory';
-import { AdminPlanoRepository } from '@/lib/repositories/admin-plano-repository';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { isFirebaseAdminInitialized, getFirebaseAdminInitializationError } from '@/lib/firebase-admin';
 import { 
-  getAuthenticatedUserOptional,
   requireAdminOrPremium,
   handleApiError,
   createApiResponse,
@@ -11,6 +9,18 @@ import {
   getRequestBody,
   getQueryParams
 } from '@/lib/api/route-helpers';
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
+type PlanoResumo = {
+  id?: string;
+  nome?: string;
+  ativo?: boolean;
+  preco?: number;
+  destaque?: boolean;
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,16 +42,16 @@ export async function GET(request: NextRequest) {
     console.log('[API /planos] ===== INÍCIO DA BUSCA =====');
     console.log('[API /planos] Parâmetros da query:', { apenasAtivos });
     
-    const planoRepo = new AdminPlanoRepository();
+    const planoRepo = repositoryFactory.getAdminPlanoRepository();
     console.log('[API /planos] AdminPlanoRepository criado com sucesso');
     
     console.log('[API /planos] Chamando método do repositório...');
-    let planos: any[] = [];
+    let planos: PlanoResumo[] = [];
     
     try {
       planos = apenasAtivos ? await planoRepo.findAtivos() : await planoRepo.findAll();
       console.log('[API /planos] Método do repositório executado com sucesso');
-    } catch (repoError: any) {
+    } catch (repoError: unknown) {
       console.error('[API /planos] Erro ao chamar método do repositório:', repoError);
       throw repoError;
     }
@@ -77,7 +87,7 @@ export async function GET(request: NextRequest) {
         } else {
           console.warn('[API /planos] ⚠️ Nenhum plano encontrado no Firestore! Verifique se os planos foram criados.');
         }
-      } catch (checkError: any) {
+      } catch (checkError: unknown) {
         console.error('[API /planos] Erro ao verificar todos os planos:', checkError);
       }
     }
@@ -91,22 +101,23 @@ export async function GET(request: NextRequest) {
     console.log('[API /planos] ===== FIM DA BUSCA =====');
     
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[API /planos] ===== ERRO NA BUSCA =====');
     console.error('[API /planos] Erro ao buscar planos:', error);
-    console.error('[API /planos] Tipo do erro:', error.constructor?.name);
-    console.error('[API /planos] Stack:', error.stack);
+    console.error('[API /planos] Tipo do erro:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('[API /planos] Stack:', error instanceof Error ? error.stack : undefined);
     console.error('[API /planos] Error details:', {
-      message: error.message,
-      name: error.name,
-      code: error.code,
-      cause: error.cause
+      message: getErrorMessage(error),
+      name: error instanceof Error ? error.name : undefined,
+      code: error && typeof error === 'object' && 'code' in error ? (error as { code?: unknown }).code : undefined,
+      cause: error instanceof Error ? error.cause : undefined
     });
     console.error('[API /planos] ===== FIM DO ERRO =====');
     
     // Se for erro de Firebase Admin não inicializado, retornar erro específico
-    if (error.message?.includes('Firebase Admin não está inicializado')) {
-      return createErrorResponse(error.message, 500);
+    const mensagemErro = getErrorMessage(error);
+    if (mensagemErro.includes('Firebase Admin não está inicializado')) {
+      return createErrorResponse(mensagemErro, 500);
     }
     
     return handleApiError(error);
@@ -119,7 +130,7 @@ export async function POST(request: NextRequest) {
 
     const data = await getRequestBody(request);
     // Usar AdminPlanoRepository no servidor para bypassar regras de segurança do Firebase
-    const planoRepo = new AdminPlanoRepository();
+    const planoRepo = repositoryFactory.getAdminPlanoRepository();
     
     const plano = await planoRepo.create({
       ...data,

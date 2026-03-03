@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { AdminPasswordResetTokenRepository } from '@/lib/repositories/admin-password-reset-token-repository';
+import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { 
   handleApiError,
   createApiResponse,
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Token é obrigatório', 400);
     }
 
-    const tokenRepo = new AdminPasswordResetTokenRepository();
+    const tokenRepo = repositoryFactory.getAdminPasswordResetTokenRepository();
     const tokenData = await tokenRepo.findByToken(token);
 
     if (!tokenData) {

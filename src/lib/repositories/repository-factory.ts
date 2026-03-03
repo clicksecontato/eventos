@@ -1,19 +1,6 @@
-import { ClienteRepository } from './cliente-repository';
-import { EventoRepository } from './evento-repository';
-import { PagamentoRepository } from './pagamento-repository';
-import { CustoEventoRepository, TipoCustoRepository } from './custo-repository';
-import { ServicoEventoRepository, TipoServicoRepository } from './servico-repository';
-import { CanalEntradaRepository } from './canal-entrada-repository';
 import { UserRepository } from './user-repository';
 import { ArquivoRepository } from './arquivo-repository';
-import { TipoEventoRepository } from './tipo-evento-repository';
 import { GoogleCalendarTokenRepository } from './google-calendar-token-repository';
-import { ModeloContratoRepository } from './modelo-contrato-repository';
-import { ConfiguracaoContratoRepository } from './configuracao-contrato-repository';
-import { ContratoRepository } from './contrato-repository';
-import { VariavelContratoRepository } from './variavel-contrato-repository';
-import { RelatoriosDiariosRepository } from './relatorios-diarios-repository';
-import { RelatorioCacheRepository } from './relatorio-cache-repository';
 import { PlanoRepository } from './plano-repository';
 import { FuncionalidadeRepository } from './funcionalidade-repository';
 import { AssinaturaRepository } from './assinatura-repository';
@@ -21,6 +8,12 @@ import { PasswordResetTokenRepository } from './password-reset-token-repository'
 import { PagamentoGlobalRepository } from './pagamento-global-repository';
 import { CustoGlobalRepository } from './custo-global-repository';
 import { ServicoGlobalRepository } from './servico-global-repository';
+import { AdminUserRepository } from './admin-user-repository';
+import { AdminPlanoRepository } from './admin-plano-repository';
+import { AdminAssinaturaRepository } from './admin-assinatura-repository';
+import { AdminFuncionalidadeRepository } from './admin-funcionalidade-repository';
+import { AdminPasswordResetTokenRepository } from './admin-password-reset-token-repository';
+import { getProvedorDadosAtual } from '@/lib/config/data-provider';
 
 // Importar repositórios Supabase
 import { ClienteSupabaseRepository } from './supabase/cliente-supabase-repository';
@@ -89,8 +82,18 @@ export class RepositoryFactory {
   private pagamentoGlobalRepository: PagamentoGlobalRepository;
   private custoGlobalRepository: CustoGlobalRepository;
   private servicoGlobalRepository: ServicoGlobalRepository;
+  
+  // Repositórios Admin (server-only, bypass regras)
+  private adminUserRepository: AdminUserRepository;
+  private adminPlanoRepository: AdminPlanoRepository;
+  private adminAssinaturaRepository: AdminAssinaturaRepository;
+  private adminFuncionalidadeRepository: AdminFuncionalidadeRepository;
+  private adminPasswordResetTokenRepository: AdminPasswordResetTokenRepository;
 
   private constructor() {
+    // Mantém o provider explícito e travado no provedor atual.
+    getProvedorDadosAtual();
+
     // Inicializar repositórios Supabase
     // Se Supabase não estiver configurado, BaseSupabaseRepository lançará erro claro
     this.clienteRepository = new ClienteSupabaseRepository();
@@ -128,6 +131,13 @@ export class RepositoryFactory {
     this.pagamentoGlobalRepository = new PagamentoGlobalRepository();
     this.custoGlobalRepository = new CustoGlobalRepository();
     this.servicoGlobalRepository = new ServicoGlobalRepository();
+
+    // Inicializar repositórios Admin
+    this.adminUserRepository = new AdminUserRepository();
+    this.adminPlanoRepository = new AdminPlanoRepository();
+    this.adminAssinaturaRepository = new AdminAssinaturaRepository();
+    this.adminFuncionalidadeRepository = new AdminFuncionalidadeRepository();
+    this.adminPasswordResetTokenRepository = new AdminPasswordResetTokenRepository();
   }
 
   public static getInstance(): RepositoryFactory {
@@ -262,6 +272,27 @@ export class RepositoryFactory {
 
   public getServicoGlobalRepository(): ServicoGlobalRepository {
     return this.servicoGlobalRepository;
+  }
+
+  // Métodos getter - Repositórios Admin (server-only)
+  public getAdminUserRepository(): AdminUserRepository {
+    return this.adminUserRepository;
+  }
+
+  public getAdminPlanoRepository(): AdminPlanoRepository {
+    return this.adminPlanoRepository;
+  }
+
+  public getAdminAssinaturaRepository(): AdminAssinaturaRepository {
+    return this.adminAssinaturaRepository;
+  }
+
+  public getAdminFuncionalidadeRepository(): AdminFuncionalidadeRepository {
+    return this.adminFuncionalidadeRepository;
+  }
+
+  public getAdminPasswordResetTokenRepository(): AdminPasswordResetTokenRepository {
+    return this.adminPasswordResetTokenRepository;
   }
 }
 
