@@ -55,7 +55,7 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
     const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .select('*, servicos(*)')
+      .select('*, servicos!pre_cadastros_servicos_servico_id_fkey(*)')
       .eq('empresa_id', empresaId)
       .eq('pre_cadastro_id', preCadastroId)
       .eq('removido', false)
@@ -90,7 +90,7 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
   async findByPreCadastroIdPublic(preCadastroId: string): Promise<PreCadastroServico[]> {
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .select('*, servicos(*)')
+      .select('*, servicos!pre_cadastros_servicos_servico_id_fkey(*)')
       .eq('pre_cadastro_id', preCadastroId)
       .eq('removido', false)
       .order('data_cadastro', { ascending: false });
@@ -143,7 +143,7 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
     const { data, error } = await this.supabase
       .from(this.tableName)
       .insert(servicosParaInserir)
-      .select('*, servicos(*)');
+      .select('*, servicos!pre_cadastros_servicos_servico_id_fkey(*)');
 
     if (error) {
       throw new Error(`Erro ao criar serviços: ${error.message}`);
@@ -203,7 +203,7 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
     const { data, error } = await this.supabase
       .from(this.tableName)
       .insert(supabaseData)
-      .select('*, servicos(*)')
+      .select('*, servicos!pre_cadastros_servicos_servico_id_fkey(*)')
       .single();
 
     if (error) {

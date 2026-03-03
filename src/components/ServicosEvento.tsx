@@ -12,6 +12,7 @@ import {
 } from '@/types';
 import { dataService } from '@/lib/data-service';
 import { useCurrentUser } from '@/hooks/useAuth';
+import { useToast } from '@/components/ui/toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { isToday, subDays } from 'date-fns';
@@ -42,6 +43,7 @@ export default function ServicosEvento({
   onServicosChange 
 }: ServicosEventoProps) {
   const { userId } = useCurrentUser();
+  const { showToast } = useToast();
   const [showForm, setShowForm] = useState(false);
   const [showModalSelecao, setShowModalSelecao] = useState(false);
   const [servicoEditando, setServicoEditando] = useState<ServicoEvento | null>(null);
@@ -222,7 +224,7 @@ export default function ServicosEvento({
       onServicosChange();
       handleFecharModalSelecao();
     } catch (error) {
-      // Erro ao salvar serviços
+      showToast('Erro ao adicionar serviços. Verifique se a migration foi aplicada e tente novamente.', 'error');
     }
   };
 

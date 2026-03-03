@@ -67,7 +67,7 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .select('*, servicos(*)')
+      .select('*, servicos!servicos_evento_servico_id_fkey(*)')
       .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .eq('removido', false)
@@ -118,7 +118,7 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     const { data, error } = await this.supabase
       .from(this.tableName)
       .insert(supabaseData)
-      .select('*, servicos(*)')
+      .select('*, servicos!servicos_evento_servico_id_fkey(*)')
       .single();
 
     if (error) {
@@ -163,7 +163,7 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
       .eq('id', servicoId)
       .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
-      .select('*, servicos(*)')
+      .select('*, servicos!servicos_evento_servico_id_fkey(*)')
       .single();
 
     if (error) {
@@ -247,7 +247,7 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .select('*, servicos(*)')
+      .select('*, servicos!servicos_evento_servico_id_fkey(*)')
       .eq('empresa_id', empresaId)
       .order('data_cadastro', { ascending: false });
 
@@ -284,7 +284,7 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .select('*, servicos(*)')
+      .select('*, servicos!servicos_evento_servico_id_fkey(*)')
       .eq('id', id)
       .eq('empresa_id', empresaId)
       .maybeSingle();
@@ -324,7 +324,7 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     const empresaId = getEmpresaIdPadrao();
     const { data, error } = await this.supabase
       .from(this.tableName)
-      .select('*, servicos(*)')
+      .select('*, servicos!servicos_evento_servico_id_fkey(*)')
       .eq('empresa_id', empresaId)
       .eq('evento_id', eventoId)
       .order('data_cadastro', { ascending: false });
@@ -394,7 +394,7 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     for (const chunk of chunks) {
       const { data, error } = await this.supabase
         .from(this.tableName)
-      .select('*, servicos(*)')
+      .select('*, servicos!servicos_evento_servico_id_fkey(*)')
         .eq('empresa_id', empresaId)
         .in('evento_id', chunk)
         .eq('removido', false)
