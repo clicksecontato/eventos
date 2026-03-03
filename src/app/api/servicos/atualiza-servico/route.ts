@@ -49,6 +49,11 @@ export async function POST(request: NextRequest) {
           totalProcessados++;
 
           try {
+            const servicoRefId = servico.servicoId;
+            if (!servicoRefId) {
+              continue;
+            }
+
             const servicoExistente = await servicoGlobalRepo.findById(
               userId,
               evento.id,
@@ -62,8 +67,7 @@ export async function POST(request: NextRequest) {
                 servico.id,
                 {
                   eventoId: evento.id,
-                  tipoServicoId: servico.servicoId || servico.tipoServicoId,
-                  servicoId: servico.servicoId || servico.tipoServicoId,
+                  servicoId: servicoRefId,
                   observacoes: servico.observacoes,
                   removido: servico.removido,
                   dataRemocao: servico.dataRemocao,

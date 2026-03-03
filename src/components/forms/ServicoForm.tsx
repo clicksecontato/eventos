@@ -83,7 +83,7 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
   useEffect(() => {
     if (servico) {
       setFormData({
-        servicoId: servico.servicoId || servico.tipoServicoId,
+        servicoId: servico.servicoId || '',
         quantidade: servico.quantidade ?? 1,
         valorUnitario: servico.valorUnitario ?? servico.tipoServico?.valorPadrao ?? 0,
         origemPreco: servico.origemPreco || 'padrao',
@@ -147,7 +147,6 @@ export default function ServicoForm({ servico, evento, onSave, onCancel }: Servi
       const servicoData: ServicoEvento = {
         id: servico?.id || '',
         eventoId: evento.id,
-        tipoServicoId: formData.servicoId,
         servicoId: formData.servicoId,
         tipoServico: tipoServico,
         quantidade: formData.quantidade,

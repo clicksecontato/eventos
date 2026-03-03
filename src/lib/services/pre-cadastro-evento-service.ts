@@ -103,7 +103,6 @@ export class PreCadastroEventoService {
       
       // Criar novos serviços
       const servicosParaSalvar = servicosIds.map(servicoId => ({
-        tipoServicoId: servicoId,
         servicoId,
         removido: false,
       }));
@@ -262,10 +261,9 @@ export class PreCadastroEventoService {
     // Copiar serviços do pré-cadastro para o evento
     if (preCadastro.servicos && preCadastro.servicos.length > 0) {
       const servicosParaCopiar = preCadastro.servicos
-        .filter(servico => !servico.removido && (servico.servicoId || servico.tipoServicoId))
+        .filter(servico => !servico.removido && servico.servicoId)
         .map(servico => ({
-          tipoServicoId: servico.servicoId || servico.tipoServicoId,
-          servicoId: servico.servicoId || servico.tipoServicoId,
+          servicoId: servico.servicoId,
           observacoes: servico.observacoes || undefined,
           removido: false,
           eventoId: evento.id,
@@ -277,9 +275,9 @@ export class PreCadastroEventoService {
       for (const servicoData of servicosParaCopiar) {
         try {
           await servicoEventoRepo.createServicoEvento(userId, evento.id, servicoData);
-          console.log(`[PreCadastroEventoService] Serviço ${servicoData.servicoId || servicoData.tipoServicoId} copiado com sucesso`);
+          console.log(`[PreCadastroEventoService] Serviço ${servicoData.servicoId} copiado com sucesso`);
         } catch (error: any) {
-          console.error(`[PreCadastroEventoService] Erro ao copiar serviço ${servicoData.servicoId || servicoData.tipoServicoId}:`, error);
+          console.error(`[PreCadastroEventoService] Erro ao copiar serviço ${servicoData.servicoId}:`, error);
           // Continuar com os outros serviços mesmo se um falhar
         }
       }

@@ -18,7 +18,6 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
     return {
       id: row.id,
       eventoId: row.evento_id,
-      tipoServicoId: row.servico_id || row.tipo_servico_id,
       servicoId: row.servico_id || row.tipo_servico_id,
       quantidade,
       valorUnitario,
@@ -39,10 +38,13 @@ export class ServicoEventoSupabaseRepository extends BaseSupabaseRepository<Serv
 
   protected convertToSupabase(entity: Partial<ServicoEvento>): any {
     const data: any = {};
+    const entidadeLegada = entity as Partial<ServicoEvento> & { tipoServicoId?: string };
     
     if (entity.eventoId !== undefined) data.evento_id = entity.eventoId;
-    if (entity.tipoServicoId !== undefined) data.servico_id = entity.tipoServicoId;
     if (entity.servicoId !== undefined) data.servico_id = entity.servicoId;
+    if (data.servico_id === undefined && entidadeLegada.tipoServicoId !== undefined) {
+      data.servico_id = entidadeLegada.tipoServicoId;
+    }
     if (entity.quantidade !== undefined) data.quantidade = entity.quantidade;
     if (entity.valorUnitario !== undefined) data.valor_unitario = entity.valorUnitario;
     if (entity.valorTotalItem !== undefined) data.valor_total_item = entity.valorTotalItem;

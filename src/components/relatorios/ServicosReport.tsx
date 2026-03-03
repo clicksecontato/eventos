@@ -65,7 +65,10 @@ export default function ServicosReport({ eventos, servicos, tiposServicos }: Ser
     // Serviços por tipo
     const servicosPorTipoMap: Record<string, { quantidade: number; eventos: Set<string> }> = {};
     servicosPeriodo.forEach(servico => {
-      const tipoNome = tiposMap.get(servico.servicoId || servico.tipoServicoId)?.nome || 'Tipo não encontrado';
+      const servicoRefId = servico.servicoId;
+      const tipoNome = servicoRefId
+        ? tiposMap.get(servicoRefId)?.nome || 'Serviço não encontrado'
+        : 'Serviço não encontrado';
       if (!servicosPorTipoMap[tipoNome]) {
         servicosPorTipoMap[tipoNome] = { quantidade: 0, eventos: new Set() };
       }
@@ -98,7 +101,10 @@ export default function ServicosReport({ eventos, servicos, tiposServicos }: Ser
       dataEvento: evento.dataEvento,
       tipoEvento: evento.tipoEvento,
       quantidadeServicos: servicosEvento.length,
-      tiposServicos: servicosEvento.map(s => tiposMap.get(s.servicoId || s.tipoServicoId)?.nome || 'Tipo não encontrado')
+      tiposServicos: servicosEvento.map(s => {
+        const servicoRefId = s.servicoId;
+        return servicoRefId ? tiposMap.get(servicoRefId)?.nome || 'Serviço não encontrado' : 'Serviço não encontrado';
+      })
     }));
 
     // Serviços por mês
@@ -111,7 +117,10 @@ export default function ServicosReport({ eventos, servicos, tiposServicos }: Ser
           servicosPorMesMap[mes] = { quantidade: 0, tipos: new Set() };
         }
         servicosPorMesMap[mes].quantidade++;
-        servicosPorMesMap[mes].tipos.add(servico.servicoId || servico.tipoServicoId);
+        const servicoRefId = servico.servicoId;
+        if (servicoRefId) {
+          servicosPorMesMap[mes].tipos.add(servicoRefId);
+        }
       }
     });
 
@@ -132,7 +141,10 @@ export default function ServicosReport({ eventos, servicos, tiposServicos }: Ser
     servicosPeriodo.forEach(servico => {
       const evento = eventosPeriodo.find(e => e.id === servico.eventoId);
       if (evento) {
-        const tipoNome = tiposMap.get(servico.servicoId || servico.tipoServicoId)?.nome || 'Tipo não encontrado';
+        const servicoRefId = servico.servicoId;
+        const tipoNome = servicoRefId
+          ? tiposMap.get(servicoRefId)?.nome || 'Serviço não encontrado'
+          : 'Serviço não encontrado';
         if (!servicosPorTipoEventoMap[evento.tipoEvento]) {
           servicosPorTipoEventoMap[evento.tipoEvento] = { quantidade: 0, tipos: {} };
         }

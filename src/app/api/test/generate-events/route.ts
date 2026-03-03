@@ -176,7 +176,6 @@ export async function POST(request: NextRequest) {
 
           const servicoEvento: Omit<ServicoEvento, 'id'> = {
             eventoId: evento.id,
-            tipoServicoId: tipoServico.id,
             servicoId: tipoServico.id,
             tipoServico: tipoServico,
             observacoes: '',

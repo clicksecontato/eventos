@@ -71,8 +71,7 @@ export interface ServicosResumo {
 }
 
 export interface ServicoPorTipo {
-  tipoServicoId: string;
-  servicoId?: string;
+  servicoId: string;
   tipoServicoNome: string;
   quantidade: number;
   eventosUtilizados: number;

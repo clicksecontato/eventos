@@ -343,10 +343,19 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
       try {
         const servicos = await dataService.getServicosEvento(userId, evento.id);
         setServicosEventoOriginais(servicos);
-        setSelectedTiposServicoIds(new Set(servicos.map(servico => servico.servicoId || servico.tipoServicoId)));
+        setSelectedTiposServicoIds(
+          new Set(
+            servicos
+              .map(servico => servico.servicoId)
+              .filter((id): id is string => Boolean(id))
+          )
+        );
         const configuracoes: Record<string, ServicoConfiguracao> = {};
         servicos.forEach((servico) => {
-          const chaveServico = servico.servicoId || servico.tipoServicoId;
+          const chaveServico = servico.servicoId;
+          if (!chaveServico) {
+            return;
+          }
           configuracoes[chaveServico] = {
             quantidade: servico.quantidade ?? 1,
             valorUnitario: servico.valorUnitario ?? servico.tipoServico?.valorPadrao ?? 0,
@@ -679,7 +688,7 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
           }
         }
 
-        const mapaOriginais = new Map(servicosAtuais.map(servico => [servico.servicoId || servico.tipoServicoId, servico]));
+        const mapaOriginais = new Map(servicosAtuais.map(servico => [servico.servicoId, servico]));
         const atualizados: ServicoEvento[] = [];
 
         for (const tipoId of selecionados) {
@@ -712,7 +721,6 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
           const valorUnitario = config?.valorUnitario ?? tipo.valorPadrao ?? 0;
           const novoServico = await dataService.createServicoEvento(userId, eventoId, {
             eventoId,
-            tipoServicoId: tipoId,
             servicoId: tipoId,
             tipoServico: tipo,
             quantidade,
@@ -750,7 +758,6 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
           const valorUnitario = config?.valorUnitario ?? tipo.valorPadrao ?? 0;
           const novoServico = await dataService.createServicoEvento(userId, eventoId, {
             eventoId,
-            tipoServicoId: tipoId,
             servicoId: tipoId,
             tipoServico: tipo,
             quantidade,

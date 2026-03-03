@@ -332,7 +332,7 @@ export class RelatorioCacheService {
     const servicosPorTipo: Record<string, { quantidade: number; eventos: Set<string> }> = {};
 
     servicosAtivos.forEach(servico => {
-      const tipoNome = tiposMap.get(servico.servicoId || servico.tipoServicoId)?.nome || 'Tipo não encontrado';
+      const tipoNome = tiposMap.get(servico.servicoId)?.nome || 'Serviço não encontrado';
       if (!servicosPorTipo[tipoNome]) {
         servicosPorTipo[tipoNome] = { quantidade: 0, eventos: new Set() };
       }
@@ -343,7 +343,6 @@ export class RelatorioCacheService {
     const totalServicos = servicosAtivos.length; // Mantido apenas para cálculo de percentuais
 
     const servicosPorTipoArray = Object.entries(servicosPorTipo).map(([nome, dados]) => ({
-      tipoServicoId: tiposServicos.find(t => t.nome === nome)?.id || '',
       servicoId: tiposServicos.find(t => t.nome === nome)?.id || '',
       tipoServicoNome: nome,
       quantidade: dados.quantidade,

@@ -22,8 +22,7 @@ export class ServicoEventoRepository extends SubcollectionRepository<ServicoEven
     
     // Criar dados simplificados para salvar no Firestore
     const servicoData = {
-      tipoServicoId: servico.servicoId || servico.tipoServicoId,
-      servicoId: servico.servicoId || servico.tipoServicoId,
+      servicoId: servico.servicoId,
       quantidade: servico.quantidade ?? 1,
       valorUnitario: servico.valorUnitario ?? 0,
       valorTotalItem: servico.valorTotalItem ?? (servico.quantidade ?? 1) * (servico.valorUnitario ?? 0),
@@ -38,8 +37,7 @@ export class ServicoEventoRepository extends SubcollectionRepository<ServicoEven
     const servicoCriado = {
       id: docRef.id,
       eventoId: servico.eventoId,
-      tipoServicoId: servico.servicoId || servico.tipoServicoId,
-      servicoId: servico.servicoId || servico.tipoServicoId,
+      servicoId: servico.servicoId,
       tipoServico: servico.tipoServico,
       quantidade: servico.quantidade ?? 1,
       valorUnitario: servico.valorUnitario ?? 0,
@@ -58,10 +56,8 @@ export class ServicoEventoRepository extends SubcollectionRepository<ServicoEven
     
     // Criar dados simplificados para atualizar no Firestore
     const updateData: any = {};
-    if (servico.tipoServicoId !== undefined || servico.servicoId !== undefined) {
-      const servicoRefId = servico.servicoId || servico.tipoServicoId;
-      updateData.tipoServicoId = servicoRefId;
-      updateData.servicoId = servicoRefId;
+    if (servico.servicoId !== undefined) {
+      updateData.servicoId = servico.servicoId;
     }
     if (servico.quantidade !== undefined) updateData.quantidade = servico.quantidade;
     if (servico.valorUnitario !== undefined) updateData.valorUnitario = servico.valorUnitario;
@@ -75,8 +71,7 @@ export class ServicoEventoRepository extends SubcollectionRepository<ServicoEven
     return {
       id: servicoId,
       eventoId: servico.eventoId || '',
-      tipoServicoId: servico.servicoId || servico.tipoServicoId || '',
-      servicoId: servico.servicoId || servico.tipoServicoId || '',
+      servicoId: servico.servicoId || '',
       tipoServico: servico.tipoServico || {} as TipoServico,
       quantidade: servico.quantidade ?? 1,
       valorUnitario: servico.valorUnitario ?? 0,
@@ -111,8 +106,8 @@ export class ServicoEventoRepository extends SubcollectionRepository<ServicoEven
       return querySnapshot.docs.map(doc => {
         const data = doc.data();
         
-        // Buscar o tipo de serviço correspondente
-        const servicoRefId = data.servicoId || data.tipoServicoId;
+        // Buscar o serviço correspondente (com fallback legado)
+        const servicoRefId = data.servicoId || data.tipoServicoId || '';
         const tipoServico = tiposMap.get(servicoRefId) || {
           id: servicoRefId,
           nome: 'Tipo não encontrado',
@@ -124,7 +119,6 @@ export class ServicoEventoRepository extends SubcollectionRepository<ServicoEven
         const servico: ServicoEvento = {
           id: doc.id,
           eventoId: eventoId,
-          tipoServicoId: servicoRefId,
           servicoId: servicoRefId,
           tipoServico: tipoServico,
           quantidade: data.quantidade ?? 1,
@@ -143,8 +137,8 @@ export class ServicoEventoRepository extends SubcollectionRepository<ServicoEven
     }
   }
 
-  async findByTipoServicoId(userId: string, eventoId: string, tipoServicoId: string): Promise<ServicoEvento[]> {
-    return this.findWhere('tipoServicoId', '==', tipoServicoId, eventoId);
+  async findByServicoId(userId: string, eventoId: string, servicoId: string): Promise<ServicoEvento[]> {
+    return this.findWhere('servicoId', '==', servicoId, eventoId);
   }
 
   async getResumoServicosPorEvento(userId: string, eventoId: string): Promise<{

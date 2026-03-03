@@ -181,7 +181,7 @@ export default function ServicosEvento({
 
   const handleSelecionarTodos = () => {
     // Filtrar serviços já adicionados
-    const servicosJaAdicionados = new Set(servicos.map(s => s.servicoId || s.tipoServicoId));
+    const servicosJaAdicionados = new Set(servicos.map(s => s.servicoId));
     const tiposDisponiveis = tiposServicoDisponiveis.filter(
       tipo => !servicosJaAdicionados.has(tipo.id)
     );
@@ -198,7 +198,7 @@ export default function ServicosEvento({
 
     try {
       // Filtrar apenas os tipos de serviço que já não foram adicionados
-      const servicosJaAdicionados = new Set(servicos.map(s => s.servicoId || s.tipoServicoId));
+      const servicosJaAdicionados = new Set(servicos.map(s => s.servicoId));
       const tiposParaAdicionar = tiposServicoDisponiveis.filter(
         tipo => servicosSelecionados.has(tipo.id) && !servicosJaAdicionados.has(tipo.id)
       );
@@ -207,7 +207,6 @@ export default function ServicosEvento({
       for (const tipoServico of tiposParaAdicionar) {
         const servicoEvento: Omit<ServicoEvento, 'id'> = {
           eventoId: evento.id,
-          tipoServicoId: tipoServico.id,
           servicoId: tipoServico.id,
           tipoServico: tipoServico,
           quantidade: 1,
@@ -360,7 +359,7 @@ export default function ServicosEvento({
   };
 
   // Filtrar serviços já adicionados ao evento
-  const servicosJaAdicionados = new Set(servicos.map(s => s.servicoId || s.tipoServicoId));
+  const servicosJaAdicionados = new Set(servicos.map(s => s.servicoId));
   const tiposDisponiveisParaAdicionar = tiposServicoDisponiveis.filter(
     tipo => !servicosJaAdicionados.has(tipo.id)
   );

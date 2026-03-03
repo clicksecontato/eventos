@@ -14,7 +14,6 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
       id: row.id,
       userId: row.user_id,
       preCadastroId: row.pre_cadastro_id,
-      tipoServicoId: row.servico_id || row.tipo_servico_id,
       servicoId: row.servico_id || row.tipo_servico_id,
       observacoes: row.observacoes,
       removido: row.removido || false,
@@ -28,11 +27,14 @@ export class PreCadastroServicoSupabaseRepository extends BaseSupabaseRepository
 
   protected convertToSupabase(entity: Partial<PreCadastroServico>): any {
     const data: any = {};
+    const entidadeLegada = entity as Partial<PreCadastroServico> & { tipoServicoId?: string };
     
     if (entity.userId !== undefined) data.user_id = entity.userId;
     if (entity.preCadastroId !== undefined) data.pre_cadastro_id = entity.preCadastroId;
-    if (entity.tipoServicoId !== undefined) data.servico_id = entity.tipoServicoId;
-    if ((entity as any).servicoId !== undefined) data.servico_id = (entity as any).servicoId;
+    if (entity.servicoId !== undefined) data.servico_id = entity.servicoId;
+    if (data.servico_id === undefined && entidadeLegada.tipoServicoId !== undefined) {
+      data.servico_id = entidadeLegada.tipoServicoId;
+    }
     if (entity.observacoes !== undefined) data.observacoes = entity.observacoes || null;
     if (entity.removido !== undefined) data.removido = entity.removido;
     if (entity.dataRemocao !== undefined) data.data_remocao = entity.dataRemocao instanceof Date ? entity.dataRemocao.toISOString() : entity.dataRemocao || null;
