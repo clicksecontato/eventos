@@ -58,53 +58,6 @@ const nextConfig: NextConfig = {
         url: false,
         zlib: false,
       };
-      
-      // Garantir que pacotes pesados sejam externos no cliente
-      const clientExternals = [
-        'googleapis',
-        'google-auth-library',
-        'gcp-metadata',
-        'gtoken',
-        'googleapis-common',
-        'puppeteer',
-        'puppeteer-core',
-        '@puppeteer/browsers',
-        '@sparticuz/chromium',
-        'firebase-admin',
-        '@aws-sdk/client-s3',
-        '@aws-sdk/s3-request-presigner',
-      ];
-
-      config.externals = config.externals || [];
-      if (Array.isArray(config.externals)) {
-        config.externals.push(...clientExternals);
-      } else if (typeof config.externals === 'function') {
-        const originalExternals = config.externals;
-        config.externals = [originalExternals, ...clientExternals];
-      } else {
-        config.externals = [
-          ...(Array.isArray(config.externals) ? config.externals : [config.externals]),
-          ...clientExternals,
-        ];
-      }
-    } else {
-      // No servidor, também marcar como externos para evitar problemas
-      const serverExternals = [
-        'googleapis',
-        'google-auth-library',
-        'gcp-metadata',
-        'gtoken',
-        'googleapis-common',
-        'puppeteer',
-        'puppeteer-core',
-        '@puppeteer/browsers',
-        '@sparticuz/chromium',
-      ];
-
-      config.externals = config.externals || [];
-      if (Array.isArray(config.externals)) {
-        config.externals.push(...serverExternals);
-      }
     }
     return config;
   },
