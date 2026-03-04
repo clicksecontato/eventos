@@ -67,6 +67,13 @@ function resolveRepositoryClass<T>(mod: unknown, className: string): ClassConstr
     return defaultExport as ClassConstructor<T>;
   }
 
+  const allFunctions = Object.values(moduleObject).filter(
+    (value): value is ClassConstructor<T> => typeof value === 'function'
+  );
+  if (allFunctions.length === 1) {
+    return allFunctions[0];
+  }
+
   throw new Error(`Classe ${className} não encontrada no módulo`);
 }
 

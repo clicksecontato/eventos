@@ -86,3 +86,5 @@ export class AdminAssinaturaRepository extends AdminFirestoreRepository<Assinatu
   }
 }
 
+export default AdminAssinaturaRepository;
+

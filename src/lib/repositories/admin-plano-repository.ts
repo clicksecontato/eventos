@@ -30,3 +30,5 @@ export class AdminPlanoRepository extends AdminFirestoreRepository<Plano> {
   }
 }
 
+export default AdminPlanoRepository;
+

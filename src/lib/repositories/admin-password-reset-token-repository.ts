@@ -109,3 +109,5 @@ export class AdminPasswordResetTokenRepository extends AdminFirestoreRepository<
     }
   }
 }
+
+export default AdminPasswordResetTokenRepository;

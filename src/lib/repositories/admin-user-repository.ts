@@ -45,3 +45,5 @@ export class AdminUserRepository extends AdminFirestoreRepository<User> {
   }
 }
 
+export default AdminUserRepository;
+

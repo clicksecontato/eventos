@@ -39,3 +39,5 @@ export class AdminFuncionalidadeRepository extends AdminFirestoreRepository<Func
     });
   }
 }
+
+export default AdminFuncionalidadeRepository;
