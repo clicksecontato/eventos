@@ -10,14 +10,11 @@ import { TemplateService } from '../services/template-service';
 // RelatoriosReportService e DashboardReportService importados dinamicamente para evitar dependência circular
 import { RelatorioCacheService } from '../services/relatorio-cache-service';
 import { S3Service } from '../s3-service';
-import { GoogleCalendarGoogleApisAdapter } from '../integrations/google/google-calendar-googleapis-adapter';
-import { GoogleCalendarSdkPort } from '../integrations/google/google-calendar-client-port';
-import { ResendEmailProvider } from '../integrations/email/resend-email-provider';
-import { EmailProviderPort } from '../integrations/email/email-provider-port';
 import { setEmailProvider } from '../services/resend-email-service';
-import { PdfEnginePort } from '../integrations/pdf/pdf-engine-port';
-import { PuppeteerPdfEngineAdapter } from '../integrations/pdf/puppeteer-pdf-engine-adapter';
 import type { RepositoryFactory } from '../repositories/repository-factory';
+import type { GoogleCalendarSdkPort } from '../integrations/google/google-calendar-client-port';
+import type { EmailProviderPort } from '../integrations/email/email-provider-port';
+import type { PdfEnginePort } from '../integrations/pdf/pdf-engine-port';
 
 /**
  * Helper para obter repositoryFactory de forma lazy
@@ -132,18 +129,27 @@ export class ServiceFactory {
       this.assinaturaService
     );
 
-    this.googleCalendarSdk = new GoogleCalendarGoogleApisAdapter();
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { GoogleCalendarGoogleApisAdapter } = require('../integrations/google/google-calendar-googleapis-adapter');
+    const googleCalendarSdk: GoogleCalendarSdkPort = new GoogleCalendarGoogleApisAdapter();
+    this.googleCalendarSdk = googleCalendarSdk;
     this.googleCalendarService = new GoogleCalendarService(
       repoFactory.getGoogleCalendarTokenRepository(),
-      this.googleCalendarSdk
+      googleCalendarSdk
     );
     this.googleCalendarSyncService = new GoogleCalendarSyncService();
     this.contratoService = new ContratoService();
-    this.pdfEngine = new PuppeteerPdfEngineAdapter();
-    PDFService.setPdfEngine(this.pdfEngine);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { PuppeteerPdfEngineAdapter } = require('../integrations/pdf/puppeteer-pdf-engine-adapter');
+    const pdfEngine: PdfEnginePort = new PuppeteerPdfEngineAdapter();
+    this.pdfEngine = pdfEngine;
+    PDFService.setPdfEngine(pdfEngine);
     this.pdfService = new PDFService();
-    this.emailProvider = new ResendEmailProvider();
-    setEmailProvider(this.emailProvider);
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { ResendEmailProvider } = require('../integrations/email/resend-email-provider');
+    const emailProvider: EmailProviderPort = new ResendEmailProvider();
+    this.emailProvider = emailProvider;
+    setEmailProvider(emailProvider);
     this.templateService = new TemplateService();
     this.relatorioCacheService = new RelatorioCacheService();
     this.s3Service = new S3Service();
