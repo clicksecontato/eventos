@@ -38,6 +38,38 @@ import { PreCadastroEventoSupabaseRepository } from './supabase/pre-cadastro-eve
 import { PreCadastroServicoSupabaseRepository } from './supabase/pre-cadastro-servico-supabase-repository';
 import { ValoresAtrasadosSupabaseRepository } from './supabase/valores-atrasados-supabase-repository';
 
+type ClassConstructor<T> = new () => T;
+
+function resolveRepositoryClass<T>(mod: unknown, className: string): ClassConstructor<T> {
+  if (!mod || typeof mod !== 'object') {
+    throw new Error(`Módulo inválido ao carregar ${className}`);
+  }
+
+  const moduleObject = mod as {
+    [key: string]: unknown;
+    default?: unknown;
+  };
+
+  const direct = moduleObject[className];
+  if (typeof direct === 'function') {
+    return direct as ClassConstructor<T>;
+  }
+
+  const defaultExport = moduleObject.default;
+  if (defaultExport && typeof defaultExport === 'object') {
+    const nested = (defaultExport as Record<string, unknown>)[className];
+    if (typeof nested === 'function') {
+      return nested as ClassConstructor<T>;
+    }
+  }
+
+  if (typeof defaultExport === 'function') {
+    return defaultExport as ClassConstructor<T>;
+  }
+
+  throw new Error(`Classe ${className} não encontrada no módulo`);
+}
+
 /**
  * Factory que inicializa repositórios com regras fixas:
  * - Repositórios Supabase: Clientes, Eventos, Pagamentos, Custos, Serviços, Canais, Tipos, Contratos, Relatórios
@@ -273,8 +305,9 @@ export class RepositoryFactory {
   public getAdminUserRepository(): AdminUserRepository {
     if (!this.adminUserRepository) {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { AdminUserRepository } = require('./admin-user-repository');
-      this.adminUserRepository = new AdminUserRepository();
+      const mod = require('./admin-user-repository');
+      const AdminUserRepositoryCtor = resolveRepositoryClass<AdminUserRepository>(mod, 'AdminUserRepository');
+      this.adminUserRepository = new AdminUserRepositoryCtor();
     }
     return this.adminUserRepository!;
   }
@@ -282,8 +315,9 @@ export class RepositoryFactory {
   public getAdminPlanoRepository(): AdminPlanoRepository {
     if (!this.adminPlanoRepository) {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { AdminPlanoRepository } = require('./admin-plano-repository');
-      this.adminPlanoRepository = new AdminPlanoRepository();
+      const mod = require('./admin-plano-repository');
+      const AdminPlanoRepositoryCtor = resolveRepositoryClass<AdminPlanoRepository>(mod, 'AdminPlanoRepository');
+      this.adminPlanoRepository = new AdminPlanoRepositoryCtor();
     }
     return this.adminPlanoRepository!;
   }
@@ -291,8 +325,9 @@ export class RepositoryFactory {
   public getAdminAssinaturaRepository(): AdminAssinaturaRepository {
     if (!this.adminAssinaturaRepository) {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { AdminAssinaturaRepository } = require('./admin-assinatura-repository');
-      this.adminAssinaturaRepository = new AdminAssinaturaRepository();
+      const mod = require('./admin-assinatura-repository');
+      const AdminAssinaturaRepositoryCtor = resolveRepositoryClass<AdminAssinaturaRepository>(mod, 'AdminAssinaturaRepository');
+      this.adminAssinaturaRepository = new AdminAssinaturaRepositoryCtor();
     }
     return this.adminAssinaturaRepository!;
   }
@@ -300,8 +335,9 @@ export class RepositoryFactory {
   public getAdminFuncionalidadeRepository(): AdminFuncionalidadeRepository {
     if (!this.adminFuncionalidadeRepository) {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { AdminFuncionalidadeRepository } = require('./admin-funcionalidade-repository');
-      this.adminFuncionalidadeRepository = new AdminFuncionalidadeRepository();
+      const mod = require('./admin-funcionalidade-repository');
+      const AdminFuncionalidadeRepositoryCtor = resolveRepositoryClass<AdminFuncionalidadeRepository>(mod, 'AdminFuncionalidadeRepository');
+      this.adminFuncionalidadeRepository = new AdminFuncionalidadeRepositoryCtor();
     }
     return this.adminFuncionalidadeRepository!;
   }
@@ -309,8 +345,9 @@ export class RepositoryFactory {
   public getAdminPasswordResetTokenRepository(): AdminPasswordResetTokenRepository {
     if (!this.adminPasswordResetTokenRepository) {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { AdminPasswordResetTokenRepository } = require('./admin-password-reset-token-repository');
-      this.adminPasswordResetTokenRepository = new AdminPasswordResetTokenRepository();
+      const mod = require('./admin-password-reset-token-repository');
+      const AdminPasswordResetTokenRepositoryCtor = resolveRepositoryClass<AdminPasswordResetTokenRepository>(mod, 'AdminPasswordResetTokenRepository');
+      this.adminPasswordResetTokenRepository = new AdminPasswordResetTokenRepositoryCtor();
     }
     return this.adminPasswordResetTokenRepository!;
   }
