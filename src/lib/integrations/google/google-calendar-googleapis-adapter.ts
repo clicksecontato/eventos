@@ -24,10 +24,12 @@ export class GoogleCalendarGoogleApisAdapter implements GoogleCalendarSdkPort {
   }
 
   createCalendarClient(auth: OAuthClientPort): CalendarClientPort {
-    const calendar = google.calendar({
+    type GoogleCalendarOptions = Parameters<typeof google.calendar>[0];
+    const options = {
       version: 'v3',
       auth: asOAuth2Client(auth)
-    });
+    } as unknown as GoogleCalendarOptions;
+    const calendar = google.calendar(options);
 
     return calendar as unknown as CalendarClientPort;
   }
