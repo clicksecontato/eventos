@@ -8,12 +8,12 @@ import { PasswordResetTokenRepository } from './password-reset-token-repository'
 import { PagamentoGlobalRepository } from './pagamento-global-repository';
 import { CustoGlobalRepository } from './custo-global-repository';
 import { ServicoGlobalRepository } from './servico-global-repository';
-import { AdminUserRepository } from './admin-user-repository';
-import { AdminPlanoRepository } from './admin-plano-repository';
-import { AdminAssinaturaRepository } from './admin-assinatura-repository';
-import { AdminFuncionalidadeRepository } from './admin-funcionalidade-repository';
-import { AdminPasswordResetTokenRepository } from './admin-password-reset-token-repository';
 import { getProvedorDadosAtual } from '@/lib/config/data-provider';
+import type { AdminUserRepository } from './admin-user-repository';
+import type { AdminPlanoRepository } from './admin-plano-repository';
+import type { AdminAssinaturaRepository } from './admin-assinatura-repository';
+import type { AdminFuncionalidadeRepository } from './admin-funcionalidade-repository';
+import type { AdminPasswordResetTokenRepository } from './admin-password-reset-token-repository';
 
 // Importar repositórios Supabase
 import { ClienteSupabaseRepository } from './supabase/cliente-supabase-repository';
@@ -84,11 +84,11 @@ export class RepositoryFactory {
   private servicoGlobalRepository: ServicoGlobalRepository;
   
   // Repositórios Admin (server-only, bypass regras)
-  private adminUserRepository: AdminUserRepository;
-  private adminPlanoRepository: AdminPlanoRepository;
-  private adminAssinaturaRepository: AdminAssinaturaRepository;
-  private adminFuncionalidadeRepository: AdminFuncionalidadeRepository;
-  private adminPasswordResetTokenRepository: AdminPasswordResetTokenRepository;
+  private adminUserRepository?: AdminUserRepository;
+  private adminPlanoRepository?: AdminPlanoRepository;
+  private adminAssinaturaRepository?: AdminAssinaturaRepository;
+  private adminFuncionalidadeRepository?: AdminFuncionalidadeRepository;
+  private adminPasswordResetTokenRepository?: AdminPasswordResetTokenRepository;
 
   private constructor() {
     // Mantém o provider explícito e travado no provedor atual.
@@ -132,12 +132,7 @@ export class RepositoryFactory {
     this.custoGlobalRepository = new CustoGlobalRepository();
     this.servicoGlobalRepository = new ServicoGlobalRepository();
 
-    // Inicializar repositórios Admin
-    this.adminUserRepository = new AdminUserRepository();
-    this.adminPlanoRepository = new AdminPlanoRepository();
-    this.adminAssinaturaRepository = new AdminAssinaturaRepository();
-    this.adminFuncionalidadeRepository = new AdminFuncionalidadeRepository();
-    this.adminPasswordResetTokenRepository = new AdminPasswordResetTokenRepository();
+    // Repositórios Admin são carregados lazy e apenas no servidor.
   }
 
   public static getInstance(): RepositoryFactory {
@@ -276,23 +271,48 @@ export class RepositoryFactory {
 
   // Métodos getter - Repositórios Admin (server-only)
   public getAdminUserRepository(): AdminUserRepository {
-    return this.adminUserRepository;
+    if (!this.adminUserRepository) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { AdminUserRepository } = require('./admin-user-repository');
+      this.adminUserRepository = new AdminUserRepository();
+    }
+    return this.adminUserRepository!;
   }
 
   public getAdminPlanoRepository(): AdminPlanoRepository {
-    return this.adminPlanoRepository;
+    if (!this.adminPlanoRepository) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { AdminPlanoRepository } = require('./admin-plano-repository');
+      this.adminPlanoRepository = new AdminPlanoRepository();
+    }
+    return this.adminPlanoRepository!;
   }
 
   public getAdminAssinaturaRepository(): AdminAssinaturaRepository {
-    return this.adminAssinaturaRepository;
+    if (!this.adminAssinaturaRepository) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { AdminAssinaturaRepository } = require('./admin-assinatura-repository');
+      this.adminAssinaturaRepository = new AdminAssinaturaRepository();
+    }
+    return this.adminAssinaturaRepository!;
   }
 
   public getAdminFuncionalidadeRepository(): AdminFuncionalidadeRepository {
-    return this.adminFuncionalidadeRepository;
+    if (!this.adminFuncionalidadeRepository) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { AdminFuncionalidadeRepository } = require('./admin-funcionalidade-repository');
+      this.adminFuncionalidadeRepository = new AdminFuncionalidadeRepository();
+    }
+    return this.adminFuncionalidadeRepository!;
   }
 
   public getAdminPasswordResetTokenRepository(): AdminPasswordResetTokenRepository {
-    return this.adminPasswordResetTokenRepository;
+    if (!this.adminPasswordResetTokenRepository) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { AdminPasswordResetTokenRepository } = require('./admin-password-reset-token-repository');
+      this.adminPasswordResetTokenRepository = new AdminPasswordResetTokenRepository();
+    }
+    return this.adminPasswordResetTokenRepository!;
   }
 }
 
