@@ -13,6 +13,8 @@ import {
 } from '@/lib/api/route-helpers';
 import { verificarAcessoGoogleCalendar } from '@/lib/utils/google-calendar-auth';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
+import { GoogleCalendarGoogleApisAdapter } from '@/lib/integrations/google/google-calendar-googleapis-adapter';
+import { OAuthClientPort } from '@/lib/integrations/google/google-calendar-client-port';
 
 interface StepResult {
   step: string;
@@ -41,6 +43,7 @@ function getErrorResponse(error: unknown): { status?: unknown; data?: unknown } 
 }
 
 export async function GET() {
+  const googleAdapter = new GoogleCalendarGoogleApisAdapter();
   const steps: StepResult[] = [];
   const addStep = (step: string, status: StepResult['status'], message: string, details?: unknown) => {
     steps.push({
@@ -220,11 +223,9 @@ export async function GET() {
         // ETAPA 9: Obter informações do calendário
         addStep('9. Obter Informações do Calendário', 'pending', 'Buscando informações do calendário principal...');
         try {
-          const { google } = await import('googleapis');
-          const calendar = google.calendar({
-            version: 'v3',
-            auth: oauth2Client
-          });
+          const calendar = googleAdapter.createCalendarClient(
+            oauth2Client as unknown as OAuthClientPort
+          );
           
           const calendarResponse = await calendar.calendars.get({
             calendarId: 'primary'
@@ -250,11 +251,9 @@ export async function GET() {
         // ETAPA 10: Testar criação de evento (simulação)
         addStep('10. Testar Permissões (Listar Eventos)', 'pending', 'Testando permissões listando eventos...');
         try {
-          const { google } = await import('googleapis');
-          const calendar = google.calendar({
-            version: 'v3',
-            auth: oauth2Client
-          });
+          const calendar = googleAdapter.createCalendarClient(
+            oauth2Client as unknown as OAuthClientPort
+          );
           
           const eventsResponse = await calendar.events.list({
             calendarId: token.calendarId || 'primary',

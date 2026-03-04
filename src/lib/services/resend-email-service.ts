@@ -1,11 +1,10 @@
-import { Resend } from 'resend';
+import { EmailProviderPort } from '@/lib/integrations/email/email-provider-port';
+import { ResendEmailProvider } from '@/lib/integrations/email/resend-email-provider';
 
 /**
  * Serviço de envio de email usando Resend
  */
-const resend = process.env.RESEND_API_KEY 
-  ? new Resend(process.env.RESEND_API_KEY)
-  : null;
+let emailProvider: EmailProviderPort = new ResendEmailProvider();
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Erro desconhecido';
@@ -31,8 +30,8 @@ export async function sendEmail({
   html,
   from = 'Clicksehub <noreply@clicksehub.com>'
 }: SendEmailOptions): Promise<{ success: boolean; error?: string }> {
-  // Verificar se Resend está configurado
-  if (!resend) {
+  // Verificar se provedor está configurado
+  if (!emailProvider.isConfigured()) {
     return {
       success: false,
       error: 'RESEND_API_KEY não configurada'
@@ -44,25 +43,12 @@ export async function sendEmail({
     console.log('[resend-email-service] Assunto:', subject);
     console.log('[resend-email-service] From:', from);
     
-    const { data, error } = await resend.emails.send({
+    return await emailProvider.send({
       from,
       to,
       subject,
-      html,
+      html
     });
-
-    if (error) {
-      console.error('[resend-email-service] Erro do Resend:', error);
-      return {
-        success: false,
-        error: error.message || 'Erro ao enviar email'
-      };
-    }
-
-    console.log('[resend-email-service] Email enviado com sucesso. ID:', data?.id);
-    return {
-      success: true
-    };
   } catch (error: unknown) {
     console.error('[resend-email-service] Exceção ao enviar email:', error);
     console.error('[resend-email-service] Stack:', getErrorStack(error));
@@ -77,6 +63,10 @@ export async function sendEmail({
  * Verificar se o serviço de email está configurado
  */
 export function isEmailServiceConfigured(): boolean {
-  return !!process.env.RESEND_API_KEY && !!resend;
+  return emailProvider.isConfigured();
+}
+
+export function setEmailProvider(provider: EmailProviderPort): void {
+  emailProvider = provider;
 }
 

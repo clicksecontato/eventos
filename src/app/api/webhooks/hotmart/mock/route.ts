@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { HotmartWebhookService } from '@/lib/services/hotmart-webhook-service';
+import { HotmartWebhookService, HotmartWebhookPayload } from '@/lib/services/hotmart-webhook-service';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { PlanoService } from '@/lib/services/plano-service';
@@ -566,7 +566,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Processar webhook (isSandbox=true para logs diferenciados)
-    const result = await service.processarWebhook(payload, true);
+    const result = await service.processarWebhook(payload as unknown as HotmartWebhookPayload, true);
 
     if (!result.success) {
       console.error('❌ [MOCK] Erro ao processar webhook:', result.message);

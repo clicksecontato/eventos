@@ -2,7 +2,7 @@ import { repositoryFactory } from '../repositories/repository-factory';
 import { PlanoService } from './plano-service';
 import { AssinaturaService } from './assinatura-service';
 import { StatusAssinatura, Assinatura as AssinaturaType, Plano } from '@/types/funcionalidades';
-import { UserAssinatura, User } from '@/types';
+import { User } from '@/types';
 import crypto from 'crypto';
 import { adminAuth } from '@/lib/firebase-admin';
 import { syncFirebaseUserToSupabase } from '@/lib/utils/sync-firebase-user-to-supabase';
@@ -14,7 +14,7 @@ import { notificarNovaAquisicaoPlano, notificarCancelamentoPlano } from './admin
 interface AssinaturaRepositoryPort {
   findByHotmartId(hotmartSubscriptionId: string): Promise<AssinaturaType | null>;
   atualizarStatus(id: string, status: StatusAssinatura, dadosAdicionais?: Partial<AssinaturaType>): Promise<AssinaturaType>;
-  addHistorico(id: string, item: any): Promise<any>;
+  addHistorico(id: string, item: unknown): Promise<unknown>;
   findByUserId(userId: string): Promise<AssinaturaType | null>;
 }
 
@@ -55,6 +55,7 @@ export interface HotmartWebhookPayload {
       id?: number;
       code?: string;
       subscription_code?: string;
+      subscriber_code?: string;
       plan?: {
         id?: number;
         code?: string;
@@ -70,15 +71,22 @@ export interface HotmartWebhookPayload {
         name?: string;
         code?: string;
       };
+      user?: {
+        email?: string;
+        name?: string;
+      };
       status?: string;
       trial?: {
         end_date?: string;
       };
       trial_period_end?: string;
       date_next_charge?: string;
+      dateNextCharge?: string;
       next_charge_date?: string;
       cancellation_date?: string;
       expiration_date?: string;
+      oldChargeDay?: string | number;
+      newChargeDay?: string | number;
     };
     buyer?: {
       email?: string;
@@ -98,12 +106,25 @@ export interface HotmartWebhookPayload {
       plan_code?: string;
       code?: string;
     }>;
+    plan?: {
+      id?: number;
+      name?: string;
+      code?: string;
+      plan_code?: string;
+    };
+    subscriber_code?: string;
+    subscription_code?: string;
+    id?: string | number;
+    status?: string;
+    next_charge_date?: string;
     switch_plan_date?: string;
   };
   subscription?: {
     code?: string;
     subscription_code?: string;
+    subscriber_code?: string;
     plan?: {
+      id?: number | string;
       code?: string;
       plan_code?: string;
       name?: string;
@@ -117,16 +138,35 @@ export interface HotmartWebhookPayload {
       name?: string;
       code?: string;
     };
+    user?: {
+      email?: string;
+      name?: string;
+    };
     status?: string;
     trial?: {
       end_date?: string;
     };
     trial_period_end?: string;
     date_next_charge?: string;
+    dateNextCharge?: string;
     next_charge_date?: string;
     cancellation_date?: string;
     expiration_date?: string;
+    oldChargeDay?: string | number;
+    newChargeDay?: string | number;
   };
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
+function getErrorCode(error: unknown): string | undefined {
+  if (error && typeof error === 'object' && 'code' in error) {
+    const code = (error as { code?: unknown }).code;
+    return typeof code === 'string' ? code : undefined;
+  }
+  return undefined;
 }
 
 export class HotmartWebhookService {
@@ -151,7 +191,7 @@ export class HotmartWebhookService {
     this.assinaturaService = assinaturaService || new AssinaturaService();
   }
 
-  async processarWebhook(payload: any, isSandbox: boolean = false): Promise<{ success: boolean; message: string }> {
+  async processarWebhook(payload: HotmartWebhookPayload, isSandbox: boolean = false): Promise<{ success: boolean; message: string }> {
     const rawEvent = payload.event;
     // Normalizar nome do evento (evitar diferenças de caixa/variações do sandbox)
     const event = typeof rawEvent === 'string' ? rawEvent.trim().toUpperCase() : '';
@@ -211,7 +251,10 @@ export class HotmartWebhookService {
       };
 
       // Normalizar estrutura do payload (suportar diferentes formatos do Hotmart)
-      let subscription = payload.data?.subscription || payload.subscription;
+      type SubscriptionLike =
+        | NonNullable<HotmartWebhookPayload['subscription']>
+        | NonNullable<NonNullable<HotmartWebhookPayload['data']>['subscription']>;
+      let subscription: SubscriptionLike | undefined = payload.data?.subscription || payload.subscription;
       
       // Fallback SANDBOX: alguns eventos do sandbox vêm sem data.subscription
       // Ex.: { data: { subscriber: { code }, plan: { id|name }, user: { email } }, event: 'PURCHASE_*' }
@@ -236,7 +279,7 @@ export class HotmartWebhookService {
         };
         // Apenas use se houver pelo menos subscription_code e email
         if (synthesized.subscriber?.code && synthesized.buyer.email) {
-          subscription = synthesized as any;
+          subscription = synthesized as unknown as SubscriptionLike;
         }
       }
       
@@ -321,10 +364,11 @@ export class HotmartWebhookService {
       }
       if (!codigoPlano) {
         // Se vier id/name apenas, use id; como último recurso, name
-        codigoPlano = subscription.plan?.id || subscription.plan?.name || payload.data?.plan?.id || payload.data?.plan?.name;
-        if (codigoPlano && typeof codigoPlano !== 'string') {
-          codigoPlano = String(codigoPlano);
-        }
+        codigoPlano =
+          (subscription.plan?.id ? String(subscription.plan.id) : undefined) ||
+          subscription.plan?.name ||
+          (payload.data?.plan?.id ? String(payload.data.plan.id) : undefined) ||
+          payload.data?.plan?.name;
         console.log(`[HotmartWebhook] - codigoPlano após fallback:`, codigoPlano);
       }
       
@@ -369,11 +413,11 @@ export class HotmartWebhookService {
             user = await this.preCadastrarUsuario(email, nome);
             isNewUser = true;
             console.log(`[HotmartWebhook] Pré-cadastro concluído para ${email} (ID: ${user.id})`);
-          } catch (preCadastroError: any) {
+          } catch (preCadastroError: unknown) {
             console.error(`[HotmartWebhook] Erro ao pré-cadastrar usuário:`, preCadastroError);
             return { 
               success: false, 
-              message: `Erro ao processar usuário não cadastrado: ${preCadastroError.message}`
+              message: `Erro ao processar usuário não cadastrado: ${getErrorMessage(preCadastroError)}`
             };
           }
         } else {
@@ -383,7 +427,7 @@ export class HotmartWebhookService {
       }
 
       // Buscar plano apenas se necessário
-      let plano: any = null;
+      let plano: Plano | null = null;
       if (!eventosQueNaoPrecisamPlano.includes(action)) {
         if (!codigoPlano) {
           console.error(`[HotmartWebhook] ❌ Código do plano não encontrado no payload. Action: ${action}`);
@@ -417,13 +461,16 @@ export class HotmartWebhookService {
       let result;
       switch (action) {
         case 'purchase':
+          if (!plano) {
+            return { success: false, message: 'Plano não encontrado para processar compra' };
+          }
           result = await this.processarCompra(user.id, plano.id, hotmartSubscriptionId, subscription);
           if (isNewUser || isSandbox) {
             try {
               await this.enviarEmailPrimeiroAcesso(user, plano);
-            } catch (err: any) {
-              console.error('[HotmartWebhook] Erro ao enviar email de primeiro acesso (webhook segue):', err?.message);
-              console.error('[HotmartWebhook] Stack:', err?.stack);
+            } catch (err: unknown) {
+              console.error('[HotmartWebhook] Erro ao enviar email de primeiro acesso (webhook segue):', getErrorMessage(err));
+              console.error('[HotmartWebhook] Stack:', err instanceof Error ? err.stack : undefined);
             }
           }
           try {
@@ -433,8 +480,8 @@ export class HotmartWebhookService {
               nomePlano: plano.nome,
               dataAquisicao: new Date(),
             });
-          } catch (err: any) {
-            console.error('[HotmartWebhook] Erro ao notificar admin (nova aquisição):', err?.message);
+          } catch (err: unknown) {
+            console.error('[HotmartWebhook] Erro ao notificar admin (nova aquisição):', getErrorMessage(err));
           }
           break;
         case 'activated':
@@ -474,7 +521,7 @@ export class HotmartWebhookService {
             }
             
             result = await this.processarTrocaPlano(hotmartSubscriptionId, novoPlano.id, payload);
-          } catch (error: any) {
+          } catch {
             const errorMsg = 'SWITCH_PLAN: Erro ao processar troca de plano';
             return { success: false, message: errorMsg };
           }
@@ -501,8 +548,8 @@ export class HotmartWebhookService {
       }
 
       return result;
-    } catch (error: any) {
-      return { success: false, message: error.message || 'Erro ao processar webhook' };
+    } catch (error: unknown) {
+      return { success: false, message: getErrorMessage(error) || 'Erro ao processar webhook' };
     }
   }
 
@@ -510,7 +557,7 @@ export class HotmartWebhookService {
     userId: string, 
     planoId: string, 
     hotmartSubscriptionId: string,
-    subscription: any
+    subscription: { status?: string }
   ): Promise<{ success: boolean; message: string }> {
     const status: StatusAssinatura = subscription.status === 'TRIAL' ? 'trial' : 'active';
     
@@ -524,7 +571,7 @@ export class HotmartWebhookService {
 
   private async processarAtivacao(
     hotmartSubscriptionId: string,
-    subscription: any
+    subscription: { date_next_charge?: string; next_charge_date?: string }
   ): Promise<{ success: boolean; message: string }> {
     const assinatura = await this.assinaturaRepo.findByHotmartId(hotmartSubscriptionId);
     if (!assinatura) {
@@ -612,8 +659,8 @@ export class HotmartWebhookService {
           dataCancelamento,
         });
       }
-    } catch (err: any) {
-      console.error('[HotmartWebhook] Erro ao notificar admin (cancelamento):', err?.message);
+    } catch (err: unknown) {
+      console.error('[HotmartWebhook] Erro ao notificar admin (cancelamento):', getErrorMessage(err));
     }
 
     console.log(`[HotmartWebhook] ✅ Cancelamento processado com sucesso - assinatura: ${assinatura.id}, userId: ${assinatura.userId}`);
@@ -673,7 +720,7 @@ export class HotmartWebhookService {
 
   private async processarRenovacao(
     hotmartSubscriptionId: string,
-    subscription: any
+    subscription: { date_next_charge?: string; next_charge_date?: string }
   ): Promise<{ success: boolean; message: string }> {
     const assinatura = await this.assinaturaRepo.findByHotmartId(hotmartSubscriptionId);
     if (!assinatura) {
@@ -712,7 +759,7 @@ export class HotmartWebhookService {
   private async processarTrocaPlano(
     hotmartSubscriptionId: string,
     novoPlanoId: string,
-    payload: any
+    payload: HotmartWebhookPayload
   ): Promise<{ success: boolean; message: string }> {
     const assinatura = await this.assinaturaRepo.findByHotmartId(hotmartSubscriptionId);
     if (!assinatura) {
@@ -769,7 +816,7 @@ export class HotmartWebhookService {
 
   private async processarAtualizacaoDataCobranca(
     hotmartSubscriptionId: string,
-    payload: any
+    payload: HotmartWebhookPayload
   ): Promise<{ success: boolean; message: string }> {
     const assinatura = await this.assinaturaRepo.findByHotmartId(hotmartSubscriptionId);
     if (!assinatura) {
@@ -913,8 +960,9 @@ export class HotmartWebhookService {
 
   private async processarPagamentoAtrasado(
     hotmartSubscriptionId: string,
-    payload: any
+    _payload: HotmartWebhookPayload
   ): Promise<{ success: boolean; message: string }> {
+    void _payload;
     const assinatura = await this.assinaturaRepo.findByHotmartId(hotmartSubscriptionId);
     if (!assinatura) {
       return { success: false, message: 'Assinatura não encontrada' };
@@ -945,6 +993,7 @@ export class HotmartWebhookService {
    * existir só no Firestore, ex.: criado por outro fluxo ou em testes sandbox).
    */
   private async enviarEmailPrimeiroAcesso(user: User, _plano?: Plano | null): Promise<void> {
+    void _plano;
     console.log('[HotmartWebhook] 📧 enviarEmailPrimeiroAcesso chamado para:', user.email);
 
     if (!isEmailServiceConfigured()) {
@@ -956,8 +1005,8 @@ export class HotmartWebhookService {
     if (adminAuth) {
       try {
         await adminAuth.getUserByEmail(user.email);
-      } catch (e: any) {
-        if (e?.code === 'auth/user-not-found') {
+      } catch (e: unknown) {
+        if (getErrorCode(e) === 'auth/user-not-found') {
           console.log('[HotmartWebhook] Usuário não existe no Firebase Auth; criando para permitir o link de senha.');
           await adminAuth.createUser({
             email: user.email,
@@ -974,8 +1023,8 @@ export class HotmartWebhookService {
     try {
       const linkResult = await createPasswordResetLink(user.email, { expiryHours: 24 });
       resetUrl = linkResult.resetUrl;
-    } catch (err: any) {
-      console.error('[HotmartWebhook] Erro ao criar link de senha (createPasswordResetLink):', err?.message, err?.stack);
+    } catch (err: unknown) {
+      console.error('[HotmartWebhook] Erro ao criar link de senha (createPasswordResetLink):', getErrorMessage(err), err instanceof Error ? err.stack : undefined);
       return;
     }
 
@@ -1005,8 +1054,8 @@ export class HotmartWebhookService {
         try {
           const fbUser = await adminAuth.getUserByEmail(email);
           firebaseUid = fbUser.uid;
-        } catch (error: any) {
-          if (error.code === 'auth/user-not-found') {
+        } catch (error: unknown) {
+          if (getErrorCode(error) === 'auth/user-not-found') {
             // Criar usuário sem senha (ele precisará usar "Esqueci minha senha" ou fluxo de primeiro acesso)
             const newUser = await adminAuth.createUser({
               email,
@@ -1046,19 +1095,19 @@ export class HotmartWebhookService {
       }
 
       return user;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[HotmartWebhook] Erro no fluxo de pré-cadastro:', error);
-      throw new Error(`Falha ao criar conta para novo comprador: ${error.message}`);
+      throw new Error(`Falha ao criar conta para novo comprador: ${getErrorMessage(error)}`);
     }
   }
 
   /**
    * Extrai o código do novo plano do payload SWITCH_PLAN
    */
-  private extrairNovoPlanoDoSwitchPlan(payload: any): string | null {
+  private extrairNovoPlanoDoSwitchPlan(payload: HotmartWebhookPayload): string | null {
     const plans = payload.data?.plans || [];
     // Encontrar o plano marcado como current: true
-    const planoAtual = plans.find((p: any) => p.current === true);
+    const planoAtual = plans.find((p) => p.current === true);
     
     if (planoAtual) {
       // Tentar extrair código do plano
@@ -1116,7 +1165,7 @@ export class HotmartWebhookService {
       }
       
       return crypto.timingSafeEqual(signatureBuffer, expectedBuffer);
-    } catch (error: any) {
+    } catch {
       return false;
     }
   }

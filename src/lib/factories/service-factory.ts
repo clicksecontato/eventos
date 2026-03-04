@@ -10,6 +10,14 @@ import { TemplateService } from '../services/template-service';
 // RelatoriosReportService e DashboardReportService importados dinamicamente para evitar dependência circular
 import { RelatorioCacheService } from '../services/relatorio-cache-service';
 import { S3Service } from '../s3-service';
+import { GoogleCalendarGoogleApisAdapter } from '../integrations/google/google-calendar-googleapis-adapter';
+import { GoogleCalendarSdkPort } from '../integrations/google/google-calendar-client-port';
+import { ResendEmailProvider } from '../integrations/email/resend-email-provider';
+import { EmailProviderPort } from '../integrations/email/email-provider-port';
+import { setEmailProvider } from '../services/resend-email-service';
+import { PdfEnginePort } from '../integrations/pdf/pdf-engine-port';
+import { PuppeteerPdfEngineAdapter } from '../integrations/pdf/puppeteer-pdf-engine-adapter';
+import type { RepositoryFactory } from '../repositories/repository-factory';
 
 /**
  * Helper para obter repositoryFactory de forma lazy
@@ -18,13 +26,26 @@ import { S3Service } from '../s3-service';
 function getRepositoryFactoryLazy() {
   // Usar importação dinâmica apenas quando necessário
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     return require('../repositories/repository-factory').repositoryFactory;
   } catch {
     // Fallback para importação estática se require falhar
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod = require('../repositories/repository-factory');
     return mod.repositoryFactory || mod.default?.repositoryFactory;
   }
 }
+
+type RepositoryFactoryPort = Pick<
+  RepositoryFactory,
+  | 'getAssinaturaRepository'
+  | 'getPlanoRepository'
+  | 'getUserRepository'
+  | 'getFuncionalidadeRepository'
+  | 'getEventoRepository'
+  | 'getClienteRepository'
+  | 'getGoogleCalendarTokenRepository'
+>;
 
 /**
  * Factory que inicializa serviços com dependências injetadas
@@ -46,6 +67,9 @@ export class ServiceFactory {
   private templateService?: TemplateService;
   private relatorioCacheService?: RelatorioCacheService;
   private s3Service?: S3Service;
+  private googleCalendarSdk?: GoogleCalendarSdkPort;
+  private emailProvider?: EmailProviderPort;
+  private pdfEngine?: PdfEnginePort;
 
   // Serviços singleton (já gerenciam sua própria instância)
   // Estes não são criados aqui, apenas expostos via getters
@@ -72,7 +96,7 @@ export class ServiceFactory {
     return this.planoService!;
   }
 
-  private initializeServicesSync(repoFactory: any): void {
+  private initializeServicesSync(repoFactory: RepositoryFactoryPort): void {
     if (this.planoService) return; // Já inicializado
 
     // Inicializar serviços com dependências do repositoryFactory
@@ -108,10 +132,18 @@ export class ServiceFactory {
       this.assinaturaService
     );
 
-    this.googleCalendarService = new GoogleCalendarService();
+    this.googleCalendarSdk = new GoogleCalendarGoogleApisAdapter();
+    this.googleCalendarService = new GoogleCalendarService(
+      repoFactory.getGoogleCalendarTokenRepository(),
+      this.googleCalendarSdk
+    );
     this.googleCalendarSyncService = new GoogleCalendarSyncService();
     this.contratoService = new ContratoService();
+    this.pdfEngine = new PuppeteerPdfEngineAdapter();
+    PDFService.setPdfEngine(this.pdfEngine);
     this.pdfService = new PDFService();
+    this.emailProvider = new ResendEmailProvider();
+    setEmailProvider(this.emailProvider);
     this.templateService = new TemplateService();
     this.relatorioCacheService = new RelatorioCacheService();
     this.s3Service = new S3Service();
@@ -190,8 +222,9 @@ export class ServiceFactory {
   // Métodos getter para serviços singleton
   // Estes serviços já gerenciam sua própria instância
   // Usar importação dinâmica para evitar dependência circular
-  public getRelatoriosReportService(): any {
+  public getRelatoriosReportService(): unknown {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { RelatoriosReportService } = require('../services/relatorios-report-service');
       return RelatoriosReportService.getInstance();
     } catch (error) {
@@ -200,8 +233,9 @@ export class ServiceFactory {
     }
   }
 
-  public getDashboardReportService(): any {
+  public getDashboardReportService(): unknown {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const { DashboardReportService } = require('../services/dashboard-report-service');
       return DashboardReportService.getInstance();
     } catch (error) {

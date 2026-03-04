@@ -44,6 +44,8 @@ export async function POST(
 
     const { ContratoService } = await import('@/lib/services/contrato-service');
     const { PDFService } = await import('@/lib/services/pdf-service');
+    const { getServiceFactory } = await import('@/lib/factories/service-factory');
+    getServiceFactory().getPDFService();
     
     // Usar HTML editado pelo usuário, se houver; senão, processar o template
     let html: string;

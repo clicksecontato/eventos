@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { HotmartWebhookService } from '@/lib/services/hotmart-webhook-service';
+import { HotmartWebhookService, HotmartWebhookPayload } from '@/lib/services/hotmart-webhook-service';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { PlanoService } from '@/lib/services/plano-service';
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     console.log('🧪 [SANDBOX] Processando webhook de teste');
     
     // Processar webhook (mesmo serviço, mas com logs diferenciados)
-    const result = await service.processarWebhook(payload, true); // true = modo sandbox
+    const result = await service.processarWebhook(payload as unknown as HotmartWebhookPayload, true); // true = modo sandbox
 
     if (!result.success) {
       console.error('❌ [SANDBOX] Erro ao processar webhook:', result.message);

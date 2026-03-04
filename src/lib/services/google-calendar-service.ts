@@ -7,14 +7,12 @@
  * Este serviço é opcional e não quebra o sistema se não estiver configurado.
  */
 
-import { google } from 'googleapis';
-import { OAuth2Client } from 'google-auth-library';
 import { Evento } from '@/types';
-import { GoogleCalendarEvent, GoogleCalendarToken } from '@/types/google-calendar';
+import { GoogleCalendarEvent } from '@/types/google-calendar';
 import { GoogleCalendarTokenRepository } from '../repositories/google-calendar-token-repository';
-import { repositoryFactory } from '../repositories/repository-factory';
-import { mapEventoToGoogleCalendar, mapGoogleCalendarToEvento } from '../utils/google-calendar-mapper';
+import { mapEventoToGoogleCalendar } from '../utils/google-calendar-mapper';
 import { verificarAcessoGoogleCalendar } from '../utils/google-calendar-auth';
+import { GoogleCalendarSdkPort, OAuthClientPort } from '../integrations/google/google-calendar-client-port';
 
 // Chave de criptografia (deve vir de variável de ambiente)
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-change-in-production';
@@ -29,15 +27,49 @@ function encrypt(text: string, key: string): string {
   return Buffer.from(text).toString('base64');
 }
 
-function decrypt(encrypted: string, key: string): string {
+function decrypt(encrypted: string): string {
   return Buffer.from(encrypted, 'base64').toString('utf-8');
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
+function getErrorCode(error: unknown): string | number | undefined {
+  if (error && typeof error === 'object' && 'code' in error) {
+    const code = (error as { code?: unknown }).code;
+    if (typeof code === 'string' || typeof code === 'number') {
+      return code;
+    }
+  }
+  return undefined;
+}
+
+function getErrorResponseData(error: unknown): unknown {
+  if (error && typeof error === 'object' && 'response' in error) {
+    return (error as { response?: { data?: unknown } }).response?.data;
+  }
+  return undefined;
+}
+
+function getErrorStatus(error: unknown): number | undefined {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const status = (error as { response?: { status?: unknown } }).response?.status;
+    return typeof status === 'number' ? status : undefined;
+  }
+  return undefined;
 }
 
 export class GoogleCalendarService {
   private tokenRepo: GoogleCalendarTokenRepository;
+  private googleSdk: GoogleCalendarSdkPort;
 
-  constructor() {
-    this.tokenRepo = repositoryFactory.getGoogleCalendarTokenRepository();
+  constructor(
+    tokenRepo: GoogleCalendarTokenRepository,
+    googleSdk: GoogleCalendarSdkPort
+  ) {
+    this.tokenRepo = tokenRepo;
+    this.googleSdk = googleSdk;
   }
 
   /**
@@ -46,18 +78,10 @@ export class GoogleCalendarService {
    * entre diferentes requisições/usuários. Isso garante que cada requisição tenha seu próprio
    * OAuth2Client com as credenciais corretas.
    */
-  private getOAuth2Client(): OAuth2Client {
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || process.env.GOOGLE_REDIRECT_URI_PROD;
-    
-    if (!clientId || !clientSecret) {
-      throw new Error('GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET devem estar configurados');
-    }
-    
+  private getOAuth2Client(): OAuthClientPort {
     // Sempre criar nova instância para evitar problemas de estado compartilhado
     // Isso é especialmente importante quando múltiplas requisições acontecem simultaneamente
-    return new OAuth2Client(clientId, clientSecret, redirectUri);
+    return this.googleSdk.createOAuth2Client();
   }
 
   /**
@@ -71,8 +95,8 @@ export class GoogleCalendarService {
     }
 
     // Descriptografar tokens
-    const accessToken = decrypt(token.accessToken, ENCRYPTION_KEY);
-    const refreshToken = decrypt(token.refreshToken, ENCRYPTION_KEY);
+    const accessToken = decrypt(token.accessToken);
+    const refreshToken = decrypt(token.refreshToken);
     
     // Log para debug (não logar o token completo por segurança)
     console.log('[GoogleCalendarService] Token descriptografado - accessToken length:', accessToken?.length || 0);
@@ -147,19 +171,21 @@ export class GoogleCalendarService {
 
       console.log('[GoogleCalendarService] Token renovado com sucesso');
       return credentials.access_token;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[GoogleCalendarService] Erro ao renovar token:', {
-        message: error.message,
-        code: error.code,
-        response: error.response?.data
+        message: getErrorMessage(error),
+        code: getErrorCode(error),
+        response: getErrorResponseData(error)
       });
       
       // Se o refresh token é inválido, o usuário precisa reconectar
-      if (error.message?.includes('invalid_grant') || error.code === 'invalid_grant') {
+      const message = getErrorMessage(error);
+      const code = getErrorCode(error);
+      if (message.includes('invalid_grant') || code === 'invalid_grant') {
         throw new Error('Sessão expirada. Por favor, reconecte sua conta Google.');
       }
       
-      throw new Error(`Erro ao renovar token de acesso: ${error.message || 'Erro desconhecido'}. Reconecte sua conta Google.`);
+      throw new Error(`Erro ao renovar token de acesso: ${message || 'Erro desconhecido'}. Reconecte sua conta Google.`);
     }
   }
 
@@ -176,7 +202,7 @@ export class GoogleCalendarService {
       throw new Error('Token não encontrado');
     }
     
-    const refreshTokenDecrypted = decrypt(tokenData.refreshToken, ENCRYPTION_KEY);
+    const refreshTokenDecrypted = decrypt(tokenData.refreshToken);
     
     // Configurar com ambos os tokens
     // IMPORTANTE: 
@@ -191,10 +217,7 @@ export class GoogleCalendarService {
     // Criar cliente calendar com OAuth2Client já configurado
     // A biblioteca googleapis usa o OAuth2Client para adicionar automaticamente
     // o header Authorization: Bearer {access_token}
-    const calendar = google.calendar({
-      version: 'v3',
-      auth: oauth2Client as any
-    });
+    const calendar = this.googleSdk.createCalendarClient(oauth2Client);
     
     return calendar;
   }
@@ -225,9 +248,9 @@ export class GoogleCalendarService {
       });
 
       return response.data.id || '';
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao criar evento no Google Calendar:', error);
-      throw new Error(`Erro ao criar evento: ${error.message}`);
+      throw new Error(`Erro ao criar evento: ${getErrorMessage(error)}`);
     }
   }
 
@@ -256,9 +279,9 @@ export class GoogleCalendarService {
       });
 
       return response.data.id || '';
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao criar evento no Google Calendar:', error);
-      throw new Error(`Erro ao criar evento: ${error.message}`);
+      throw new Error(`Erro ao criar evento: ${getErrorMessage(error)}`);
     }
   }
 
@@ -286,9 +309,9 @@ export class GoogleCalendarService {
         eventId: googleEventId,
         requestBody: googleEvent
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao atualizar evento no Google Calendar:', error);
-      throw new Error(`Erro ao atualizar evento: ${error.message}`);
+      throw new Error(`Erro ao atualizar evento: ${getErrorMessage(error)}`);
     }
   }
 
@@ -313,14 +336,14 @@ export class GoogleCalendarService {
         calendarId: token.calendarId || 'primary',
         eventId: googleEventId
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Se evento já foi deletado, não é erro crítico
-      if (error.code === 404) {
+      if (getErrorCode(error) === 404) {
         console.warn('Evento já foi deletado do Google Calendar');
         return;
       }
       console.error('Erro ao deletar evento no Google Calendar:', error);
-      throw new Error(`Erro ao deletar evento: ${error.message}`);
+      throw new Error(`Erro ao deletar evento: ${getErrorMessage(error)}`);
     }
   }
 
@@ -341,10 +364,10 @@ export class GoogleCalendarService {
         eventId: googleEventId
       });
 
-      return response.data as GoogleCalendarEvent;
-    } catch (error: any) {
+      return response.data as unknown as GoogleCalendarEvent;
+    } catch (error: unknown) {
       console.error('Erro ao buscar evento no Google Calendar:', error);
-      throw new Error(`Erro ao buscar evento: ${error.message}`);
+      throw new Error(`Erro ao buscar evento: ${getErrorMessage(error)}`);
     }
   }
 
@@ -421,19 +444,21 @@ export class GoogleCalendarService {
         refreshToken: tokens.refresh_token,
         expiresAt: new Date(tokens.expiry_date)
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[GoogleCalendarService] Erro ao trocar código por tokens:', {
-        message: error.message,
-        code: error.code,
-        response: error.response?.data
+        message: getErrorMessage(error),
+        code: getErrorCode(error),
+        response: getErrorResponseData(error)
       });
       
       // Mensagens de erro mais específicas
-      if (error.message?.includes('invalid_grant') || error.code === 'invalid_grant') {
+      const message = getErrorMessage(error);
+      const code = getErrorCode(error);
+      if (message.includes('invalid_grant') || code === 'invalid_grant') {
         throw new Error('Código de autorização inválido ou já usado. Tente desconectar e conectar novamente.');
       }
       
-      throw new Error(`Erro na autenticação: ${error.message || 'Erro desconhecido'}`);
+      throw new Error(`Erro na autenticação: ${message || 'Erro desconhecido'}`);
     }
   }
 
@@ -457,7 +482,7 @@ export class GoogleCalendarService {
           throw new Error('Token não encontrado');
         }
         
-        const refreshTokenDecrypted = decrypt(tokenData.refreshToken, ENCRYPTION_KEY);
+        const refreshTokenDecrypted = decrypt(tokenData.refreshToken);
         
         // Configurar OAuth2Client com access_token e refresh_token
         oauth2Client.setCredentials({ 
@@ -466,18 +491,12 @@ export class GoogleCalendarService {
         });
         
         console.log('[GoogleCalendarService] OAuth2Client configurado com access_token e refresh_token');
-        calendar = google.calendar({
-          version: 'v3',
-          auth: oauth2Client as any
-        });
+        calendar = this.googleSdk.createCalendarClient(oauth2Client);
       } else if (accessToken) {
         // Se accessToken fornecido diretamente
         console.log('[GoogleCalendarService] Usando accessToken fornecido diretamente');
         oauth2Client.setCredentials({ access_token: accessToken });
-        calendar = google.calendar({
-          version: 'v3',
-          auth: oauth2Client as any
-        });
+        calendar = this.googleSdk.createCalendarClient(oauth2Client);
       } else {
         throw new Error('userId ou accessToken deve ser fornecido');
       }
@@ -510,16 +529,18 @@ export class GoogleCalendarService {
         email: calendarId,
         calendarId: calendarId
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[GoogleCalendarService] Erro ao obter informações do calendário:', {
-        message: error.message,
-        code: error.code,
-        response: error.response?.data,
-        status: error.response?.status
+        message: getErrorMessage(error),
+        code: getErrorCode(error),
+        response: getErrorResponseData(error),
+        status: getErrorStatus(error)
       });
       
       // Se for erro de autenticação, tentar renovar token se tiver userId
-      if ((error.message?.includes('Login Required') || error.code === 401) && userId) {
+      const message = getErrorMessage(error);
+      const code = getErrorCode(error);
+      if ((message.includes('Login Required') || code === 401) && userId) {
         console.log('[GoogleCalendarService] Erro 401 detectado, forçando renovação do token...');
         try {
           // Forçar renovação do token marcando como expirado
@@ -535,17 +556,14 @@ export class GoogleCalendarService {
             const novoToken = await this.getAccessToken(userId);
             console.log('[GoogleCalendarService] Novo token obtido, tentando novamente...');
             
-            const refreshTokenDecrypted = decrypt(token.refreshToken, ENCRYPTION_KEY);
+            const refreshTokenDecrypted = decrypt(token.refreshToken);
             const oauth2Client = this.getOAuth2Client();
             oauth2Client.setCredentials({ 
               access_token: novoToken,
               refresh_token: refreshTokenDecrypted
             });
             
-            const calendar = google.calendar({
-              version: 'v3',
-              auth: oauth2Client as any
-            });
+            const calendar = this.googleSdk.createCalendarClient(oauth2Client);
             
             const response = await calendar.calendars.get({
               calendarId: 'primary'
@@ -559,14 +577,16 @@ export class GoogleCalendarService {
           } else {
             throw new Error('Token não encontrado para renovação');
           }
-        } catch (retryError: any) {
+        } catch (retryError: unknown) {
           console.error('[GoogleCalendarService] Erro ao tentar renovar token:', {
-            message: retryError.message,
-            code: retryError.code
+            message: getErrorMessage(retryError),
+            code: getErrorCode(retryError)
           });
           
           // Se o refresh token também está inválido, usuário precisa reconectar
-          if (retryError.message?.includes('invalid_grant') || retryError.code === 'invalid_grant') {
+          const retryMessage = getErrorMessage(retryError);
+          const retryCode = getErrorCode(retryError);
+          if (retryMessage.includes('invalid_grant') || retryCode === 'invalid_grant') {
             throw new Error('Sessão expirada. Por favor, reconecte sua conta Google.');
           }
           
@@ -574,7 +594,7 @@ export class GoogleCalendarService {
         }
       }
       
-      throw new Error(`Erro ao obter informações: ${error.message || 'Erro desconhecido'}`);
+      throw new Error(`Erro ao obter informações: ${message || 'Erro desconhecido'}`);
     }
   }
 }
