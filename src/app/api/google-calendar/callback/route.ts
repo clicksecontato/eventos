@@ -24,6 +24,11 @@ function encrypt(text: string, key: string): string {
   return Buffer.from(text).toString('base64');
 }
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
+
 export async function GET(request: NextRequest) {
   try {
     console.log('[Google Calendar Callback] Iniciando callback OAuth');
@@ -90,10 +95,11 @@ export async function GET(request: NextRequest) {
     try {
       tokens = await googleService.exchangeCodeForTokens(code);
       console.log('[Google Calendar Callback] Tokens recebidos com sucesso');
-    } catch (tokenError: any) {
+    } catch (tokenError: unknown) {
       console.error('[Google Calendar Callback] Erro ao trocar código por tokens:', tokenError);
       // Se o código já foi usado, pode ser que o token já existe
-      if (tokenError.message?.includes('invalid_grant') || tokenError.message?.includes('code')) {
+      const tokenErrorMessage = getErrorMessage(tokenError);
+      if (tokenErrorMessage.includes('invalid_grant') || tokenErrorMessage.includes('code')) {
         // Verificar se já existe token
         const tokenExistente = await tokenRepo.findByUserId(user.id);
         if (tokenExistente) {
@@ -120,7 +126,7 @@ export async function GET(request: NextRequest) {
           calendarId: 'primary'
         };
       }
-    } catch (infoError: any) {
+    } catch {
       // Tentar obter email de forma alternativa usando o token diretamente
       try {
         const emailResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
@@ -138,7 +144,7 @@ export async function GET(request: NextRequest) {
         } else {
           throw new Error('Não foi possível obter email via userinfo');
         }
-      } catch (altError: any) {
+      } catch {
         // Continuar mesmo se não conseguir obter email
         calendarInfo = {
           email: '',
@@ -195,25 +201,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(
         new URL('/configuracoes/calendario?success=connected', request.url)
       );
-    } catch (saveError: any) {
+    } catch (saveError: unknown) {
       console.error('[Google Calendar Callback] Erro ao salvar token:', saveError);
       throw saveError;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Google Calendar Callback] Erro geral no callback:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
+      message: getErrorMessage(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined
     });
     
     // Mensagem de erro mais amigável
     let errorMessage = 'Erro ao conectar Google Calendar';
-    if (error.message?.includes('invalid_grant')) {
+    const errorMessageOriginal = getErrorMessage(error);
+    if (errorMessageOriginal.includes('invalid_grant')) {
       errorMessage = 'Código de autorização inválido ou já usado. Tente conectar novamente.';
-    } else if (error.message?.includes('ENCRYPTION_KEY')) {
+    } else if (errorMessageOriginal.includes('ENCRYPTION_KEY')) {
       errorMessage = 'Erro de configuração. Contate o administrador.';
     } else {
-      errorMessage = error.message || 'Erro desconhecido';
+      errorMessage = errorMessageOriginal || 'Erro desconhecido';
     }
 
     return NextResponse.redirect(

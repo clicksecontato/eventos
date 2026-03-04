@@ -8,6 +8,10 @@ import {
   getRouteParams
 } from '@/lib/api/route-helpers';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
 /** Timeout maior para descompressão do Chromium + renderização do PDF (Vercel). */
 export const maxDuration = 60;
 
@@ -57,9 +61,9 @@ export async function POST(
       if (!html || !html.trim()) {
         return createErrorResponse('HTML do contrato está vazio', 400);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao processar HTML do contrato:', error);
-      return createErrorResponse(`Erro ao processar template: ${error.message}`, 500);
+      return createErrorResponse(`Erro ao processar template: ${getErrorMessage(error)}`, 500);
     }
 
     console.log(`[PDF] HTML processado. Tamanho: ${html.length} caracteres`);
@@ -72,16 +76,16 @@ export async function POST(
       url = resultado.url;
       path = resultado.path;
       console.log(`[PDF] PDF gerado com sucesso. URL: ${url}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[PDF] Erro detalhado ao gerar PDF:', {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
+        message: getErrorMessage(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
         contratoId: id,
         userId: user.id
       });
       return createErrorResponse(
-        `Erro ao gerar PDF: ${error.message || 'Erro desconhecido'}. Verifique os logs do servidor para mais detalhes.`,
+        `Erro ao gerar PDF: ${getErrorMessage(error) || 'Erro desconhecido'}. Verifique os logs do servidor para mais detalhes.`,
         500
       );
     }
@@ -97,7 +101,7 @@ export async function POST(
       
       console.log(`[PDF] Contrato atualizado com sucesso. Status: ${atualizado.status}`);
       return createApiResponse(atualizado);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[PDF] Erro ao atualizar contrato após gerar PDF:', error);
       // Mesmo que falhe ao atualizar, retornar sucesso com os dados do PDF
       return createApiResponse({

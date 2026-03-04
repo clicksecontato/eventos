@@ -9,6 +9,10 @@ import {
   getRequestBody
 } from '@/lib/api/route-helpers';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
 export async function POST(request: NextRequest) {
   try {
     console.log('[API /funcionalidades/por-ids] ===== INÍCIO DA BUSCA =====');
@@ -45,8 +49,8 @@ export async function POST(request: NextRequest) {
         if (func && func.ativo) {
           funcionalidades.push(func);
         }
-      } catch (error: any) {
-        console.error(`[API /funcionalidades/por-ids] Erro ao buscar funcionalidade ${id}:`, error.message);
+      } catch (error: unknown) {
+        console.error(`[API /funcionalidades/por-ids] Erro ao buscar funcionalidade ${id}:`, getErrorMessage(error));
         // Continuar com as outras funcionalidades mesmo se uma falhar
       }
     }
@@ -66,16 +70,16 @@ export async function POST(request: NextRequest) {
     console.log('[API /funcionalidades/por-ids] ===== FIM DA BUSCA =====');
     
     return createApiResponse({ funcionalidades });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[API /funcionalidades/por-ids] ===== ERRO NA BUSCA =====');
     console.error('[API /funcionalidades/por-ids] Erro ao buscar funcionalidades:', error);
-    console.error('[API /funcionalidades/por-ids] Tipo do erro:', error.constructor?.name);
-    console.error('[API /funcionalidades/por-ids] Stack:', error.stack);
+    console.error('[API /funcionalidades/por-ids] Tipo do erro:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('[API /funcionalidades/por-ids] Stack:', error instanceof Error ? error.stack : undefined);
     console.error('[API /funcionalidades/por-ids] Error details:', {
-      message: error.message,
-      name: error.name,
-      code: error.code,
-      cause: error.cause
+      message: getErrorMessage(error),
+      name: error instanceof Error ? error.name : undefined,
+      code: error && typeof error === 'object' && 'code' in error ? (error as { code?: unknown }).code : undefined,
+      cause: error instanceof Error ? error.cause : undefined
     });
     console.error('[API /funcionalidades/por-ids] ===== FIM DO ERRO =====');
     return handleApiError(error);

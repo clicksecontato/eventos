@@ -11,6 +11,14 @@ import {
 } from '@/lib/api/route-helpers';
 import { parseLocalDate } from '@/lib/utils/date-helpers';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
+type DadosPreCadastro = Partial<Record<string, unknown>> & {
+  dataEvento?: Date;
+};
+
 /**
  * GET /api/pre-cadastros/[id]
  * Busca pré-cadastro por ID (público, mas valida expiração)
@@ -57,7 +65,7 @@ export async function POST(
     const body = await getRequestBody(request);
     
     const { dados, servicosIds } = body as {
-      dados: Partial<any>;
+      dados: DadosPreCadastro;
       servicosIds?: string[];
     };
     
@@ -102,8 +110,9 @@ export async function POST(
     
     // Converter dataEvento de string para Date se necessário
     // Usar parseLocalDate para evitar problemas de timezone
-    if (dados.dataEvento && typeof dados.dataEvento === 'string') {
-      dados.dataEvento = parseLocalDate(dados.dataEvento);
+    const dataEventoRaw = dados.dataEvento;
+    if (typeof dataEventoRaw === 'string') {
+      dados.dataEvento = parseLocalDate(dataEventoRaw);
     }
     
     // Salvar pré-cadastro
@@ -118,10 +127,11 @@ export async function POST(
       message: 'Pré-cadastro realizado com sucesso!',
       preCadastro: preCadastroAtualizado
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Verificar se é erro de validação (expiração, já preenchido, etc.)
-    if (error.message?.includes('expirado') || error.message?.includes('já foi preenchido')) {
-      return createErrorResponse(error.message, 400);
+    const message = getErrorMessage(error);
+    if (message.includes('expirado') || message.includes('já foi preenchido')) {
+      return createErrorResponse(message, 400);
     }
     
     return handleApiError(error);
@@ -147,9 +157,10 @@ export async function DELETE(
       success: true,
       message: 'Pré-cadastro deletado com sucesso'
     });
-  } catch (error: any) {
-    if (error.message?.includes('não encontrado') || error.message?.includes('já foi convertido')) {
-      return createErrorResponse(error.message, 400);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    if (message.includes('não encontrado') || message.includes('já foi convertido')) {
+      return createErrorResponse(message, 400);
     }
     
     return handleApiError(error);

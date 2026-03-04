@@ -10,6 +10,10 @@ import { ValoresAtrasadosFiltros } from '@/types';
 
 const valoresAtrasadosService = new ValoresAtrasadosService();
 
+function isOrdenacaoValida(valor: string): valor is NonNullable<ValoresAtrasadosFiltros['ordenarPor']> {
+  return valor === 'clienteNome' || valor === 'valorAtrasado' || valor === 'dataVencimento' || valor === 'diasAtraso';
+}
+
 /**
  * GET /api/valores-atrasados
  * Busca valores atrasados com filtros opcionais
@@ -58,8 +62,8 @@ export async function GET(request: NextRequest) {
     }
 
     const ordenarPor = params.get('ordenarPor');
-    if (ordenarPor) {
-      filtros.ordenarPor = ordenarPor as any;
+    if (ordenarPor && isOrdenacaoValida(ordenarPor)) {
+      filtros.ordenarPor = ordenarPor;
     }
 
     const ordem = params.get('ordem');

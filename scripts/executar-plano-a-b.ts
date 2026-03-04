@@ -16,6 +16,10 @@ import { Funcionalidade, Plano, Assinatura } from '../src/types/funcionalidades'
 dotenv.config({ path: path.join(process.cwd(), '.env.local') });
 dotenv.config({ path: path.join(process.cwd(), '.env') });
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 const FUNCIONALIDADES_INICIAIS: Omit<Funcionalidade, 'id' | 'dataCadastro'>[] = [
   { codigo: 'EVENTOS_LIMITADOS', nome: 'Eventos Limitados', descricao: 'Criar eventos com limite mensal', categoria: 'EVENTOS', ativo: true, ordem: 1 },
   { codigo: 'CLIENTES_LIMITADOS', nome: 'Clientes Limitados', descricao: 'Cadastrar clientes com limite anual', categoria: 'EVENTOS', ativo: true, ordem: 2 },
@@ -253,9 +257,9 @@ async function aplicarPremiumEmControleUsers(premium: Plano): Promise<void> {
       }
 
       await assinaturaService.sincronizarPlanoUsuario(user.id);
-    } catch (error: any) {
+    } catch (error: unknown) {
       erros++;
-      console.error(`[B] Erro no usuário ${user.id}: ${error?.message || error}`);
+      console.error(`[B] Erro no usuário ${user.id}: ${getErrorMessage(error)}`);
     }
   }
 

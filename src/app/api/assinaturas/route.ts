@@ -9,6 +9,10 @@ import {
   getQueryParams
 } from '@/lib/api/route-helpers';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
 export async function GET(request: NextRequest) {
   try {
     console.log('[API /assinaturas] ===== INÍCIO DA BUSCA =====');
@@ -108,16 +112,16 @@ export async function GET(request: NextRequest) {
     console.log('[API /assinaturas] ===== FIM DA BUSCA =====');
     
     return response;
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[API /assinaturas] ===== ERRO NA BUSCA =====');
     console.error('[API /assinaturas] Erro ao buscar assinaturas:', error);
-    console.error('[API /assinaturas] Tipo do erro:', error.constructor?.name);
-    console.error('[API /assinaturas] Stack:', error.stack);
+    console.error('[API /assinaturas] Tipo do erro:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('[API /assinaturas] Stack:', error instanceof Error ? error.stack : undefined);
     console.error('[API /assinaturas] Error details:', {
-      message: error.message,
-      name: error.name,
-      code: error.code,
-      cause: error.cause
+      message: getErrorMessage(error),
+      name: error instanceof Error ? error.name : undefined,
+      code: error && typeof error === 'object' && 'code' in error ? (error as { code?: unknown }).code : undefined,
+      cause: error instanceof Error ? error.cause : undefined
     });
     console.error('[API /assinaturas] ===== FIM DO ERRO =====');
     

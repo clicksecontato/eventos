@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
 
       // Usar repositório Supabase para anexos de eventos
       const anexoEventoRepo = repositoryFactory.getAnexoEventoRepository();
+      type PayloadCreateAnexo = Parameters<typeof anexoEventoRepo.createAnexo>[0];
       
       // Determinar tipo do arquivo baseado no MIME type
       const determinarTipoAnexo = (mimeType: string): 'PDF' | 'Imagem' | 'Documento' | 'Outro' => {
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
         s3Key: uploadResult.key!, // Adicionar s3Key para poder deletar depois
       };
 
-      const arquivo = await anexoEventoRepo.createAnexo(anexoData as any);
+      const arquivo = await anexoEventoRepo.createAnexo(anexoData as PayloadCreateAnexo);
 
       console.log('[API Upload] Metadados salvos com sucesso:', arquivo.id);
 
@@ -148,7 +149,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const user = await getAuthenticatedUser();
+    await getAuthenticatedUser();
     const queryParams = getQueryParams(request);
     const arquivoId = queryParams.get('arquivoId');
     const eventoId = queryParams.get('eventoId');

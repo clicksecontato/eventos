@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DataService } from '@/lib/data-service';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
-import { Evento, Cliente, TipoServico, TipoCusto, TipoEvento, CustoEvento, ServicoEvento, Pagamento } from '@/types';
+import { Evento, CustoEvento, ServicoEvento, Pagamento } from '@/types';
 
 const dataService = new DataService();
 const userRepo = repositoryFactory.getUserRepository();
@@ -48,6 +48,10 @@ function getRandomDate(start: Date, end: Date): Date {
 function getDiaSemana(data: Date): string {
   const dias = ['DOMINGO', 'SEGUNDA', 'TERÇA', 'QUARTA', 'QUINTA', 'SEXTA', 'SÁBADO'];
   return dias[data.getDay()];
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
 }
 
 export async function POST(request: NextRequest) {
@@ -250,13 +254,13 @@ export async function POST(request: NextRequest) {
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao gerar eventos:', error);
     return NextResponse.json(
       { 
         error: 'Erro ao gerar eventos', 
-        details: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        details: getErrorMessage(error),
+        stack: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined
       },
       { status: 500 }
     );

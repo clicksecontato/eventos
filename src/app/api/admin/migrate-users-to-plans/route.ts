@@ -5,6 +5,10 @@ import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { StatusAssinatura } from '@/types/funcionalidades';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Verificar se há um token de segurança no header (para uso via Postman/API)
@@ -136,11 +140,11 @@ export async function POST(request: NextRequest) {
 
         assinaturasCriadas.push(assinatura.id);
         usuariosMigrados.push(usuario.id);
-      } catch (error: any) {
+      } catch (error: unknown) {
         erros.push({
           usuarioId: usuario.id,
           email: usuario.email,
-          erro: error.message || 'Erro desconhecido'
+          erro: getErrorMessage(error)
         });
       }
     }
@@ -157,9 +161,9 @@ export async function POST(request: NextRequest) {
         totalUsuariosProcessados: usuariosSemPlano.length
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error.message || 'Erro ao executar migração' },
+      { error: getErrorMessage(error) || 'Erro ao executar migração' },
       { status: 500 }
     );
   }

@@ -17,6 +17,35 @@ import {
 import { verificarAcessoGoogleCalendar } from '@/lib/utils/google-calendar-auth';
 import { GoogleCalendarEvent } from '@/types/google-calendar';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
+function getErrorCode(error: unknown): unknown {
+  if (error && typeof error === 'object' && 'code' in error) {
+    return (error as { code?: unknown }).code;
+  }
+  return undefined;
+}
+
+function getErrorResponseStatus(error: unknown): unknown {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = (error as { response?: { status?: unknown } }).response;
+    return response?.status;
+  }
+  return undefined;
+}
+
+function getErrorResponseData(error: unknown): Record<string, unknown> | null {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = (error as { response?: { data?: unknown } }).response;
+    if (response?.data && typeof response.data === 'object') {
+      return response.data as Record<string, unknown>;
+    }
+  }
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
@@ -85,20 +114,20 @@ export async function POST(request: NextRequest) {
         eventId,
         message: 'Evento criado com sucesso no Google Calendar'
       });
-    } catch (createError: any) {
+    } catch (createError: unknown) {
       console.error('Erro ao criar evento no Google Calendar:', createError);
       
       // Mapear erros específicos da API do Google Calendar
-      const errorCode = createError.code || createError.response?.status;
-      const errorData = createError.response?.data;
+      const errorCode = getErrorCode(createError) || getErrorResponseStatus(createError);
+      const errorData = getErrorResponseData(createError);
       
-      let errorMessage = createError.message || 'Erro desconhecido';
+      let errorMessage = getErrorMessage(createError) || 'Erro desconhecido';
       let statusCode = 500;
       
       // Erros específicos da API do Google Calendar
       switch (errorCode) {
         case 400:
-          errorMessage = errorData?.error?.message || 'Dados inválidos. Verifique os campos do evento.';
+          errorMessage = String((errorData?.error as { message?: unknown } | undefined)?.message || 'Dados inválidos. Verifique os campos do evento.');
           statusCode = 400;
           break;
         case 401:

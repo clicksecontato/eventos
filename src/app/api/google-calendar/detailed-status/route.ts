@@ -6,12 +6,10 @@
  * Retorna informações detalhadas de cada etapa do processo de conexão e uso do Google Calendar
  */
 
-import { NextRequest } from 'next/server';
 import { 
   getAuthenticatedUser,
   handleApiError,
-  createApiResponse,
-  createErrorResponse
+  createApiResponse
 } from '@/lib/api/route-helpers';
 import { verificarAcessoGoogleCalendar } from '@/lib/utils/google-calendar-auth';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
@@ -20,13 +18,31 @@ interface StepResult {
   step: string;
   status: 'success' | 'error' | 'warning' | 'pending';
   message: string;
-  details?: any;
+  details?: unknown;
   timestamp: string;
 }
 
-export async function GET(request: NextRequest) {
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
+function getErrorCode(error: unknown): unknown {
+  if (error && typeof error === 'object' && 'code' in error) {
+    return (error as { code?: unknown }).code;
+  }
+  return undefined;
+}
+
+function getErrorResponse(error: unknown): { status?: unknown; data?: unknown } | undefined {
+  if (error && typeof error === 'object' && 'response' in error) {
+    return (error as { response?: { status?: unknown; data?: unknown } }).response;
+  }
+  return undefined;
+}
+
+export async function GET() {
   const steps: StepResult[] = [];
-  const addStep = (step: string, status: StepResult['status'], message: string, details?: any) => {
+  const addStep = (step: string, status: StepResult['status'], message: string, details?: unknown) => {
     steps.push({
       step,
       status,
@@ -114,14 +130,12 @@ export async function GET(request: NextRequest) {
     // ETAPA 5: Descriptografar tokens
     addStep('5. Descriptografar Tokens', 'pending', 'Descriptografando tokens...');
     try {
-      const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-change-in-production';
-      
-      function decrypt(encrypted: string, key: string): string {
+      function decrypt(encrypted: string): string {
         return Buffer.from(encrypted, 'base64').toString('utf-8');
       }
       
-      const accessToken = decrypt(token.accessToken, ENCRYPTION_KEY);
-      const refreshToken = decrypt(token.refreshToken, ENCRYPTION_KEY);
+      const accessToken = decrypt(token.accessToken);
+      const refreshToken = decrypt(token.refreshToken);
       
       addStep('5. Descriptografar Tokens', 'success', 'Tokens descriptografados com sucesso', {
         accessTokenLength: accessToken.length,
@@ -175,10 +189,10 @@ export async function GET(request: NextRequest) {
             httpStatus: tokenInfoResponse.status
           });
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         addStep('7. Validar Token com Google (tokeninfo)', 'error', 'Erro ao validar token com tokeninfo', {
-          message: error.message,
-          error: error.toString()
+          message: getErrorMessage(error),
+          error: String(error)
         });
       }
 
@@ -209,7 +223,7 @@ export async function GET(request: NextRequest) {
           const { google } = await import('googleapis');
           const calendar = google.calendar({
             version: 'v3',
-            auth: oauth2Client as any
+            auth: oauth2Client
           });
           
           const calendarResponse = await calendar.calendars.get({
@@ -223,12 +237,13 @@ export async function GET(request: NextRequest) {
             description: calendarResponse.data.description,
             location: calendarResponse.data.location
           });
-        } catch (error: any) {
+        } catch (error: unknown) {
+          const response = getErrorResponse(error);
           addStep('9. Obter Informações do Calendário', 'error', 'Erro ao obter informações do calendário', {
-            message: error.message,
-            code: error.code,
-            response: error.response?.data,
-            status: error.response?.status
+            message: getErrorMessage(error),
+            code: getErrorCode(error),
+            response: response?.data,
+            status: response?.status
           });
         }
 
@@ -238,7 +253,7 @@ export async function GET(request: NextRequest) {
           const { google } = await import('googleapis');
           const calendar = google.calendar({
             version: 'v3',
-            auth: oauth2Client as any
+            auth: oauth2Client
           });
           
           const eventsResponse = await calendar.events.list({
@@ -252,26 +267,27 @@ export async function GET(request: NextRequest) {
             canRead: true,
             canWrite: true
           });
-        } catch (error: any) {
+        } catch (error: unknown) {
+          const response = getErrorResponse(error);
           addStep('10. Testar Permissões (Listar Eventos)', 'error', 'Erro ao testar permissões', {
-            message: error.message,
-            code: error.code,
-            response: error.response?.data,
-            status: error.response?.status
+            message: getErrorMessage(error),
+            code: getErrorCode(error),
+            response: response?.data,
+            status: response?.status
           });
         }
 
-      } catch (error: any) {
+      } catch (error: unknown) {
         addStep('8. Configurar OAuth2Client', 'error', 'Erro ao configurar OAuth2Client', {
-          message: error.message,
-          error: error.toString()
+          message: getErrorMessage(error),
+          error: String(error)
         });
       }
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       addStep('5. Descriptografar Tokens', 'error', 'Erro ao descriptografar tokens', {
-        message: error.message,
-        error: error.toString()
+        message: getErrorMessage(error),
+        error: String(error)
       });
     }
 

@@ -26,8 +26,9 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ ok: true });
-  } catch (err: any) {
-    console.error('[notificacao-admin/novo-cadastro] Erro ao notificar:', err?.message);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error('[notificacao-admin/novo-cadastro] Erro ao notificar:', message);
     return NextResponse.json({ ok: false }, { status: 200 });
   }
 }

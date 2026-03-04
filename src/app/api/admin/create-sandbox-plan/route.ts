@@ -3,13 +3,18 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Auth: allow admin session or x-api-key in dev
     const apiKey = request.headers.get('x-api-key') || request.headers.get('authorization') || '';
     const isDev = process.env.NODE_ENV === 'development';
     const session = await getServerSession(authOptions);
-    const isAdmin = !!session && (session as any)?.user?.role === 'admin';
+    const userComRole = session?.user as { role?: string } | undefined;
+    const isAdmin = userComRole?.role === 'admin';
 
     if (!isAdmin) {
       const validApiKey = process.env.SEED_API_KEY || 'dev-seed-key-2024';
@@ -78,9 +83,9 @@ export async function POST(request: NextRequest) {
         funcionalidades: created.funcionalidades || []
       }
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Erro ao criar plano sandbox:', err);
-    return NextResponse.json({ error: err?.message || 'Erro ao criar plano sandbox' }, { status: 500 });
+    return NextResponse.json({ error: getErrorMessage(err) || 'Erro ao criar plano sandbox' }, { status: 500 });
   }
 }
 

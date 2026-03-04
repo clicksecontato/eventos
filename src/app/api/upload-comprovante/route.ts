@@ -8,6 +8,10 @@ import {
   createErrorResponse
 } from '@/lib/api/route-helpers';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
@@ -113,7 +117,7 @@ export async function POST(request: NextRequest) {
             : anexo.dataCadastro,
         }
       }, { status: 200 });
-    } catch (supabaseError: any) {
+    } catch (supabaseError: unknown) {
       console.error('[API Upload Comprovante] Erro ao salvar no Supabase:', supabaseError);
       // Mesmo que falhe ao salvar no Supabase, o arquivo já está no S3
       // Retornar sucesso parcial para não perder o upload
@@ -132,7 +136,7 @@ export async function POST(request: NextRequest) {
           dataUpload: new Date().toISOString(),
           dataCadastro: new Date().toISOString(),
         },
-        warning: 'Arquivo enviado com sucesso, mas houve um problema ao salvar os metadados. O arquivo pode não aparecer na lista.'
+        warning: `Arquivo enviado com sucesso, mas houve um problema ao salvar os metadados (${getErrorMessage(supabaseError)}). O arquivo pode não aparecer na lista.`
       }, { status: 200 });
     }
 

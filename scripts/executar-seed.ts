@@ -6,6 +6,10 @@
 import { repositoryFactory } from '../src/lib/repositories/repository-factory';
 import { Funcionalidade, Plano } from '../src/types/funcionalidades';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 const FUNCIONALIDADES_INICIAIS: Omit<Funcionalidade, 'id' | 'dataCadastro'>[] = [
   // EVENTOS
   { codigo: 'EVENTOS_LIMITADOS', nome: 'Eventos Limitados', descricao: 'Criar eventos com limite mensal', categoria: 'EVENTOS', ativo: true, ordem: 1 },
@@ -171,8 +175,8 @@ async function executarSeed() {
     console.log(`  - Planos: ${planosCriados.length}`);
     console.log('\n✅ Processo concluído!');
 
-  } catch (error: any) {
-    console.error('❌ Erro ao executar seed:', error);
+  } catch (error: unknown) {
+    console.error('❌ Erro ao executar seed:', getErrorMessage(error));
     process.exit(1);
   }
 }

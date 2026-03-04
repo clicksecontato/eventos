@@ -4,6 +4,10 @@ import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { PlanoService } from '@/lib/services/plano-service';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
 function isHotmartEnabled(): boolean {
   return process.env.HOTMART_ENABLED === 'true';
 }
@@ -64,7 +68,7 @@ export async function POST(request: NextRequest) {
     const service = new HotmartWebhookService(assinaturaRepo, planoRepo, userRepo, planoService, assinaturaService);
 
     // Gerar payload mock baseado no tipo de evento
-    let payload: any;
+    let payload: Record<string, unknown>;
 
     switch (eventType.toUpperCase()) {
       case 'PURCHASE_APPROVED':
@@ -362,7 +366,7 @@ export async function POST(request: NextRequest) {
         }
         
         // Montar array de planos
-        const plansArray: any[] = [];
+        const plansArray: Array<Record<string, unknown>> = [];
         
         // Adicionar plano anterior (se existir e tiver dados válidos)
         if (planoAtual && planoAtual.id && planoAtual.codigoHotmart) {
@@ -579,10 +583,10 @@ export async function POST(request: NextRequest) {
       payload: payload
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ [MOCK] Erro ao processar webhook mock:', error);
     return NextResponse.json(
-      { error: error.message || 'Erro ao processar webhook mock' },
+      { error: getErrorMessage(error) || 'Erro ao processar webhook mock' },
       { status: 500 }
     );
   }

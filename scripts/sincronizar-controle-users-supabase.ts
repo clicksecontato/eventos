@@ -17,9 +17,18 @@ interface ResultadoSync {
   erros: number;
 }
 
-function converterTimestamp(timestamp: any): string | null {
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function converterTimestamp(timestamp: unknown): string | null {
   if (!timestamp) return null;
-  if (timestamp.toDate) return timestamp.toDate().toISOString();
+  if (typeof timestamp === 'object' && timestamp !== null && 'toDate' in timestamp) {
+    const value = (timestamp as { toDate?: () => Date }).toDate;
+    if (typeof value === 'function') {
+      return value().toISOString();
+    }
+  }
   if (timestamp instanceof Date) return timestamp.toISOString();
   if (typeof timestamp === 'string') return timestamp;
   return null;
@@ -87,9 +96,9 @@ async function main() {
       } else {
         resultado.migrados++;
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       resultado.erros++;
-      console.error(`Erro ao processar usuário ${doc.id}: ${error?.message || error}`);
+      console.error(`Erro ao processar usuário ${doc.id}: ${getErrorMessage(error)}`);
     }
   }
 

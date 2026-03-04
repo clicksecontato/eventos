@@ -4,6 +4,18 @@ import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { requireAdminOrPremium } from '@/lib/api/route-helpers';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
+function getErrorCode(error: unknown): string | undefined {
+  if (error && typeof error === 'object' && 'code' in error) {
+    const code = (error as { code?: unknown }).code;
+    return typeof code === 'string' ? code : undefined;
+  }
+  return undefined;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const usuarioAutenticado = await requireAdminOrPremium();
@@ -73,11 +85,11 @@ export async function POST(request: NextRequest) {
         planoNome: resultadoAssinatura.user.assinatura?.planoNome || null
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao criar usuário:', error);
     
     // Se o usuário já existe, retornar erro específico
-    if (error.code === 'auth/email-already-in-use') {
+    if (getErrorCode(error) === 'auth/email-already-in-use') {
       return NextResponse.json(
         { error: 'Este email já está em uso' },
         { status: 400 }
@@ -85,7 +97,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error.message || 'Erro ao criar usuário' },
+      { error: getErrorMessage(error) || 'Erro ao criar usuário' },
       { status: 500 }
     );
   }

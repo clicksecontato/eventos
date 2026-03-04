@@ -3,6 +3,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Verificar autenticação
@@ -65,7 +69,7 @@ export async function POST(request: NextRequest) {
         // 1. Migrar Clientes
         const clientes = await clienteRepo.findAll(usuario.id);
         for (const cliente of clientes) {
-          const updates: any = {};
+          const updates: Record<string, unknown> = {};
           let precisaAtualizar = false;
 
           if (cliente.arquivado === undefined || cliente.arquivado === null) {
@@ -85,7 +89,7 @@ export async function POST(request: NextRequest) {
         // 2. Migrar Eventos
         const eventos = await eventoRepo.findAll(usuario.id);
         for (const evento of eventos) {
-          const updates: any = {};
+          const updates: Record<string, unknown> = {};
           let precisaAtualizar = false;
 
           if (evento.arquivado === undefined || evento.arquivado === null) {
@@ -106,7 +110,7 @@ export async function POST(request: NextRequest) {
         // 3. Migrar Tipos de Serviço
         const tiposServico = await tipoServicoRepo.findAll(usuario.id);
         for (const tipo of tiposServico) {
-          const updates: any = {};
+          const updates: Record<string, unknown> = {};
           let precisaAtualizar = false;
 
           if (tipo.ativo === undefined || tipo.ativo === null) {
@@ -126,7 +130,7 @@ export async function POST(request: NextRequest) {
         // 4. Migrar Tipos de Custo
         const tiposCusto = await tipoCustoRepo.findAll(usuario.id);
         for (const tipo of tiposCusto) {
-          const updates: any = {};
+          const updates: Record<string, unknown> = {};
           let precisaAtualizar = false;
 
           if (tipo.ativo === undefined || tipo.ativo === null) {
@@ -146,7 +150,7 @@ export async function POST(request: NextRequest) {
         // 5. Migrar Canais de Entrada
         const canaisEntrada = await canalEntradaRepo.findAll(usuario.id);
         for (const canal of canaisEntrada) {
-          const updates: any = {};
+          const updates: Record<string, unknown> = {};
           let precisaAtualizar = false;
 
           if (canal.ativo === undefined || canal.ativo === null) {
@@ -166,7 +170,7 @@ export async function POST(request: NextRequest) {
         // 6. Migrar Tipos de Evento
         const tiposEvento = await tipoEventoRepo.findAll(usuario.id);
         for (const tipo of tiposEvento) {
-          const updates: any = {};
+          const updates: Record<string, unknown> = {};
           let precisaAtualizar = false;
 
           if (tipo.ativo === undefined || tipo.ativo === null) {
@@ -182,8 +186,8 @@ export async function POST(request: NextRequest) {
             resultados.detalhes.tiposEvento.push(`${tipo.nome} (${usuario.email})`);
           }
         }
-      } catch (error: any) {
-        const mensagem = `Erro ao processar usuário ${usuario.email}: ${error.message}`;
+      } catch (error: unknown) {
+        const mensagem = `Erro ao processar usuário ${usuario.email}: ${getErrorMessage(error)}`;
         console.error(mensagem, error);
         resultados.erros.push(mensagem);
       }
@@ -214,12 +218,12 @@ export async function POST(request: NextRequest) {
       detalhes: dryRun ? resultados.detalhes : undefined,
       erros: resultados.erros.length > 0 ? resultados.erros : undefined
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro na migração de campos de integridade:', error);
     return NextResponse.json(
       { 
         error: 'Erro ao executar migração', 
-        message: error.message 
+        message: getErrorMessage(error)
       },
       { status: 500 }
     );

@@ -8,6 +8,10 @@ import {
   getRouteParams
 } from '@/lib/api/route-helpers';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
 /**
  * PATCH /api/pre-cadastros/[id]/renovar
  * Renova expiração do pré-cadastro (adiciona mais 7 dias)
@@ -29,9 +33,10 @@ export async function PATCH(
       preCadastro,
       novaDataExpiracao: preCadastro.dataExpiracao
     });
-  } catch (error: any) {
-    if (error.message?.includes('não encontrado')) {
-      return createErrorResponse(error.message, 404);
+  } catch (error: unknown) {
+    const message = getErrorMessage(error);
+    if (message.includes('não encontrado')) {
+      return createErrorResponse(message, 404);
     }
     
     return handleApiError(error);

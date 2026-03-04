@@ -9,9 +9,11 @@ import {
   getQueryParams
 } from '@/lib/api/route-helpers';
 
+type AnexoComS3KeyOpcional = { s3Key?: string };
+
 export async function GET(request: NextRequest) {
   try {
-    const user = await getAuthenticatedUser();
+    await getAuthenticatedUser();
     const queryParams = getQueryParams(request);
     const eventoId = queryParams.get('eventoId');
 
@@ -26,7 +28,7 @@ export async function GET(request: NextRequest) {
     // Gerar URLs assinadas para cada anexo (se tiver s3Key) ou usar URL existente
     const anexosComUrls = await Promise.all(
       anexos.map(async (anexo) => {
-        const anexoComS3Key = anexo as any;
+        const anexoComS3Key = anexo as unknown as AnexoComS3KeyOpcional;
         // Se tiver s3Key, gerar nova URL assinada (URLs expiram após 7 dias)
         if (anexoComS3Key.s3Key) {
           try {
@@ -57,7 +59,7 @@ export async function GET(request: NextRequest) {
       dataUpload: anexo.dataUpload instanceof Date 
         ? anexo.dataUpload.toISOString() 
         : anexo.dataUpload,
-      evento: anexo.evento || {} as any,
+      evento: anexo.evento || null,
     }));
 
     return createApiResponse({

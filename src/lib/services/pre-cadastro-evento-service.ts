@@ -1,7 +1,9 @@
-import { PreCadastroEvento, PreCadastroServico, StatusPreCadastro, Evento, Cliente, ServicoEvento, StatusEvento } from '@/types';
+import { PreCadastroEvento, StatusPreCadastro, Evento, Cliente, ServicoEvento, StatusEvento } from '@/types';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { dataService } from '@/lib/data-service';
-import { getDiaSemana, dateToLocalMidnight, parseLocalDate } from '@/lib/utils/date-helpers';
+import { getDiaSemana, parseLocalDate } from '@/lib/utils/date-helpers';
+
+type TipoServicoMinimo = { id: string };
 
 export class PreCadastroEventoService {
   /**
@@ -182,7 +184,7 @@ export class PreCadastroEventoService {
         // Criar cliente sem validar plano (é parte da criação do evento)
         cliente = await dataService.createCliente(novoCliente, userId, true);
         console.log(`[PreCadastroEventoService] Cliente criado: ${cliente.nome} (${cliente.email})`);
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Para outros erros (ex: email duplicado), propagar
         throw error;
       }
@@ -267,7 +269,7 @@ export class PreCadastroEventoService {
           observacoes: servico.observacoes || undefined,
           removido: false,
           eventoId: evento.id,
-          tipoServico: {} as any, // Será carregado pelo repositório
+          tipoServico: ({ id: servico.servicoId || '' } as unknown as TipoServicoMinimo), // Será carregado pelo repositório
         } as Omit<ServicoEvento, 'id' | 'dataCadastro'>));
       
       console.log(`[PreCadastroEventoService] Preparando para copiar ${servicosParaCopiar.length} serviços para o evento ${evento.id}`);
@@ -276,7 +278,7 @@ export class PreCadastroEventoService {
         try {
           await servicoEventoRepo.createServicoEvento(userId, evento.id, servicoData);
           console.log(`[PreCadastroEventoService] Serviço ${servicoData.servicoId} copiado com sucesso`);
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error(`[PreCadastroEventoService] Erro ao copiar serviço ${servicoData.servicoId}:`, error);
           // Continuar com os outros serviços mesmo se um falhar
         }

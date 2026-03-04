@@ -24,10 +24,10 @@ export async function POST(request: NextRequest) {
 
     // Obter o body como texto primeiro (para validação HMAC)
     const bodyText = await request.text();
-    let payload: any;
+    let payload: Record<string, unknown>;
     
     try {
-      payload = JSON.parse(bodyText);
+      payload = JSON.parse(bodyText) as Record<string, unknown>;
     } catch (parseError) {
       console.error('❌ Erro ao fazer parse do JSON:', parseError);
       return createErrorResponse('Payload JSON inválido', 400);

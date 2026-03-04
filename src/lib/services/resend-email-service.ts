@@ -7,6 +7,14 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
+function getErrorStack(error: unknown): string | undefined {
+  return error instanceof Error ? error.stack : undefined;
+}
+
 export interface SendEmailOptions {
   to: string;
   subject: string;
@@ -55,12 +63,12 @@ export async function sendEmail({
     return {
       success: true
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[resend-email-service] Exceção ao enviar email:', error);
-    console.error('[resend-email-service] Stack:', error?.stack);
+    console.error('[resend-email-service] Stack:', getErrorStack(error));
     return {
       success: false,
-      error: error.message || 'Erro inesperado ao enviar email'
+      error: getErrorMessage(error) || 'Erro inesperado ao enviar email'
     };
   }
 }

@@ -6,7 +6,6 @@
  * Esta rota força a renovação do access token usando o refresh token
  */
 
-import { NextRequest } from 'next/server';
 import { 
   getAuthenticatedUser,
   handleApiError,
@@ -15,13 +14,23 @@ import {
 } from '@/lib/api/route-helpers';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-change-in-production';
-
-function decrypt(encrypted: string, key: string): string {
+function decrypt(encrypted: string): string {
   return Buffer.from(encrypted, 'base64').toString('utf-8');
 }
 
-export async function POST(request: NextRequest) {
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
+function getErrorCode(error: unknown): string | undefined {
+  if (error && typeof error === 'object' && 'code' in error) {
+    const code = (error as { code?: unknown }).code;
+    return typeof code === 'string' ? code : undefined;
+  }
+  return undefined;
+}
+
+export async function POST() {
   try {
     const user = await getAuthenticatedUser();
 
@@ -33,7 +42,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Descriptografar refresh token
-    const refreshToken = decrypt(token.refreshToken, ENCRYPTION_KEY);
+    decrypt(token.refreshToken);
 
     // Importar serviço
     const { getServiceFactory } = await import('@/lib/factories/service-factory');
@@ -51,18 +60,18 @@ export async function POST(request: NextRequest) {
       const calendarInfo = await googleService.getCalendarInfo(user.id);
       
       // Buscar token atualizado
-      const updatedToken = await tokenRepo.findByUserId(user.id);
-      
       return createApiResponse({
         success: true,
         message: 'Token renovado com sucesso',
         calendarInfo: calendarInfo
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao renovar token:', error);
       
       // Se o refresh token é inválido, usuário precisa reconectar
-      if (error.message?.includes('invalid_grant') || error.code === 'invalid_grant') {
+      const message = getErrorMessage(error);
+      const code = getErrorCode(error);
+      if (message.includes('invalid_grant') || code === 'invalid_grant') {
         return createErrorResponse(
           'O refresh token é inválido ou foi revogado. Por favor, desconecte e conecte novamente sua conta do Google Calendar.',
           401,
@@ -71,7 +80,7 @@ export async function POST(request: NextRequest) {
       }
       
       return createErrorResponse(
-        error.message || 'Erro desconhecido ao renovar token',
+        message || 'Erro desconhecido ao renovar token',
         500
       );
     }

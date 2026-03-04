@@ -4,6 +4,10 @@ import { authOptions } from '@/lib/auth-config';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { Funcionalidade, Plano } from '@/types/funcionalidades';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
 const FUNCIONALIDADES_INICIAIS: Omit<Funcionalidade, 'id' | 'dataCadastro'>[] = [
   // EVENTOS
   { codigo: 'EVENTOS_LIMITADOS', nome: 'Eventos Limitados', descricao: 'Criar eventos com limite mensal', categoria: 'EVENTOS', ativo: true, ordem: 1 },
@@ -289,10 +293,10 @@ export async function POST(request: NextRequest) {
         atualizadosDetalhes: planosAtualizados.map(p => ({ nome: p.nome, codigoHotmart: p.codigoHotmart }))
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao executar seed:', error);
     return NextResponse.json(
-      { error: error.message || 'Erro ao executar seed' },
+      { error: getErrorMessage(error) || 'Erro ao executar seed' },
       { status: 500 }
     );
   }

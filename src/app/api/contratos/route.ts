@@ -10,6 +10,8 @@ import {
   getQueryParams
 } from '@/lib/api/route-helpers';
 
+type EventoResumoContrato = { id: string; nomeEvento?: string };
+
 export async function GET(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
@@ -59,7 +61,8 @@ export async function GET(request: NextRequest) {
           try {
             const evento = await eventoRepo.findById(contrato.eventoId, user.id);
             if (evento) {
-              contrato = { ...contrato, evento: { id: evento.id, nomeEvento: evento.nomeEvento } as any };
+              const eventoResumo: EventoResumoContrato = { id: evento.id, nomeEvento: evento.nomeEvento };
+              contrato = { ...contrato, evento: eventoResumo as unknown as typeof contrato.evento };
             }
           } catch (error) {
             console.error(`Erro ao buscar evento ${contrato.eventoId}:`, error);

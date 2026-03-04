@@ -7,23 +7,37 @@
  * para fins de debug durante desenvolvimento.
  */
 
-import { NextRequest } from 'next/server';
 import { 
   getAuthenticatedUser,
   handleApiError,
-  createApiResponse,
-  createErrorResponse
+  createApiResponse
 } from '@/lib/api/route-helpers';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 
 // Função de descriptografia (mesma do serviço)
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'default-key-change-in-production';
-
-function decrypt(encrypted: string, key: string): string {
+function decrypt(encrypted: string): string {
   return Buffer.from(encrypted, 'base64').toString('utf-8');
 }
 
-export async function GET(request: NextRequest) {
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
+function getErrorCode(error: unknown): unknown {
+  if (error && typeof error === 'object' && 'code' in error) {
+    return (error as { code?: unknown }).code;
+  }
+  return undefined;
+}
+
+function getErrorResponse(error: unknown): { status?: unknown; statusText?: unknown; data?: unknown } | undefined {
+  if (error && typeof error === 'object' && 'response' in error) {
+    return (error as { response?: { status?: unknown; statusText?: unknown; data?: unknown } }).response;
+  }
+  return undefined;
+}
+
+export async function GET() {
   try {
     const user = await getAuthenticatedUser();
     const tokenRepo = repositoryFactory.getGoogleCalendarTokenRepository();
@@ -43,8 +57,8 @@ export async function GET(request: NextRequest) {
     let refreshTokenPreview = '';
     
     try {
-      accessToken = decrypt(token.accessToken, ENCRYPTION_KEY);
-      refreshToken = decrypt(token.refreshToken, ENCRYPTION_KEY);
+      accessToken = decrypt(token.accessToken);
+      refreshToken = decrypt(token.refreshToken);
       
       // Criar preview (primeiros 20 e últimos 10 caracteres)
       if (accessToken.length > 30) {
@@ -80,11 +94,11 @@ export async function GET(request: NextRequest) {
       const serviceFactory = getServiceFactory();
       const googleService = serviceFactory.getGoogleCalendarService();
       calendarInfo = await googleService.getCalendarInfo(user.id);
-    } catch (error: any) {
+    } catch (error: unknown) {
       calendarError = {
-        message: error.message,
-        code: error.code,
-        status: error.response?.status
+        message: getErrorMessage(error),
+        code: getErrorCode(error),
+        status: getErrorResponse(error)?.status
       };
     }
 
@@ -106,15 +120,16 @@ export async function GET(request: NextRequest) {
         calendarEmail: calendarInfo.email,
         calendarId: calendarInfo.calendarId
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       tokenValid = false;
+      const response = getErrorResponse(error);
       tokenValidationError = {
-        message: error.message,
-        code: error.code,
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        response: error.response?.data,
-        stack: error.stack
+        message: getErrorMessage(error),
+        code: getErrorCode(error),
+        status: response?.status,
+        statusText: response?.statusText,
+        response: response?.data,
+        stack: error instanceof Error ? error.stack : undefined
       };
       
       // Tentar fazer uma requisição direta com o token para ver o erro exato
@@ -140,10 +155,10 @@ export async function GET(request: NextRequest) {
             warning: !clientIdMatch ? '⚠️ O client_id do token não corresponde ao configurado no ambiente!' : null
           }
         };
-      } catch (tokenInfoError: any) {
+      } catch (tokenInfoError: unknown) {
         tokenTestDetails = {
           success: false,
-          tokenInfoError: tokenInfoError.message
+          tokenInfoError: getErrorMessage(tokenInfoError)
         };
       }
 
@@ -172,13 +187,13 @@ export async function GET(request: NextRequest) {
             success: calendarResponse.ok
           }
         };
-      } catch (calendarApiError: any) {
+      } catch (calendarApiError: unknown) {
         console.error('[Debug] Erro ao testar API do Calendar:', calendarApiError);
         tokenTestDetails = {
           ...tokenTestDetails,
           calendarApiError: {
-            message: calendarApiError.message,
-            stack: calendarApiError.stack
+            message: getErrorMessage(calendarApiError),
+            stack: calendarApiError instanceof Error ? calendarApiError.stack : undefined
           }
         };
       }
@@ -202,11 +217,12 @@ export async function GET(request: NextRequest) {
             calendarEmail: calendarInfo.email
           }
         };
-      } catch (oauth2Error: any) {
+      } catch (oauth2Error: unknown) {
+        const oauth2Response = getErrorResponse(oauth2Error);
         console.error('[Debug] Erro ao testar com OAuth2Client:', {
-          message: oauth2Error.message,
-          code: oauth2Error.code,
-          response: oauth2Error.response?.data
+          message: getErrorMessage(oauth2Error),
+          code: getErrorCode(oauth2Error),
+          response: oauth2Response?.data
         });
         
         tokenTestDetails = {
@@ -214,10 +230,10 @@ export async function GET(request: NextRequest) {
           oauth2ClientTest: {
             success: false,
             error: {
-              message: oauth2Error.message,
-              code: oauth2Error.code,
-              response: oauth2Error.response?.data,
-              status: oauth2Error.response?.status
+              message: getErrorMessage(oauth2Error),
+              code: getErrorCode(oauth2Error),
+              response: oauth2Response?.data,
+              status: oauth2Response?.status
             }
           }
         };

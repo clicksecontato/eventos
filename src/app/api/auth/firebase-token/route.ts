@@ -1,13 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { adminAuth, isFirebaseAdminInitialized } from '@/lib/firebase-admin';
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
 
 /**
  * API Route para obter um custom token do Firebase Admin
  * Isso permite que o cliente faça login no Firebase Auth usando o token customizado
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // Verificar se o usuário está autenticado no NextAuth
     const session = await getServerSession(authOptions);
@@ -29,17 +33,22 @@ export async function GET(request: NextRequest) {
     }
 
     // Criar custom token para o usuário
+    const roleSession =
+      session.user && typeof session.user === 'object' && 'role' in session.user
+        ? (session.user as { role?: unknown }).role
+        : undefined;
+
     const customToken = await adminAuth.createCustomToken(session.user.id, {
       email: session.user.email,
       name: session.user.name,
-      role: (session.user as any).role || 'user'
+      role: typeof roleSession === 'string' ? roleSession : 'user'
     });
 
     return NextResponse.json({ token: customToken });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[firebase-token] Erro ao criar custom token:', error);
     return NextResponse.json(
-      { error: error.message || 'Erro ao criar token' },
+      { error: getErrorMessage(error) || 'Erro ao criar token' },
       { status: 500 }
     );
   }

@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
-import { arquivoRepository } from '@/lib/repositories/arquivo-repository';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { db } from '@/lib/firebase';
 import { COLLECTIONS } from '@/lib/firestore/collections';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { AnexoEvento } from '@/types';
 
 interface MigrationStats {
@@ -20,6 +19,10 @@ interface MigrationStats {
     status: 'updated' | 'not_found' | 'error';
     error?: string;
   }>;
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
 }
 
 /**
@@ -160,7 +163,7 @@ export async function POST(request: NextRequest) {
               }
 
               // Verificar se já tem s3_key
-              const anexoComS3Key = anexoCorrespondente as any;
+              const anexoComS3Key = anexoCorrespondente as unknown as { s3Key?: string };
               if (anexoComS3Key.s3Key === s3Key) {
                 // Já está atualizado, pular
                 continue;
@@ -181,32 +184,32 @@ export async function POST(request: NextRequest) {
                 if (stats.updated % 10 === 0) {
                   console.log(`  ✅ ${stats.updated} anexos atualizados...`);
                 }
-              } catch (updateError: any) {
+              } catch (updateError: unknown) {
                 stats.errors++;
                 stats.details.push({
                   eventoId,
                   anexoId: anexoDoc.id,
                   nome: firestoreData.nome || 'Sem nome',
                   status: 'error',
-                  error: updateError.message || 'Erro desconhecido'
+                  error: getErrorMessage(updateError)
                 });
-                console.error(`  ❌ Erro ao atualizar anexo ${anexoCorrespondente.id}:`, updateError.message);
+                console.error(`  ❌ Erro ao atualizar anexo ${anexoCorrespondente.id}:`, getErrorMessage(updateError));
               }
-            } catch (error: any) {
+            } catch (error: unknown) {
               stats.errors++;
               stats.details.push({
                 eventoId,
                 anexoId: anexoDoc.id,
                 nome: 'Erro ao processar',
                 status: 'error',
-                error: error.message || 'Erro desconhecido'
+                error: getErrorMessage(error)
               });
-              console.error(`  ❌ Erro ao processar anexo ${anexoDoc.id}:`, error.message);
+              console.error(`  ❌ Erro ao processar anexo ${anexoDoc.id}:`, getErrorMessage(error));
             }
           }
         }
-      } catch (error: any) {
-        console.error(`  ❌ Erro ao processar usuário ${currentUserId}:`, error.message);
+      } catch (error: unknown) {
+        console.error(`  ❌ Erro ao processar usuário ${currentUserId}:`, getErrorMessage(error));
         stats.errors++;
       }
     }
@@ -232,13 +235,13 @@ export async function POST(request: NextRequest) {
       },
       details: stats.details
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Erro ao executar migração:', error);
     return NextResponse.json(
       { 
         success: false,
-        error: error.message || 'Erro desconhecido ao executar migração',
-        details: error.toString()
+        error: getErrorMessage(error) || 'Erro desconhecido ao executar migração',
+        details: String(error)
       },
       { status: 500 }
     );

@@ -4,6 +4,10 @@ import { authOptions } from '@/lib/auth-config';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
 /**
  * Endpoint para atualizar planos e funcionalidades de todos os usuários
  * 
@@ -160,7 +164,7 @@ export async function POST(request: NextRequest) {
           });
         }
 
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`  ❌ Erro ao processar assinatura ${assinatura.id}:`, error);
         resultados.erros++;
         resultados.detalhes.push({
@@ -168,7 +172,7 @@ export async function POST(request: NextRequest) {
           assinaturaId: assinatura.id,
           planoId: assinatura.planoId,
           status: 'erro',
-          mensagem: error.message || 'Erro desconhecido'
+          mensagem: getErrorMessage(error)
         });
       }
     }
@@ -190,10 +194,10 @@ export async function POST(request: NextRequest) {
       detalhes: resultados.detalhes
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao atualizar planos dos usuários:', error);
     return NextResponse.json(
-      { error: error.message || 'Erro ao atualizar planos dos usuários' },
+      { error: getErrorMessage(error) || 'Erro ao atualizar planos dos usuários' },
       { status: 500 }
     );
   }

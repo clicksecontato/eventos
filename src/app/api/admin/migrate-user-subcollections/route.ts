@@ -8,6 +8,10 @@ async function getMigrationFunction() {
   return migrationModule.migrateUserSubcollections;
 }
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
 /**
  * Endpoint para migrar subcollections de eventos de um usuário específico
  * 
@@ -74,13 +78,13 @@ export async function POST(request: NextRequest) {
         stats: result.stats,
       }, { status: 500 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao executar migração:', error);
     return NextResponse.json(
       { 
         success: false,
-        error: error.message || 'Erro desconhecido ao executar migração',
-        details: error.toString()
+        error: getErrorMessage(error) || 'Erro desconhecido ao executar migração',
+        details: String(error)
       },
       { status: 500 }
     );

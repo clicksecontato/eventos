@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
 import { 
-  handleApiError,
   createApiResponse,
   createErrorResponse,
   getRequestBody
@@ -134,7 +133,7 @@ export async function POST(request: NextRequest) {
         message: 'Email de redefinição enviado com sucesso'
       });
 
-    } catch (error: any) {
+    } catch {
       // Não expor se o email existe ou não por segurança
       // Sempre retornar sucesso para evitar enumeração de emails
       return createApiResponse({
@@ -143,7 +142,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-  } catch (error: any) {
+  } catch {
     // Sempre retornar sucesso por segurança
     return createApiResponse({
       success: true,

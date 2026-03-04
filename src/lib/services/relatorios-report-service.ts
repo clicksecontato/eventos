@@ -15,6 +15,10 @@ import { startOfMonth, endOfMonth, eachMonthOfInterval, subMonths } from 'date-f
 import { ptBR } from 'date-fns/locale';
 import { filtrarEventosValidos, filtrarEventosValidosComValor } from '../utils/evento-filters';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
 export class RelatoriosReportService {
   private static instance: RelatoriosReportService;
 
@@ -50,7 +54,7 @@ export class RelatoriosReportService {
           return; // Todos os relatórios já estão em cache
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao verificar cache de relatórios:', error);
       // Continuar mesmo se houver erro ao verificar cache
     }
@@ -71,9 +75,9 @@ export class RelatoriosReportService {
         this.clienteRepo.findAll(userId),
         this.canalEntradaRepo.findAll(userId)
       ]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao buscar dados para gerar relatórios:', error);
-      throw new Error(`Erro ao buscar dados: ${error?.message || 'Erro desconhecido ao buscar dados'}`);
+      throw new Error(`Erro ao buscar dados: ${getErrorMessage(error) || 'Erro desconhecido ao buscar dados'}`);
     }
 
     // Enriquecer custos e serviços com tipos
@@ -122,9 +126,9 @@ export class RelatoriosReportService {
         this.gerarCanaisEntrada(clientes, canaisEntrada, eventos),
         this.gerarImpressoes(eventos)
       ]);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao gerar relatórios:', error);
-      throw new Error(`Erro ao gerar relatórios: ${error?.message || 'Erro desconhecido ao gerar relatórios'}`);
+      throw new Error(`Erro ao gerar relatórios: ${getErrorMessage(error) || 'Erro desconhecido ao gerar relatórios'}`);
     }
 
     // Salvar todos os relatórios de uma vez
@@ -143,13 +147,21 @@ export class RelatoriosReportService {
         },
         hoje
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao salvar relatórios:', error);
-      throw new Error(`Erro ao salvar relatórios: ${error?.message || 'Erro desconhecido ao salvar relatórios'}`);
+      throw new Error(`Erro ao salvar relatórios: ${getErrorMessage(error) || 'Erro desconhecido ao salvar relatórios'}`);
     }
   }
 
-  private todosRelatoriosPresentes(cached: any): boolean {
+  private todosRelatoriosPresentes(cached: {
+    detalhamentoReceber?: unknown;
+    receitaMensal?: unknown;
+    performanceEventos?: unknown;
+    fluxoCaixa?: unknown;
+    servicos?: unknown;
+    canaisEntrada?: unknown;
+    impressoes?: unknown;
+  }): boolean {
     return !!(
       cached.detalhamentoReceber &&
       cached.receitaMensal &&

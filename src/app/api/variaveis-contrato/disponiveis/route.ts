@@ -15,7 +15,7 @@ import { VariavelContratoService } from '@/lib/services/variavel-contrato-servic
  * 
  * Response:
  * {
- *   variaveis: Record<string, any>, // Todas as variáveis com valores
+ *   variaveis: Record<string, unknown>, // Todas as variáveis com valores
  *   metadados: {
  *     configuracoes: string[], // Chaves das variáveis de configuração
  *     customizadas: { chave: string, tipo: 'unica' | 'multipla' }[], // Variáveis customizadas com tipo

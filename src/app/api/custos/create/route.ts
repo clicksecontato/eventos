@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
+import { Evento, TipoCusto } from '@/types';
 import { 
   getAuthenticatedUser,
   handleApiError,
@@ -33,8 +34,8 @@ export async function POST(request: NextRequest) {
         observacoes: observacoes || '',
         removido: false,
         eventoId,
-        evento: {} as any,
-        tipoCusto: {} as any,
+        evento: ({ id: eventoId } as unknown as Evento),
+        tipoCusto: ({ id: tipoCustoId } as unknown as TipoCusto),
         dataCadastro: new Date()
       }
     );

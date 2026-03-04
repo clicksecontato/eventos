@@ -1,10 +1,22 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { requireAdminOrPremium } from '@/lib/api/route-helpers';
 
-export async function POST(request: NextRequest) {
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
+
+function getErrorCode(error: unknown): string | undefined {
+  if (error && typeof error === 'object' && 'code' in error) {
+    const code = (error as { code?: unknown }).code;
+    return typeof code === 'string' ? code : undefined;
+  }
+  return undefined;
+}
+
+export async function POST() {
   try {
     await requireAdminOrPremium();
 
@@ -66,9 +78,10 @@ export async function POST(request: NextRequest) {
           });
         }
       }
-    } catch (loginError: any) {
+    } catch (loginError: unknown) {
       // Se o erro for diferente de "user not found", relançar
-      if (loginError.code !== 'auth/user-not-found' && loginError.code !== 'auth/wrong-password') {
+      const code = getErrorCode(loginError);
+      if (code !== 'auth/user-not-found' && code !== 'auth/wrong-password') {
         throw loginError;
       }
     }
@@ -99,11 +112,11 @@ export async function POST(request: NextRequest) {
         password: adminPassword
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao criar usuário admin:', error);
     
     // Se o usuário já existe, retornar sucesso
-    if (error.code === 'auth/email-already-in-use') {
+    if (getErrorCode(error) === 'auth/email-already-in-use') {
       // Tentar atualizar o role
       try {
         const loginResult = await signInWithEmailAndPassword(auth, 'admin@clickse.com', '123456');
@@ -128,7 +141,7 @@ export async function POST(request: NextRequest) {
           message: 'Usuário admin já existe e foi atualizado',
           user: { ...userData, id: user.uid, role: 'admin' }
         });
-      } catch (updateError: any) {
+      } catch {
         return NextResponse.json(
           { error: 'Usuário já existe mas não foi possível atualizar. Tente fazer login com a senha original.' },
           { status: 400 }
@@ -137,7 +150,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error.message || 'Erro ao criar usuário admin' },
+      { error: getErrorMessage(error) || 'Erro ao criar usuário admin' },
       { status: 500 }
     );
   }

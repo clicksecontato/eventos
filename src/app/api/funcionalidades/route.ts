@@ -7,20 +7,20 @@ import {
   getRequestBody
 } from '@/lib/api/route-helpers';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     await requireAdminOrPremium();
 
     const repo = repositoryFactory.getFuncionalidadeRepository();
-    let funcionalidades: any[] = [];
+    let funcionalidades: unknown[] = [];
     
     try {
       funcionalidades = await repo.findAllOrdered();
-    } catch (error: any) {
+    } catch {
       // Tentar buscar sem ordenação
       try {
         funcionalidades = await repo.findAll();
-      } catch (fallbackError: any) {
+      } catch (fallbackError: unknown) {
         throw fallbackError;
       }
     }

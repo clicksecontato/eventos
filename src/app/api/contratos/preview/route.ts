@@ -14,7 +14,7 @@ import {
  * Body:
  * - modeloContratoId?: string - ID do modelo (opcional se template fornecido)
  * - template?: string - Template direto (opcional se modeloContratoId fornecido)
- * - dadosPreenchidos?: Record<string, any> - Dados manuais (opcional se eventoId fornecido)
+ * - dadosPreenchidos?: Record<string, unknown> - Dados manuais (opcional se eventoId fornecido)
  * - eventoId?: string - ID do evento para preencher variáveis automaticamente
  * 
  * Se eventoId fornecido, as variáveis do evento serão mescladas com dadosPreenchidos
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     const { modeloContratoId, template: templateDireto, dadosPreenchidos = {}, eventoId } = body;
 
     let template: string;
-    let dados: Record<string, any> = { ...dadosPreenchidos };
+    let dados: Record<string, unknown> = { ...dadosPreenchidos };
 
     // Obter template
     if (templateDireto) {

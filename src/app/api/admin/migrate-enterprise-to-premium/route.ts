@@ -3,6 +3,11 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
+import type { Assinatura } from '@/types/funcionalidades';
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Erro desconhecido';
+}
 
 /**
  * Endpoint para migrar usuários de ENTERPRISE_MENSAL para PREMIUM_MENSAL
@@ -55,7 +60,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Buscar assinaturas com plano antigo
-    let assinaturasParaMigrar;
+    let assinaturasParaMigrar: Assinatura[];
     if (planoAntigo) {
       // Buscar assinaturas pelo planoId antigo
       const todasAssinaturas = await assinaturaRepo.findAll();
@@ -85,10 +90,12 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      assinaturasParaMigrar = await Promise.all(
+      const assinaturasEncontradas = await Promise.all(
         assinaturasIds.map(id => assinaturaRepo.findById(id))
       );
-      assinaturasParaMigrar = assinaturasParaMigrar.filter(Boolean) as any[];
+      assinaturasParaMigrar = assinaturasEncontradas.filter(
+        (assinatura): assinatura is Assinatura => Boolean(assinatura)
+      );
     }
 
     console.log(`📋 Encontradas ${assinaturasParaMigrar.length} assinatura(s) com ENTERPRISE_MENSAL`);
@@ -158,14 +165,14 @@ export async function POST(request: NextRequest) {
           });
         }
 
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error(`  ❌ Erro ao processar assinatura ${assinatura.id}:`, error);
         resultados.erros++;
         resultados.detalhes.push({
           userId: assinatura.userId,
           assinaturaId: assinatura.id,
           status: 'erro',
-          mensagem: error.message || 'Erro desconhecido'
+          mensagem: getErrorMessage(error)
         });
       }
     }
@@ -186,10 +193,10 @@ export async function POST(request: NextRequest) {
       detalhes: resultados.detalhes
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao migrar planos:', error);
     return NextResponse.json(
-      { error: error.message || 'Erro ao migrar planos' },
+      { error: getErrorMessage(error) || 'Erro ao migrar planos' },
       { status: 500 }
     );
   }
