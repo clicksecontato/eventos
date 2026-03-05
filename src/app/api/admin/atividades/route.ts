@@ -1,5 +1,5 @@
-import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { requireAdminOrPremium, handleApiError, createApiResponse } from '@/lib/api/route-helpers';
+import { createRepositoriosAdminBasicos } from '@/lib/composition/server-assinatura-context';
 import { User } from '@/types';
 import { Assinatura, StatusAssinatura } from '@/types/funcionalidades';
 
@@ -23,9 +23,7 @@ export async function GET() {
   try {
     await requireAdminOrPremium();
 
-    const userRepo = repositoryFactory.getAdminUserRepository();
-    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
-    const planoRepo = repositoryFactory.getAdminPlanoRepository();
+    const { userRepo, assinaturaRepo, planoRepo } = await createRepositoriosAdminBasicos();
 
     const [allUsers, allAssinaturas] = await Promise.all([
       userRepo.findAll(),

@@ -7,6 +7,7 @@ import type { AdminFuncionalidadeRepository } from '@/lib/repositories/admin-fun
 import type { AdminUserRepository } from '@/lib/repositories/admin-user-repository';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { FuncionalidadeService } from '@/lib/services/funcionalidade-service';
+import type { AdminPasswordResetTokenRepository } from '@/lib/repositories/admin-password-reset-token-repository';
 
 export interface ContextoAssinaturaServidor {
   assinaturaRepo: AdminAssinaturaRepository;
@@ -17,11 +18,18 @@ export interface ContextoAssinaturaServidor {
   funcionalidadeService: FuncionalidadeService;
 }
 
-/**
- * Composition root server-only para o domínio de assinatura/permissões.
- * Mantém desacoplamento dos serviços e evita resolução dinâmica frágil em runtime.
- */
-export async function createContextoAssinaturaServidor(): Promise<ContextoAssinaturaServidor> {
+export interface RepositoriosAdminBasicos {
+  assinaturaRepo: AdminAssinaturaRepository;
+  planoRepo: AdminPlanoRepository;
+  funcionalidadeRepo: AdminFuncionalidadeRepository;
+  userRepo: AdminUserRepository;
+}
+
+export interface RepositoriosAdminComToken extends RepositoriosAdminBasicos {
+  passwordResetTokenRepo: AdminPasswordResetTokenRepository;
+}
+
+export async function createRepositoriosAdminBasicos(): Promise<RepositoriosAdminBasicos> {
   const [
     { AdminAssinaturaRepository },
     { AdminPlanoRepository },
@@ -34,10 +42,35 @@ export async function createContextoAssinaturaServidor(): Promise<ContextoAssina
     import('@/lib/repositories/admin-user-repository')
   ]);
 
-  const assinaturaRepo = new AdminAssinaturaRepository();
-  const planoRepo = new AdminPlanoRepository();
-  const funcionalidadeRepo = new AdminFuncionalidadeRepository();
-  const userRepo = new AdminUserRepository();
+  return {
+    assinaturaRepo: new AdminAssinaturaRepository(),
+    planoRepo: new AdminPlanoRepository(),
+    funcionalidadeRepo: new AdminFuncionalidadeRepository(),
+    userRepo: new AdminUserRepository()
+  };
+}
+
+export async function createRepositoriosAdminComToken(): Promise<RepositoriosAdminComToken> {
+  const [
+    basicos,
+    { AdminPasswordResetTokenRepository }
+  ] = await Promise.all([
+    createRepositoriosAdminBasicos(),
+    import('@/lib/repositories/admin-password-reset-token-repository')
+  ]);
+
+  return {
+    ...basicos,
+    passwordResetTokenRepo: new AdminPasswordResetTokenRepository()
+  };
+}
+
+/**
+ * Composition root server-only para o domínio de assinatura/permissões.
+ * Mantém desacoplamento dos serviços e evita resolução dinâmica frágil em runtime.
+ */
+export async function createContextoAssinaturaServidor(): Promise<ContextoAssinaturaServidor> {
+  const { assinaturaRepo, planoRepo, funcionalidadeRepo, userRepo } = await createRepositoriosAdminBasicos();
   const eventoRepo = repositoryFactory.getEventoRepository();
   const clienteRepo = repositoryFactory.getClienteRepository();
 

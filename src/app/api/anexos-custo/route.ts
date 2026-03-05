@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { s3Service } from '@/lib/s3-service';
 import { FuncionalidadeService } from '@/lib/services/funcionalidade-service';
+import { createRepositoriosAdminBasicos } from '@/lib/composition/server-assinatura-context';
 import {
   getAuthenticatedUser,
   handleApiError,
@@ -14,9 +15,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
 
-    const funcionalidadeRepo = repositoryFactory.getAdminFuncionalidadeRepository();
-    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
-    const userRepo = repositoryFactory.getAdminUserRepository();
+    const { funcionalidadeRepo, assinaturaRepo, userRepo } = await createRepositoriosAdminBasicos();
     const funcionalidadeService = new FuncionalidadeService(funcionalidadeRepo, assinaturaRepo, userRepo);
     const temPermissao = await funcionalidadeService.verificarPermissao(user.id, 'ANEXOS_CUSTO');
     if (!temPermissao) {
@@ -70,9 +69,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
 
-    const funcionalidadeRepo = repositoryFactory.getAdminFuncionalidadeRepository();
-    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
-    const userRepo = repositoryFactory.getAdminUserRepository();
+    const { funcionalidadeRepo, assinaturaRepo, userRepo } = await createRepositoriosAdminBasicos();
     const funcionalidadeService = new FuncionalidadeService(funcionalidadeRepo, assinaturaRepo, userRepo);
     const temPermissao = await funcionalidadeService.verificarPermissao(user.id, 'ANEXOS_CUSTO');
     if (!temPermissao) {

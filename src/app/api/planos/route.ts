@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { isFirebaseAdminInitialized, getFirebaseAdminInitializationError } from '@/lib/firebase-admin';
 import { 
   requireAdminOrPremium,
@@ -41,8 +40,9 @@ export async function GET(request: NextRequest) {
 
     console.log('[API /planos] ===== INÍCIO DA BUSCA =====');
     console.log('[API /planos] Parâmetros da query:', { apenasAtivos });
-    
-    const planoRepo = repositoryFactory.getAdminPlanoRepository();
+
+    const { AdminPlanoRepository } = await import('@/lib/repositories/admin-plano-repository');
+    const planoRepo = new AdminPlanoRepository();
     console.log('[API /planos] AdminPlanoRepository criado com sucesso');
     
     console.log('[API /planos] Chamando método do repositório...');
@@ -130,7 +130,8 @@ export async function POST(request: NextRequest) {
 
     const data = await getRequestBody(request);
     // Usar AdminPlanoRepository no servidor para bypassar regras de segurança do Firebase
-    const planoRepo = repositoryFactory.getAdminPlanoRepository();
+    const { AdminPlanoRepository } = await import('@/lib/repositories/admin-plano-repository');
+    const planoRepo = new AdminPlanoRepository();
     
     const plano = await planoRepo.create({
       ...data,

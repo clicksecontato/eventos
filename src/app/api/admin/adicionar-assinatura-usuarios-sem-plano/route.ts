@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
-import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { StatusAssinatura } from '@/types/funcionalidades';
+import { createRepositoriosAdminBasicos } from '@/lib/composition/server-assinatura-context';
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Erro desconhecido';
@@ -46,9 +46,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Usar repositórios Admin que bypassam as regras de segurança do Firestore
-    const userRepo = repositoryFactory.getAdminUserRepository();
-    const planoRepo = repositoryFactory.getAdminPlanoRepository();
-    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
+    const { userRepo, planoRepo, assinaturaRepo } = await createRepositoriosAdminBasicos();
     const assinaturaService = new AssinaturaService(assinaturaRepo, planoRepo, userRepo);
 
     // Buscar plano padrão

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
-import { repositoryFactory } from '@/lib/repositories/repository-factory';
+import { createRepositoriosAdminBasicos } from '@/lib/composition/server-assinatura-context';
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Erro desconhecido';
@@ -40,9 +40,7 @@ export async function POST(request: NextRequest) {
 
     const { apenasAtivas = true, dryRun = false } = await request.json().catch(() => ({}));
 
-    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
-    const planoRepo = repositoryFactory.getAdminPlanoRepository();
-    const userRepo = repositoryFactory.getAdminUserRepository();
+    const { assinaturaRepo, planoRepo, userRepo } = await createRepositoriosAdminBasicos();
     const assinaturaService = new AssinaturaService(assinaturaRepo, planoRepo, userRepo);
 
     // Buscar assinaturas

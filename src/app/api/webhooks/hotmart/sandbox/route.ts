@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { HotmartWebhookService, HotmartWebhookPayload } from '@/lib/services/hotmart-webhook-service';
-import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { PlanoService } from '@/lib/services/plano-service';
+import { createRepositoriosAdminBasicos } from '@/lib/composition/server-assinatura-context';
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Erro desconhecido';
@@ -53,9 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Usar repositórios Admin que bypassam as regras de segurança do Firestore
-    const userRepo = repositoryFactory.getAdminUserRepository();
-    const planoRepo = repositoryFactory.getAdminPlanoRepository();
-    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
+    const { userRepo, planoRepo, assinaturaRepo } = await createRepositoriosAdminBasicos();
     const assinaturaService = new AssinaturaService(assinaturaRepo, planoRepo, userRepo);
     const planoService = new PlanoService(planoRepo, undefined, assinaturaRepo, undefined, assinaturaService);
     const service = new HotmartWebhookService(assinaturaRepo, planoRepo, userRepo, planoService, assinaturaService);
@@ -190,9 +188,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Usar repositórios Admin que bypassam as regras de segurança do Firestore
-    const userRepo = repositoryFactory.getAdminUserRepository();
-    const planoRepo = repositoryFactory.getAdminPlanoRepository();
-    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
+    const { userRepo, planoRepo, assinaturaRepo } = await createRepositoriosAdminBasicos();
     const assinaturaService = new AssinaturaService(assinaturaRepo, planoRepo, userRepo);
     const planoService = new PlanoService(planoRepo, undefined, assinaturaRepo, undefined, assinaturaService);
     const service = new HotmartWebhookService(assinaturaRepo, planoRepo, userRepo, planoService, assinaturaService);

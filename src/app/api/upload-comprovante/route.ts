@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { s3Service } from '@/lib/s3-service';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { FuncionalidadeService } from '@/lib/services/funcionalidade-service';
+import { createRepositoriosAdminBasicos } from '@/lib/composition/server-assinatura-context';
 import { 
   getAuthenticatedUser,
   handleApiError,
@@ -16,9 +17,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
 
-    const funcionalidadeRepo = repositoryFactory.getAdminFuncionalidadeRepository();
-    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
-    const userRepo = repositoryFactory.getAdminUserRepository();
+    const { funcionalidadeRepo, assinaturaRepo, userRepo } = await createRepositoriosAdminBasicos();
     const funcionalidadeService = new FuncionalidadeService(funcionalidadeRepo, assinaturaRepo, userRepo);
     const temPermissao = await funcionalidadeService.verificarPermissao(user.id, 'PAGAMENTOS_COMPROVANTES');
     if (!temPermissao) {

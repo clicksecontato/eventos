@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
-import { repositoryFactory } from '@/lib/repositories/repository-factory';
+import { createRepositoriosAdminBasicos } from '@/lib/composition/server-assinatura-context';
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Erro desconhecido';
@@ -47,9 +47,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userRepo = repositoryFactory.getAdminUserRepository();
-    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
-    const planoRepo = repositoryFactory.getAdminPlanoRepository();
+    const { userRepo, assinaturaRepo, planoRepo } = await createRepositoriosAdminBasicos();
     const assinaturaService = new AssinaturaService(assinaturaRepo, planoRepo, userRepo);
 
     const user = await userRepo.findByEmail(email.toLowerCase().trim());

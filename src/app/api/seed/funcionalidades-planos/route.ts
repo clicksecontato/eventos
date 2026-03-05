@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
-import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { Funcionalidade, Plano } from '@/types/funcionalidades';
+import { createRepositoriosAdminBasicos } from '@/lib/composition/server-assinatura-context';
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Erro desconhecido';
@@ -69,8 +69,7 @@ export async function POST(request: NextRequest) {
       // Em desenvolvimento, permitir sem autenticação
     }
 
-    const funcionalidadeRepo = repositoryFactory.getAdminFuncionalidadeRepository();
-    const planoRepo = repositoryFactory.getAdminPlanoRepository();
+    const { funcionalidadeRepo, planoRepo } = await createRepositoriosAdminBasicos();
 
     // Se reset=true, limpar tudo primeiro
     if (reset) {

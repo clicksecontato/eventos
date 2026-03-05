@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { repositoryFactory } from '@/lib/repositories/repository-factory';
+import { createRepositoriosAdminComToken } from '@/lib/composition/server-assinatura-context';
 import { 
   handleApiError,
   createApiResponse,
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Token é obrigatório', 400);
     }
 
-    const tokenRepo = repositoryFactory.getAdminPasswordResetTokenRepository();
+    const { passwordResetTokenRepo: tokenRepo } = await createRepositoriosAdminComToken();
     const tokenData = await tokenRepo.findByToken(token);
 
     if (!tokenData) {

@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
-import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { isFirebaseAdminInitialized, getFirebaseAdminInitializationError } from '@/lib/firebase-admin';
+import { createRepositoriosAdminBasicos } from '@/lib/composition/server-assinatura-context';
 import { 
   getAuthenticatedUser,
   handleApiError,
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     console.log('[API /funcionalidades/por-ids] Buscando funcionalidades para IDs:', ids);
     
     // Usar AdminFuncionalidadeRepository no servidor para bypassar regras de segurança do Firebase
-    const repo = repositoryFactory.getAdminFuncionalidadeRepository();
+    const { funcionalidadeRepo: repo } = await createRepositoriosAdminBasicos();
     console.log('[API /funcionalidades/por-ids] AdminFuncionalidadeRepository criado com sucesso');
     
     const funcionalidades = [];

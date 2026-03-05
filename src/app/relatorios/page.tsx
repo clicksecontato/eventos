@@ -16,16 +16,22 @@ import DetalhamentoReceberReport from '@/components/relatorios/DetalhamentoReceb
 import PlanoBloqueio from '@/components/PlanoBloqueio';
 import PlanOverlay from '@/components/PlanOverlay';
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
-import { useCurrentUser } from '@/hooks/useAuth';
-import { dataService } from '@/lib/data-service';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { useToast } from '@/components/ui/toast';
+import { getJson } from '@/lib/api/client';
+
+interface StatusRelatoriosResponse {
+  dateKey: string;
+  ultimaAtualizacao: string | null;
+}
+
+interface AtualizarRelatoriosResponse {
+  atualizadoEm: string;
+}
 
 export default function RelatoriosPage() {
   const router = useRouter();
-  const { userId } = useCurrentUser();
   const { showToast } = useToast();
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
@@ -38,24 +44,18 @@ export default function RelatoriosPage() {
   // Buscar data de atualização dos relatórios
   useEffect(() => {
     const buscarDataAtualizacao = async () => {
-      if (!userId) return;
-      
       try {
-        const hoje = new Date();
-        const dateKey = format(hoje, 'yyyyMMdd');
-        const relatoriosRepo = repositoryFactory.getRelatoriosDiariosRepository();
-        const cached = await relatoriosRepo.getRelatorioDiario(userId, dateKey);
-        
-        if (cached?.dataGeracao) {
-          setLastUpdatedAt(cached.dataGeracao);
+        const status = await getJson<StatusRelatoriosResponse>('/api/relatorios/status');
+        if (status.ultimaAtualizacao) {
+          setLastUpdatedAt(new Date(status.ultimaAtualizacao));
         }
       } catch (error) {
-        // Erro silencioso
+        setLastUpdatedAt(null);
       }
     };
     
     buscarDataAtualizacao();
-  }, [userId]);
+  }, []);
   
   // Carregar dados adicionais apenas quando necessário (lazy loading)
   const [loadAdditionalData, setLoadAdditionalData] = useState(false);
@@ -82,29 +82,15 @@ export default function RelatoriosPage() {
   const loadingAdditional = loadAdditionalData && (loadingServicos || loadingTiposServicos || loadingClientes || loadingCanaisEntrada || loadingCustos);
 
   const handleRefresh = async () => {
-    if (refreshing || !userId) {
-      if (!userId) {
-        showToast('Usuário não autenticado', 'error');
-      }
+    if (refreshing) {
       return;
     }
     setRefreshing(true);
     try {
-      // Não força refresh - só gera se não existir cache para o dia
-      await dataService.gerarTodosRelatorios(userId);
-      
-      // Buscar data de atualização atualizada
-      const hoje = new Date();
-      const dateKey = format(hoje, 'yyyyMMdd');
-      const relatoriosRepo = repositoryFactory.getRelatoriosDiariosRepository();
-      const cached = await relatoriosRepo.getRelatorioDiario(userId, dateKey);
-      
-      if (cached?.dataGeracao) {
-        setLastUpdatedAt(cached.dataGeracao);
-      } else {
-        // Se foi gerado agora, usar data atual
-        setLastUpdatedAt(new Date());
-      }
+      const resultado = await getJson<AtualizarRelatoriosResponse>('/api/relatorios/atualizar', {
+        method: 'POST'
+      });
+      setLastUpdatedAt(new Date(resultado.atualizadoEm));
       
       showToast('Relatórios atualizados com sucesso!', 'success');
       
@@ -112,16 +98,14 @@ export default function RelatoriosPage() {
       setTimeout(() => {
         router.refresh();
       }, 500);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Extrair mensagem de erro mais detalhada
       let errorMessage = 'Erro ao atualizar relatórios. Tente novamente.';
       
-      if (error?.message) {
+      if (error instanceof Error && error.message) {
         errorMessage = error.message;
       } else if (typeof error === 'string') {
         errorMessage = error;
-      } else if (error?.error?.message) {
-        errorMessage = error.error.message;
       }
       
       showToast(errorMessage, 'error');

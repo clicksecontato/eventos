@@ -3,7 +3,7 @@ import { adminAuth, isFirebaseAdminInitialized, getFirebaseAdminInitializationEr
 import { generatePasswordResetEmailTemplate } from '@/lib/services/email-service';
 import { createPasswordResetLink } from '@/lib/services/password-link-service';
 import { sendEmail, isEmailServiceConfigured } from '@/lib/services/resend-email-service';
-import { repositoryFactory } from '@/lib/repositories/repository-factory';
+import { createRepositoriosAdminBasicos } from '@/lib/composition/server-assinatura-context';
 import { 
   createApiResponse,
   createErrorResponse,
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
       // Buscar nome do usuário no Firestore (usar Admin para bypassar regras)
       let nome = '';
       try {
-        const userRepo = repositoryFactory.getAdminUserRepository();
+        const { userRepo } = await createRepositoriosAdminBasicos();
         const userData = await userRepo.findById(user.uid);
         nome = userData?.nome || '';
         console.log('[reset-password] Nome do usuário:', nome || '(não encontrado)');

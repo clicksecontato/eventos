@@ -5,9 +5,9 @@ import {
   createErrorResponse
 } from '@/lib/api/route-helpers';
 import { HotmartWebhookService, HotmartWebhookPayload } from '@/lib/services/hotmart-webhook-service';
-import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { PlanoService } from '@/lib/services/plano-service';
+import { createRepositoriosAdminBasicos } from '@/lib/composition/server-assinatura-context';
 
 function isHotmartEnabled(): boolean {
   return process.env.HOTMART_ENABLED === 'true';
@@ -35,9 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Usar repositórios Admin que bypassam as regras de segurança do Firestore
     // Webhooks são executados no servidor e precisam de acesso administrativo
-    const userRepo = repositoryFactory.getAdminUserRepository();
-    const planoRepo = repositoryFactory.getAdminPlanoRepository();
-    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
+    const { userRepo, planoRepo, assinaturaRepo } = await createRepositoriosAdminBasicos();
     const assinaturaService = new AssinaturaService(assinaturaRepo, planoRepo, userRepo);
     // PlanoService.aplicarPlanoUsuario cria/atualiza assinatura e sincroniza no user: precisa de assinaturaRepo e assinaturaService Admin
     const planoService = new PlanoService(planoRepo, undefined, assinaturaRepo, undefined, assinaturaService);
@@ -134,9 +132,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Usar repositórios Admin que bypassam as regras de segurança do Firestore
-    const userRepo = repositoryFactory.getAdminUserRepository();
-    const planoRepo = repositoryFactory.getAdminPlanoRepository();
-    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
+    const { userRepo, planoRepo, assinaturaRepo } = await createRepositoriosAdminBasicos();
     const assinaturaService = new AssinaturaService(assinaturaRepo, planoRepo, userRepo);
     const planoService = new PlanoService(planoRepo, undefined, assinaturaRepo, undefined, assinaturaService);
     const service = new HotmartWebhookService(assinaturaRepo, planoRepo, userRepo, planoService, assinaturaService);
