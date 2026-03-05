@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { FuncionalidadeService } from '../services/funcionalidade-service';
 import type { PlanoStatus } from '../services/assinatura-service';
 import type { Assinatura } from '@/types/funcionalidades';
 import { LimitesUsuario } from '@/types/funcionalidades';
@@ -31,8 +30,6 @@ export function usePlano(): UsePlanoReturn {
   const [limites, setLimites] = useState<LimitesUsuario | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const funcionalidadeService = new FuncionalidadeService();
 
   const criarStatusFallbackPorAssinatura = (assinatura: Assinatura | null, todasAssinaturas: Assinatura[]): PlanoStatus => {
     if (assinatura) {
@@ -154,14 +151,31 @@ export function usePlano(): UsePlanoReturn {
 
   const temPermissao = async (codigoFuncionalidade: string): Promise<boolean> => {
     if (!session?.user?.id) return false;
-    return funcionalidadeService.verificarPermissao(session.user.id, codigoFuncionalidade);
+    try {
+      const data = await getJson<{ permitido: boolean }>(
+        `/api/plano/permissoes?codigo=${encodeURIComponent(codigoFuncionalidade)}`
+      );
+      return data.permitido === true;
+    } catch {
+      return false;
+    }
   };
 
   const podeCriar = async (tipo: 'eventos' | 'clientes'): Promise<{ pode: boolean; motivo?: string; limite?: number; usado?: number; restante?: number }> => {
     if (!session?.user?.id) {
       return { pode: false, motivo: 'Usuário não autenticado' };
     }
-    return funcionalidadeService.verificarPodeCriar(session.user.id, tipo);
+    try {
+      const data = await getJson<{
+        resultado: { pode: boolean; motivo?: string; limite?: number; usado?: number; restante?: number };
+      }>(`/api/plano/pode-criar?tipo=${tipo}`);
+      return data.resultado;
+    } catch (error) {
+      return {
+        pode: false,
+        motivo: error instanceof Error ? error.message : 'Não foi possível verificar o limite no momento'
+      };
+    }
   };
 
   return {
