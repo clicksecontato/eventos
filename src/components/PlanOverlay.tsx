@@ -7,12 +7,13 @@ import { usePlano } from '@/lib/hooks/usePlano';
 import { Button } from '@/components/ui/button';
 
 export default function PlanOverlay({ children }: { children: React.ReactNode }) {
-  const { statusPlano, loading } = usePlano();
+  const { statusPlano, loading, error } = usePlano();
   const router = useRouter();
   const temPlanoAtivo = statusPlano?.ativo === true;
   const statusAssinatura = statusPlano?.status;
 
   const mensagemBloqueio = (() => {
+    if (error) return 'Não foi possível validar seu acesso no momento. Atualize a página e tente novamente.';
     if (statusAssinatura === 'suspended') return 'Sua assinatura está suspensa. Entre em contato com o administrador.';
     if (statusAssinatura === 'cancelled') return 'Sua assinatura foi cancelada. Solicite ao administrador a reativação.';
     if (statusAssinatura === 'expired') return 'Sua assinatura expirou. Solicite ao administrador a renovação.';

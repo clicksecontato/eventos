@@ -66,7 +66,7 @@ export default function Layout({ children }: LayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session, status } = useSession();
-  const { statusPlano, loading: loadingPlano } = usePlano();
+  const { statusPlano, loading: loadingPlano, error: erroPlano } = usePlano();
   const { isCollapsed, toggleSidebar } = useSidebar();
 
   const loading = status === 'loading';
@@ -80,6 +80,12 @@ export default function Layout({ children }: LayoutProps) {
   const temAcessoAdmin = session?.user?.role === 'admin' || statusPlano?.plano?.codigoHotmart === 'PREMIUM_MENSAL';
   const statusAssinatura = statusPlano?.status;
   const alertaAcesso = (() => {
+    if (erroPlano) {
+      return {
+        titulo: 'Não foi possível validar seu acesso agora',
+        descricao: 'Tente atualizar a página. Se persistir, peça ao administrador para sincronizar sua assinatura.'
+      };
+    }
     if (statusAssinatura === 'suspended') {
       return {
         titulo: 'Seu acesso está suspenso',

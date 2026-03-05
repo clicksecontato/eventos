@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { FuncionalidadeService } from '../services/funcionalidade-service';
 import type { PlanoStatus } from '../services/assinatura-service';
+import type { Assinatura } from '@/types/funcionalidades';
 import { LimitesUsuario } from '@/types/funcionalidades';
 
 export interface UsePlanoReturn {
@@ -25,6 +26,41 @@ export function usePlano(): UsePlanoReturn {
 
   const funcionalidadeService = new FuncionalidadeService();
 
+  const criarStatusFallbackPorAssinatura = (assinatura: Assinatura | null, todasAssinaturas: Assinatura[]): PlanoStatus => {
+    if (assinatura) {
+      const ativo = assinatura.status === 'active' || assinatura.status === 'trial';
+      return {
+        plano: null,
+        assinatura,
+        status: assinatura.status,
+        pagamentoEmDia: ativo,
+        ativo,
+        mensagem: ativo ? undefined : `Assinatura ${assinatura.status.toLowerCase()}`
+      };
+    }
+
+    const maisRecente = todasAssinaturas.length > 0 ? todasAssinaturas[0] : null;
+    if (maisRecente) {
+      return {
+        plano: null,
+        assinatura: maisRecente,
+        status: maisRecente.status,
+        pagamentoEmDia: false,
+        ativo: false,
+        mensagem: `Assinatura ${maisRecente.status.toLowerCase()}`
+      };
+    }
+
+    return {
+      plano: null,
+      assinatura: null,
+      status: 'sem_assinatura',
+      pagamentoEmDia: false,
+      ativo: false,
+      mensagem: 'Usuário não possui assinatura ativa'
+    };
+  };
+
   const loadData = async () => {
     if (sessionStatus !== 'authenticated' || !session?.user?.id) {
       setLoading(false);
@@ -37,21 +73,66 @@ export function usePlano(): UsePlanoReturn {
 
       const userId = session.user.id;
 
-      // Carregar status do plano e limites em paralelo via API (bypassa regras do Firestore no cliente)
-      const [statusRes, limitesResponse] = await Promise.all([
-        fetch(`/api/users/${userId}/assinatura`),
-        fetch('/api/limites-usuario').then(res => res.json())
+      const [statusResult, limitesResult] = await Promise.allSettled([
+        fetch(`/api/users/${userId}/assinatura`, { cache: 'no-store' }),
+        fetch('/api/limites-usuario', { cache: 'no-store' }).then(res => res.json())
       ]);
 
-      const statusData = await statusRes.json().catch(() => ({}));
-      const status = statusRes.ok ? ((statusData.data ?? statusData)?.statusPlano ?? null) : null;
-      setStatusPlano(status);
+      let erroStatusPlano: string | null = null;
 
-      // Extrair limites da resposta da API
-      if (limitesResponse.data?.limites) {
-        setLimites(limitesResponse.data.limites);
+      if (statusResult.status === 'fulfilled') {
+        const statusRes = statusResult.value;
+        const statusData = await statusRes.json().catch(() => ({}));
+        const status = statusRes.ok ? ((statusData.data ?? statusData)?.statusPlano ?? null) : null;
+
+        if (status) {
+          setStatusPlano(status);
+        } else {
+          erroStatusPlano = (statusData?.error as string) || 'Falha ao obter status do plano';
+        }
       } else {
-        // Fallback: valores padrão
+        erroStatusPlano = statusResult.reason instanceof Error ? statusResult.reason.message : 'Falha ao obter status do plano';
+      }
+
+      // Fallback robusto quando endpoint principal falhar:
+      // usa /api/assinaturas para montar status mínimo e evitar falso bloqueio por erro transitório.
+      if (erroStatusPlano) {
+        try {
+          const fallbackRes = await fetch('/api/assinaturas', { cache: 'no-store' });
+          const fallbackData = await fallbackRes.json().catch(() => ({}));
+          const payload = (fallbackData.data ?? fallbackData) as {
+            assinatura?: Assinatura | null;
+            todasAssinaturas?: Assinatura[];
+          };
+
+          const statusFallback = criarStatusFallbackPorAssinatura(
+            payload.assinatura ?? null,
+            payload.todasAssinaturas ?? []
+          );
+          setStatusPlano(statusFallback);
+          setError(erroStatusPlano);
+        } catch (fallbackError: unknown) {
+          const fallbackMensagem = fallbackError instanceof Error ? fallbackError.message : 'Falha no fallback de assinatura';
+          setError(`${erroStatusPlano}. ${fallbackMensagem}`);
+          setStatusPlano(null);
+        }
+      } else {
+        setError(null);
+      }
+
+      if (limitesResult.status === 'fulfilled') {
+        const limitesResponse = limitesResult.value;
+        if (limitesResponse.data?.limites) {
+          setLimites(limitesResponse.data.limites);
+        } else {
+          setLimites({
+            eventosMesAtual: 0,
+            clientesTotal: 0,
+            usuariosConta: 1,
+            armazenamentoUsado: 0
+          });
+        }
+      } else {
         setLimites({
           eventosMesAtual: 0,
           clientesTotal: 0,
@@ -59,9 +140,10 @@ export function usePlano(): UsePlanoReturn {
           armazenamentoUsado: 0
         });
       }
-    } catch (err: any) {
-      setError(err.message || 'Erro ao carregar dados do plano');
-      // Em caso de erro, definir valores padrão
+    } catch (err: unknown) {
+      const mensagemErro = err instanceof Error ? err.message : 'Erro ao carregar dados do plano';
+      setError(mensagemErro);
+      setStatusPlano(null);
       setLimites({
         eventosMesAtual: 0,
         clientesTotal: 0,
