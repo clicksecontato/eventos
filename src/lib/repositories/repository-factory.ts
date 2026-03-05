@@ -40,38 +40,85 @@ import { ValoresAtrasadosSupabaseRepository } from './supabase/valores-atrasados
 
 type ClassConstructor<T> = new () => T;
 
-function resolveRepositoryClass<T>(mod: unknown, className: string): ClassConstructor<T> {
-  if (!mod || typeof mod !== 'object') {
-    throw new Error(`Módulo inválido ao carregar ${className}`);
+function isObjectLike(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function getModuleKeys(obj: Record<string, unknown>): string[] {
+  return Reflect.ownKeys(obj).map((key) => String(key));
+}
+
+function findConstructorRecursive<T>(
+  value: unknown,
+  className: string,
+  visited: Set<unknown>,
+  depth: number
+): ClassConstructor<T> | null {
+  if (!isObjectLike(value) || visited.has(value) || depth > 5) {
+    return null;
   }
+  visited.add(value);
 
-  const moduleObject = mod as {
-    [key: string]: unknown;
-    default?: unknown;
-  };
+  const keys = getModuleKeys(value);
 
-  const direct = moduleObject[className];
-  if (typeof direct === 'function') {
-    return direct as ClassConstructor<T>;
-  }
-
-  const defaultExport = moduleObject.default;
-  if (defaultExport && typeof defaultExport === 'object') {
-    const nested = (defaultExport as Record<string, unknown>)[className];
-    if (typeof nested === 'function') {
-      return nested as ClassConstructor<T>;
+  // Prioridade 1: chave exata com o nome esperado
+  if (keys.includes(className)) {
+    const direct = value[className];
+    if (typeof direct === 'function') {
+      return direct as ClassConstructor<T>;
     }
   }
 
-  if (typeof defaultExport === 'function') {
-    return defaultExport as ClassConstructor<T>;
+  // Prioridade 2: default function direto
+  const defaultValue = value.default;
+  if (typeof defaultValue === 'function') {
+    return defaultValue as ClassConstructor<T>;
   }
 
-  const allFunctions = Object.values(moduleObject).filter(
-    (value): value is ClassConstructor<T> => typeof value === 'function'
-  );
+  // Prioridade 3: função cujo nome bate (quando a chave foi alterada pelo bundle)
+  for (const key of keys) {
+    const candidate = value[key];
+    if (typeof candidate === 'function' && candidate.name === className) {
+      return candidate as ClassConstructor<T>;
+    }
+  }
+
+  // Prioridade 4: buscar recursivamente em default e demais exports-objeto
+  const nestedValues: unknown[] = [];
+  if (isObjectLike(defaultValue)) {
+    nestedValues.push(defaultValue);
+  }
+  for (const key of keys) {
+    if (key === 'default') continue;
+    const nested = value[key];
+    if (isObjectLike(nested)) {
+      nestedValues.push(nested);
+    }
+  }
+  for (const nested of nestedValues) {
+    const found = findConstructorRecursive<T>(nested, className, visited, depth + 1);
+    if (found) return found;
+  }
+
+  // Prioridade 5: se houver apenas uma função exportada no nível atual, usa como fallback
+  const allFunctions = keys
+    .map((key) => value[key])
+    .filter((item): item is ClassConstructor<T> => typeof item === 'function');
   if (allFunctions.length === 1) {
     return allFunctions[0];
+  }
+
+  return null;
+}
+
+function resolveRepositoryClass<T>(mod: unknown, className: string): ClassConstructor<T> {
+  if (!isObjectLike(mod)) {
+    throw new Error(`Módulo inválido ao carregar ${className}`);
+  }
+
+  const resolved = findConstructorRecursive<T>(mod, className, new Set<unknown>(), 0);
+  if (resolved) {
+    return resolved;
   }
 
   throw new Error(`Classe ${className} não encontrada no módulo`);
