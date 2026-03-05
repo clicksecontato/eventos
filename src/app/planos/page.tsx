@@ -1,20 +1,22 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/Layout';
 import { Plano, Funcionalidade } from '@/types/funcionalidades';
 import { CheckIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { usePlano } from '@/lib/hooks/usePlano';
-import LimiteUso from '@/components/LimiteUso';
 import { useToast } from '@/components/ui/toast';
+import { getJson } from '@/lib/api/client';
 
 export default function PlanosPage() {
+  const router = useRouter();
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [funcionalidadesMap, setFuncionalidadesMap] = useState<Record<string, Funcionalidade>>({});
   const [loading, setLoading] = useState(true);
-  const { statusPlano, limites } = usePlano();
+  const { statusPlano } = usePlano();
   const [planoComFuncionalidades, setPlanoComFuncionalidades] = useState<Record<string, Funcionalidade[]>>({});
   const { showToast } = useToast();
 
@@ -37,10 +39,8 @@ export default function PlanosPage() {
       for (const plano of planos) {
         if (plano.funcionalidades && plano.funcionalidades.length > 0) {
           try {
-            const res = await fetch(`/api/planos/${plano.id}`);
-            const data = await res.json();
-            // createApiResponse retorna { data: { plano } }, compatível com { plano }
-            const planoData = (data.data ?? data)?.plano;
+            const data = await getJson<{ plano: Plano & { funcionalidadesDetalhes?: Funcionalidade[] } }>(`/api/planos/${plano.id}`);
+            const planoData = data.plano;
             if (planoData?.funcionalidadesDetalhes) {
               planoData.funcionalidadesDetalhes.forEach((f: Funcionalidade) => {
                 if (!funcMap.has(f.id)) {
@@ -80,19 +80,8 @@ export default function PlanosPage() {
   const loadPlanos = async () => {
     setLoading(true);
     try {
-      // Buscar planos ativos
-      const res = await fetch('/api/planos?ativos=true');
-      
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        setPlanos([]);
-        return;
-      }
-      
-      const responseData = await res.json();
-      
-      // A API retorna { data: { planos: [...] } } devido ao createApiResponse
-      const planosArray = responseData.data?.planos || responseData.planos || [];
+      const responseData = await getJson<{ planos: Plano[] }>('/api/planos?ativos=true');
+      const planosArray = responseData.planos || [];
       
       if (Array.isArray(planosArray) && planosArray.length > 0) {
         const planosOrdenados = planosArray.sort((a: Plano, b: Plano) => {
@@ -175,7 +164,7 @@ export default function PlanosPage() {
                 </div>
                 <Button
                   variant="outline"
-                  onClick={() => window.location.href = '/assinatura'}
+                  onClick={() => router.push('/assinatura')}
                 >
                   Ver Detalhes
                 </Button>
@@ -333,7 +322,7 @@ export default function PlanosPage() {
             <CardContent className="pt-6">
               <div className="text-center py-12">
                 <p className="text-text-secondary mb-4">Nenhum plano disponível no momento.</p>
-                <Button onClick={() => window.location.href = '/assinatura'}>
+                <Button onClick={() => router.push('/assinatura')}>
                   Ver meu status de assinatura
                 </Button>
               </div>

@@ -6,6 +6,7 @@ import { FuncionalidadeService } from '../services/funcionalidade-service';
 import type { PlanoStatus } from '../services/assinatura-service';
 import type { Assinatura } from '@/types/funcionalidades';
 import { LimitesUsuario } from '@/types/funcionalidades';
+import { ApiClientError, getJson } from '@/lib/api/client';
 
 export interface UsePlanoReturn {
   statusPlano: PlanoStatus | null;
@@ -18,6 +19,13 @@ export interface UsePlanoReturn {
 }
 
 export function usePlano(): UsePlanoReturn {
+  const limitesPadrao: LimitesUsuario = {
+    eventosMesAtual: 0,
+    clientesTotal: 0,
+    usuariosConta: 1,
+    armazenamentoUsado: 0
+  };
+
   const { data: session, status: sessionStatus } = useSession();
   const [statusPlano, setStatusPlano] = useState<PlanoStatus | null>(null);
   const [limites, setLimites] = useState<LimitesUsuario | null>(null);
@@ -74,21 +82,18 @@ export function usePlano(): UsePlanoReturn {
       const userId = session.user.id;
 
       const [statusResult, limitesResult] = await Promise.allSettled([
-        fetch(`/api/users/${userId}/assinatura`, { cache: 'no-store' }),
-        fetch('/api/limites-usuario', { cache: 'no-store' }).then(res => res.json())
+        getJson<{ success: boolean; statusPlano: PlanoStatus }>(`/api/users/${userId}/assinatura`),
+        getJson<{ limites: LimitesUsuario }>('/api/limites-usuario')
       ]);
 
       let erroStatusPlano: string | null = null;
 
       if (statusResult.status === 'fulfilled') {
-        const statusRes = statusResult.value;
-        const statusData = await statusRes.json().catch(() => ({}));
-        const status = statusRes.ok ? ((statusData.data ?? statusData)?.statusPlano ?? null) : null;
-
+        const status = statusResult.value.statusPlano;
         if (status) {
           setStatusPlano(status);
         } else {
-          erroStatusPlano = (statusData?.error as string) || 'Falha ao obter status do plano';
+          erroStatusPlano = 'Falha ao obter status do plano';
         }
       } else {
         erroStatusPlano = statusResult.reason instanceof Error ? statusResult.reason.message : 'Falha ao obter status do plano';
@@ -98,12 +103,10 @@ export function usePlano(): UsePlanoReturn {
       // usa /api/assinaturas para montar status mínimo e evitar falso bloqueio por erro transitório.
       if (erroStatusPlano) {
         try {
-          const fallbackRes = await fetch('/api/assinaturas', { cache: 'no-store' });
-          const fallbackData = await fallbackRes.json().catch(() => ({}));
-          const payload = (fallbackData.data ?? fallbackData) as {
+          const payload = await getJson<{
             assinatura?: Assinatura | null;
             todasAssinaturas?: Assinatura[];
-          };
+          }>('/api/assinaturas');
 
           const statusFallback = criarStatusFallbackPorAssinatura(
             payload.assinatura ?? null,
@@ -121,35 +124,19 @@ export function usePlano(): UsePlanoReturn {
       }
 
       if (limitesResult.status === 'fulfilled') {
-        const limitesResponse = limitesResult.value;
-        if (limitesResponse.data?.limites) {
-          setLimites(limitesResponse.data.limites);
-        } else {
-          setLimites({
-            eventosMesAtual: 0,
-            clientesTotal: 0,
-            usuariosConta: 1,
-            armazenamentoUsado: 0
-          });
-        }
+        setLimites(limitesResult.value.limites ?? limitesPadrao);
       } else {
-        setLimites({
-          eventosMesAtual: 0,
-          clientesTotal: 0,
-          usuariosConta: 1,
-          armazenamentoUsado: 0
-        });
+        setLimites(limitesPadrao);
       }
     } catch (err: unknown) {
-      const mensagemErro = err instanceof Error ? err.message : 'Erro ao carregar dados do plano';
+      const mensagemErro = err instanceof ApiClientError
+        ? err.message
+        : err instanceof Error
+          ? err.message
+          : 'Erro ao carregar dados do plano';
       setError(mensagemErro);
       setStatusPlano(null);
-      setLimites({
-        eventosMesAtual: 0,
-        clientesTotal: 0,
-        usuariosConta: 1,
-        armazenamentoUsado: 0
-      });
+      setLimites(limitesPadrao);
     } finally {
       setLoading(false);
     }

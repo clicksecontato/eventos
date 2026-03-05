@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { usePlano } from '@/lib/hooks/usePlano';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
@@ -21,6 +22,7 @@ export default function PlanoBloqueio({
   children,
   mostrarBotaoAtualizar = true
 }: PlanoBloqueioProps) {
+  const router = useRouter();
   const { statusPlano, temPermissao, podeCriar, loading } = usePlano();
   const [bloqueado, setBloqueado] = useState(false);
   const [motivo, setMotivo] = useState<string | null>(null);
@@ -123,7 +125,7 @@ export default function PlanoBloqueio({
 
           {mostrarBotaoAtualizar && (
             <Button
-              onClick={() => window.location.href = '/assinatura'}
+              onClick={() => router.push('/assinatura')}
               className="w-full"
               variant="default"
             >

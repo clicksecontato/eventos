@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/Layout';
@@ -23,6 +24,7 @@ import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { useToast } from '@/components/ui/toast';
 
 export default function RelatoriosPage() {
+  const router = useRouter();
   const { userId } = useCurrentUser();
   const { showToast } = useToast();
   const [refreshing, setRefreshing] = useState(false);
@@ -106,10 +108,9 @@ export default function RelatoriosPage() {
       
       showToast('Relatórios atualizados com sucesso!', 'success');
       
-      // Recarregar dados após gerar relatórios (se necessário)
-      // Usar setTimeout para garantir que o toast seja exibido antes do reload
+      // Recarregar dados após gerar relatórios (sem reload imperativo)
       setTimeout(() => {
-        window.location.reload();
+        router.refresh();
       }, 500);
     } catch (error: any) {
       // Extrair mensagem de erro mais detalhada
