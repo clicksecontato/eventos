@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     const repo = repositoryFactory.getAdminAssinaturaRepository();
     console.log('[API /assinaturas] AdminAssinaturaRepository criado com sucesso');
     
-    // Admin pode ver todas, usuário apenas a sua
+    // Admin pode consultar por userId explícito; por padrão, retorna a própria assinatura.
     if (user.role === 'admin') {
       const queryParams = getQueryParams(request);
       const userId = queryParams.get('userId');
@@ -61,17 +61,9 @@ export async function GET(request: NextRequest) {
         console.log('[API /assinaturas] ===== FIM DA BUSCA (ADMIN) =====');
         return response;
       }
-      
-      console.log('[API /assinaturas] Admin buscando todas as assinaturas ativas');
-      const assinaturas = await repo.findAtivas();
-      console.log('[API /assinaturas] Assinaturas ativas encontradas (admin):', assinaturas.length);
-      
-      const response = createApiResponse({ assinaturas });
-      console.log('[API /assinaturas] ===== FIM DA BUSCA (ADMIN) =====');
-      return response;
     }
 
-    // Usuário comum: retornar assinatura ativa e todas as assinaturas (para histórico)
+    // Retornar assinatura ativa e todas as assinaturas do usuário autenticado (inclui admin)
     console.log('[API /assinaturas] Buscando assinatura ativa para userId:', user.id);
     const assinatura = await repo.findByUserId(user.id);
     console.log('[API /assinaturas] Assinatura ativa encontrada:', assinatura ? {

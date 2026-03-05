@@ -10,16 +10,35 @@ export class AdminAssinaturaRepository extends AdminFirestoreRepository<Assinatu
     super('assinaturas');
   }
 
+  private toTimestamp(value: unknown): number {
+    if (value instanceof Date) return value.getTime();
+    if (typeof value === 'string' || typeof value === 'number') {
+      const parsed = new Date(value).getTime();
+      return Number.isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  }
+
+  private ordenarMaisRecente(a: Assinatura, b: Assinatura): number {
+    const dataA = Math.max(
+      this.toTimestamp(a.dataInicio),
+      this.toTimestamp(a.dataAtualizacao),
+      this.toTimestamp(a.dataCadastro)
+    );
+    const dataB = Math.max(
+      this.toTimestamp(b.dataInicio),
+      this.toTimestamp(b.dataAtualizacao),
+      this.toTimestamp(b.dataCadastro)
+    );
+    return dataB - dataA;
+  }
+
   async findByUserId(userId: string): Promise<Assinatura | null> {
     const assinaturas = await this.findWhere('userId', '==', userId);
     // Buscar a assinatura ativa mais recente
     const ativas = assinaturas
-      .filter(a => (a.status === 'trial' || a.status === 'active') && a.dataInicio)
-      .sort((a, b) => {
-        const dataA = a.dataInicio instanceof Date ? a.dataInicio.getTime() : new Date(a.dataInicio || 0).getTime();
-        const dataB = b.dataInicio instanceof Date ? b.dataInicio.getTime() : new Date(b.dataInicio || 0).getTime();
-        return dataB - dataA;
-      });
+      .filter(a => a.status === 'trial' || a.status === 'active')
+      .sort((a, b) => this.ordenarMaisRecente(a, b));
     
     return ativas.length > 0 ? ativas[0] : null;
   }
@@ -31,11 +50,7 @@ export class AdminAssinaturaRepository extends AdminFirestoreRepository<Assinatu
 
   async findAllByUserId(userId: string): Promise<Assinatura[]> {
     const assinaturas = await this.findWhere('userId', '==', userId);
-    return assinaturas.sort((a, b) => {
-      const dataA = a.dataInicio instanceof Date ? a.dataInicio.getTime() : new Date(a.dataInicio || 0).getTime();
-      const dataB = b.dataInicio instanceof Date ? b.dataInicio.getTime() : new Date(b.dataInicio || 0).getTime();
-      return dataB - dataA;
-    });
+    return assinaturas.sort((a, b) => this.ordenarMaisRecente(a, b));
   }
 
   async findAtivas(): Promise<Assinatura[]> {
