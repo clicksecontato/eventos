@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { isFirebaseAdminInitialized, getFirebaseAdminInitializationError } from '@/lib/firebase-admin';
+import { createContextoAssinaturaServidor } from '@/lib/composition/server-assinatura-context';
 import { 
   getAuthenticatedUser,
   handleApiError,
@@ -34,8 +35,7 @@ export async function GET(request: NextRequest) {
     });
     
     // Usar AdminAssinaturaRepository no servidor para bypassar regras de segurança do Firebase
-    const { AdminAssinaturaRepository } = await import('@/lib/repositories/admin-assinatura-repository');
-    const repo = new AdminAssinaturaRepository();
+    const { assinaturaRepo: repo } = await createContextoAssinaturaServidor();
     console.log('[API /assinaturas] AdminAssinaturaRepository criado com sucesso');
     
     // Admin pode consultar por userId explícito; por padrão, retorna a própria assinatura.
