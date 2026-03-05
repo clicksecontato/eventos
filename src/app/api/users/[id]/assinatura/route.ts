@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { AssinaturaService } from '@/lib/services/assinatura-service';
 import { 
   getAuthenticatedUser,
@@ -24,10 +23,14 @@ export async function GET(
       return createErrorResponse('Não autorizado', 403);
     }
 
+    const { AdminAssinaturaRepository } = await import('@/lib/repositories/admin-assinatura-repository');
+    const { AdminPlanoRepository } = await import('@/lib/repositories/admin-plano-repository');
+    const { AdminUserRepository } = await import('@/lib/repositories/admin-user-repository');
+
     const assinaturaService = new AssinaturaService(
-      repositoryFactory.getAdminAssinaturaRepository(),
-      repositoryFactory.getAdminPlanoRepository(),
-      repositoryFactory.getAdminUserRepository()
+      new AdminAssinaturaRepository(),
+      new AdminPlanoRepository(),
+      new AdminUserRepository()
     );
     const statusPlano = await assinaturaService.obterStatusPlanoUsuario(userId);
 

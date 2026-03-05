@@ -12,10 +12,14 @@ export async function GET() {
     const user = await getAuthenticatedUser();
     
     // Usar repositórios Admin para bypassar regras do Firestore
-    const assinaturaRepo = repositoryFactory.getAdminAssinaturaRepository();
-    const planoRepo = repositoryFactory.getAdminPlanoRepository();
-    const funcionalidadeRepo = repositoryFactory.getAdminFuncionalidadeRepository();
-    const userRepo = repositoryFactory.getAdminUserRepository();
+    const { AdminAssinaturaRepository } = await import('@/lib/repositories/admin-assinatura-repository');
+    const { AdminPlanoRepository } = await import('@/lib/repositories/admin-plano-repository');
+    const { AdminFuncionalidadeRepository } = await import('@/lib/repositories/admin-funcionalidade-repository');
+    const { AdminUserRepository } = await import('@/lib/repositories/admin-user-repository');
+    const assinaturaRepo = new AdminAssinaturaRepository();
+    const planoRepo = new AdminPlanoRepository();
+    const funcionalidadeRepo = new AdminFuncionalidadeRepository();
+    const userRepo = new AdminUserRepository();
     const eventoRepo = repositoryFactory.getEventoRepository();
     const clienteRepo = repositoryFactory.getClienteRepository();
     
