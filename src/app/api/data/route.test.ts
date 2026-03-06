@@ -4,6 +4,10 @@ import { createApiResponse, createErrorResponse, getAuthenticatedUser } from '@/
 
 vi.mock('@/lib/data-service', () => ({
   dataService: {
+    getEventos: vi.fn(),
+    getAllEventos: vi.fn(),
+    getEventosArquivados: vi.fn(),
+    getEventoById: vi.fn(),
     getAllClientes: vi.fn(),
     getServicosPorEventos: vi.fn(),
     getCanaisEntradaAtivos: vi.fn(),
@@ -41,6 +45,55 @@ describe('API /api/data', () => {
     expect(dataService.getAllClientes).toHaveBeenCalledWith('user-1');
     expect(createApiResponse).toHaveBeenCalled();
     expect(response).toEqual({ ok: true, data: [{ id: 'c1', nome: 'Cliente 1' }] });
+  });
+
+  it('retorna eventos para recurso eventos', async () => {
+    vi.mocked(dataService.getEventos).mockResolvedValue([{ id: 'ev-1', nomeEvento: 'Evento 1' }] as never);
+    const request = { url: 'http://localhost/api/data?recurso=eventos' } as unknown as Request;
+
+    const response = await GET(request as never);
+
+    expect(dataService.getEventos).toHaveBeenCalledWith('user-1');
+    expect(response).toEqual({ ok: true, data: [{ id: 'ev-1', nomeEvento: 'Evento 1' }] });
+  });
+
+  it('retorna eventos-all para recurso eventos-all', async () => {
+    vi.mocked(dataService.getAllEventos).mockResolvedValue([{ id: 'ev-2' }] as never);
+    const request = { url: 'http://localhost/api/data?recurso=eventos-all' } as unknown as Request;
+
+    const response = await GET(request as never);
+
+    expect(dataService.getAllEventos).toHaveBeenCalledWith('user-1');
+    expect(response).toEqual({ ok: true, data: [{ id: 'ev-2' }] });
+  });
+
+  it('retorna eventos arquivados para recurso eventos-arquivados', async () => {
+    vi.mocked(dataService.getEventosArquivados).mockResolvedValue([{ id: 'ev-arch-1' }] as never);
+    const request = { url: 'http://localhost/api/data?recurso=eventos-arquivados' } as unknown as Request;
+
+    const response = await GET(request as never);
+
+    expect(dataService.getEventosArquivados).toHaveBeenCalledWith('user-1');
+    expect(response).toEqual({ ok: true, data: [{ id: 'ev-arch-1' }] });
+  });
+
+  it('retorna evento por id para recurso evento', async () => {
+    vi.mocked(dataService.getEventoById).mockResolvedValue({ id: 'ev-99' } as never);
+    const request = { url: 'http://localhost/api/data?recurso=evento&id=ev-99' } as unknown as Request;
+
+    const response = await GET(request as never);
+
+    expect(dataService.getEventoById).toHaveBeenCalledWith('ev-99', 'user-1');
+    expect(response).toEqual({ ok: true, data: { id: 'ev-99' } });
+  });
+
+  it('retorna erro quando evento não recebe id', async () => {
+    const request = { url: 'http://localhost/api/data?recurso=evento' } as unknown as Request;
+
+    const response = await GET(request as never);
+
+    expect(createErrorResponse).toHaveBeenCalledWith('Parâmetro "id" é obrigatório', 400);
+    expect(response).toEqual({ ok: false, error: 'Parâmetro "id" é obrigatório', status: 400 });
   });
 
   it('serializa map de servicos-eventos para objeto', async () => {
