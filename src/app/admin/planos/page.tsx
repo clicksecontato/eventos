@@ -9,6 +9,7 @@ import { Plano, Funcionalidade } from '@/types/funcionalidades';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/components/ui/toast';
+import { getJson } from '@/lib/api/client';
 
 export default function AdminPlanosPage() {
   const [planos, setPlanos] = useState<Plano[]>([]);
@@ -44,21 +45,15 @@ export default function AdminPlanosPage() {
     setLoading(true);
     setMessage('');
     try {
-      const res = await fetch('/api/planos');
-      const data = await res.json();
-      
-      if (!res.ok) {
-        setMessage(`❌ Erro: ${data.error || 'Erro ao carregar planos'}`);
-        setPlanos([]);
-        return;
-      }
-      
-      setPlanos(data.planos || []);
-      if (data.planos && data.planos.length === 0) {
+      const data = await getJson<{ planos: Plano[] }>('/api/planos');
+      const planosCarregados = data.planos || [];
+      setPlanos(planosCarregados);
+      if (planosCarregados.length === 0) {
         setMessage('ℹ️ Nenhum plano cadastrado. Execute o seed primeiro.');
       }
-    } catch (error: any) {
-      setMessage(`❌ Erro ao carregar planos: ${error.message}`);
+    } catch (error: unknown) {
+      const mensagem = error instanceof Error ? error.message : 'Erro ao carregar planos';
+      setMessage(`❌ Erro ao carregar planos: ${mensagem}`);
       setPlanos([]);
     } finally {
       setLoading(false);
@@ -67,8 +62,7 @@ export default function AdminPlanosPage() {
 
   const loadFuncionalidades = async () => {
     try {
-      const res = await fetch('/api/funcionalidades');
-      const data = await res.json();
+      const data = await getJson<{ funcionalidades: Funcionalidade[] }>('/api/funcionalidades');
       setFuncionalidades(data.funcionalidades || []);
     } catch (error) {
       // Erro silencioso

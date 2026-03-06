@@ -1,5 +1,4 @@
 import { NextRequest } from 'next/server';
-import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { 
   requireAdminOrPremium,
   handleApiError,
@@ -8,6 +7,7 @@ import {
   getRequestBody,
   getRouteParams
 } from '@/lib/api/route-helpers';
+import { createRepositoriosAdminBasicos } from '@/lib/composition/server-assinatura-context';
 
 export async function GET(
   request: NextRequest,
@@ -17,7 +17,7 @@ export async function GET(
     await requireAdminOrPremium();
 
     const { id } = await getRouteParams(params);
-    const repo = repositoryFactory.getFuncionalidadeRepository();
+    const { funcionalidadeRepo: repo } = await createRepositoriosAdminBasicos();
     const funcionalidade = await repo.findById(id);
 
     if (!funcionalidade) {
@@ -39,7 +39,7 @@ export async function PUT(
 
     const { id } = await getRouteParams(params);
     const data = await getRequestBody(request);
-    const repo = repositoryFactory.getFuncionalidadeRepository();
+    const { funcionalidadeRepo: repo } = await createRepositoriosAdminBasicos();
     
     const funcionalidade = await repo.update(id, data);
 
@@ -57,7 +57,7 @@ export async function DELETE(
     await requireAdminOrPremium();
 
     const { id } = await getRouteParams(params);
-    const repo = repositoryFactory.getFuncionalidadeRepository();
+    const { funcionalidadeRepo: repo } = await createRepositoriosAdminBasicos();
     await repo.delete(id);
 
     return createApiResponse({ success: true });

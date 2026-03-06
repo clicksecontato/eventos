@@ -9,6 +9,7 @@ import { Funcionalidade, CategoriaFuncionalidade } from '@/types/funcionalidades
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/components/ui/toast';
+import { getJson } from '@/lib/api/client';
 
 const CATEGORIAS: CategoriaFuncionalidade[] = ['EVENTOS', 'FINANCEIRO', 'RELATORIOS', 'INTEGRACAO', 'ADMIN'];
 
@@ -37,21 +38,15 @@ export default function AdminFuncionalidadesPage() {
     setLoading(true);
     setMessage('');
     try {
-      const res = await fetch('/api/funcionalidades');
-      const data = await res.json();
-      
-      if (!res.ok) {
-        setMessage(`❌ Erro: ${data.error || 'Erro ao carregar funcionalidades'}`);
-        setFuncionalidades([]);
-        return;
-      }
-      
-      setFuncionalidades(data.funcionalidades || []);
-      if (data.funcionalidades && data.funcionalidades.length === 0) {
+      const data = await getJson<{ funcionalidades: Funcionalidade[] }>('/api/funcionalidades');
+      const funcionalidadesCarregadas = data.funcionalidades || [];
+      setFuncionalidades(funcionalidadesCarregadas);
+      if (funcionalidadesCarregadas.length === 0) {
         setMessage('ℹ️ Nenhuma funcionalidade cadastrada. Execute o seed primeiro.');
       }
-    } catch (error: any) {
-      setMessage(`❌ Erro ao carregar funcionalidades: ${error.message}`);
+    } catch (error: unknown) {
+      const mensagem = error instanceof Error ? error.message : 'Erro ao carregar funcionalidades';
+      setMessage(`❌ Erro ao carregar funcionalidades: ${mensagem}`);
       setFuncionalidades([]);
     } finally {
       setLoading(false);

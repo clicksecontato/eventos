@@ -1,17 +1,17 @@
 import { NextRequest } from 'next/server';
-import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { 
   requireAdminOrPremium,
   handleApiError,
   createApiResponse,
   getRequestBody
 } from '@/lib/api/route-helpers';
+import { createRepositoriosAdminBasicos } from '@/lib/composition/server-assinatura-context';
 
 export async function GET() {
   try {
     await requireAdminOrPremium();
 
-    const repo = repositoryFactory.getFuncionalidadeRepository();
+    const { funcionalidadeRepo: repo } = await createRepositoriosAdminBasicos();
     let funcionalidades: unknown[] = [];
     
     try {
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     await requireAdminOrPremium();
 
     const data = await getRequestBody(request);
-    const repo = repositoryFactory.getFuncionalidadeRepository();
+    const { funcionalidadeRepo: repo } = await createRepositoriosAdminBasicos();
     
     const funcionalidade = await repo.create({
       ...data,
