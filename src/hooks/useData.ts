@@ -1,13 +1,75 @@
 import { useState, useEffect, useCallback } from 'react';
-import { dataService } from '@/lib/data-service';
 import { Cliente, Evento, Pagamento, CustoEvento, ServicoEvento, TipoServico, CanalEntrada, DashboardData, TipoEvento, PreCadastroEvento, Contrato, ValorAtrasado, ValoresAtrasadosFiltros } from '@/types';
 import { useCurrentUser } from './useAuth';
+import { getJson } from '@/lib/api/client';
 
 export interface UseDataResult<T> {
   data: T | null;
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
+}
+
+type RecursoDadosApi =
+  | 'clientes'
+  | 'clientes-all'
+  | 'cliente'
+  | 'eventos'
+  | 'eventos-all'
+  | 'eventos-arquivados'
+  | 'evento'
+  | 'pagamentos-evento'
+  | 'pagamentos-all'
+  | 'custos-evento'
+  | 'custos-all'
+  | 'servicos-evento'
+  | 'servicos-all'
+  | 'servicos-eventos'
+  | 'canais-entrada'
+  | 'tipos-servico'
+  | 'tipos-evento'
+  | 'dashboard';
+
+const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
+
+function normalizarDatas<T>(input: T): T {
+  if (Array.isArray(input)) {
+    return input.map((item) => normalizarDatas(item)) as T;
+  }
+
+  if (input && typeof input === 'object') {
+    const objeto = input as Record<string, unknown>;
+    const resultado: Record<string, unknown> = {};
+    for (const [chave, valor] of Object.entries(objeto)) {
+      resultado[chave] = normalizarDatas(valor);
+    }
+    return resultado as T;
+  }
+
+  if (typeof input === 'string' && ISO_DATE_REGEX.test(input)) {
+    const parsed = new Date(input);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed as T;
+    }
+  }
+
+  return input;
+}
+
+async function getDados<T>(
+  recurso: RecursoDadosApi,
+  params?: Record<string, string | number | boolean | undefined>
+): Promise<T> {
+  const query = new URLSearchParams({ recurso });
+  if (params) {
+    for (const [chave, valor] of Object.entries(params)) {
+      if (valor !== undefined && valor !== null && valor !== '') {
+        query.set(chave, String(valor));
+      }
+    }
+  }
+  const data = await getJson<T>(`/api/data?${query.toString()}`);
+  return normalizarDatas(data);
 }
 
 // Hook para clientes (apenas ativos por padrão)
@@ -27,7 +89,7 @@ export function useClientes(): UseDataResult<Cliente[]> {
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getClientes(userId);
+      const result = await getDados<Cliente[]>('clientes');
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar clientes');
@@ -60,7 +122,7 @@ export function useAllClientes(): UseDataResult<Cliente[]> {
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getAllClientes(userId);
+      const result = await getDados<Cliente[]>('clientes-all');
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar clientes');
@@ -92,7 +154,7 @@ export function useCliente(id: string): UseDataResult<Cliente> {
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getClienteById(id, userId);
+      const result = await getDados<Cliente>('cliente', { id });
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar cliente');
@@ -125,7 +187,7 @@ export function useEventos(): UseDataResult<Evento[]> {
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getEventos(userId);
+      const result = await getDados<Evento[]>('eventos');
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar eventos');
@@ -158,7 +220,7 @@ export function useAllEventos(): UseDataResult<Evento[]> {
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getAllEventos(userId);
+      const result = await getDados<Evento[]>('eventos-all');
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar eventos');
@@ -191,7 +253,7 @@ export function useEventosArquivados(): UseDataResult<Evento[]> {
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getEventosArquivados(userId);
+      const result = await getDados<Evento[]>('eventos-arquivados');
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar eventos arquivados');
@@ -223,7 +285,7 @@ export function useEvento(id: string): UseDataResult<Evento> {
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getEventoById(id, userId);
+      const result = await getDados<Evento>('evento', { id });
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar evento');
@@ -256,7 +318,7 @@ export function usePagamentosPorEvento(eventoId: string): UseDataResult<Pagament
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getPagamentosPorEvento(userId, eventoId);
+      const result = await getDados<Pagamento[]>('pagamentos-evento', { eventoId });
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar pagamentos');
@@ -289,7 +351,7 @@ export function useAllPagamentos(): UseDataResult<Pagamento[]> {
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getAllPagamentos(userId);
+      const result = await getDados<Pagamento[]>('pagamentos-all');
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar pagamentos');
@@ -322,7 +384,7 @@ export function useCustosPorEvento(eventoId: string): UseDataResult<CustoEvento[
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getCustosPorEvento(userId, eventoId);
+      const result = await getDados<CustoEvento[]>('custos-evento', { eventoId });
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar custos');
@@ -355,7 +417,7 @@ export function useAllCustos(): UseDataResult<CustoEvento[]> {
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getAllCustos(userId);
+      const result = await getDados<CustoEvento[]>('custos-all');
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar custos');
@@ -388,7 +450,7 @@ export function useServicosPorEvento(eventoId: string): UseDataResult<ServicoEve
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getServicosPorEvento(userId, eventoId);
+      const result = await getDados<ServicoEvento[]>('servicos-evento', { eventoId });
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar serviços');
@@ -421,7 +483,7 @@ export function useCanaisEntrada(): UseDataResult<CanalEntrada[]> {
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getCanaisEntradaAtivos(userId);
+      const result = await getDados<CanalEntrada[]>('canais-entrada');
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar canais de entrada');
@@ -454,7 +516,7 @@ export function useAllServicos(): UseDataResult<ServicoEvento[]> {
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getAllServicos(userId);
+      const result = await getDados<ServicoEvento[]>('servicos-all');
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar serviços');
@@ -487,7 +549,7 @@ export function useTiposServicos(): UseDataResult<TipoServico[]> {
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getAllServicosCatalogo(userId);
+      const result = await getDados<TipoServico[]>('tipos-servico');
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar serviços');
@@ -531,8 +593,9 @@ export function useServicosPorEventos(eventoIds: string[]): {
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getServicosPorEventos(userId, eventoIds);
-      setServicosPorEvento(result);
+      const result = await getDados<Record<string, ServicoEvento[]>>('servicos-eventos', { eventoIds: eventoIds.join(',') });
+      const mapa = new Map<string, ServicoEvento[]>(Object.entries(result || {}));
+      setServicosPorEvento(mapa);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar serviços');
       setServicosPorEvento(new Map());
@@ -564,7 +627,7 @@ export function useTiposEvento(): UseDataResult<TipoEvento[]> {
     try {
       setLoading(true);
       setError(null);
-      const result = await dataService.getTiposEvento(userId);
+      const result = await getDados<TipoEvento[]>('tipos-evento');
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar tipos de evento');
@@ -599,9 +662,7 @@ export function useDashboardData(): UseDataResult<DashboardData> {
         setLoading(true);
       }
       setError(null);
-      const result = await dataService.getDashboardData(userId, {
-        forceRefresh: options?.forceRefresh
-      });
+      const result = await getDados<DashboardData>('dashboard', { forceRefresh: !!options?.forceRefresh });
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar dados do dashboard');
