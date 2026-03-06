@@ -17,6 +17,12 @@
 - `qa-relatorios-financeiro`
 - `executar-qa-browser`
 
+## Engenharia de testes
+- `planejar-testes-estrategia`
+- `criar-testes-implementacao`
+- `analisar-testes-qualidade`
+- `agente-orquestrador-testes`
+
 ## Orquestração por subagent
 - `executar-mapeamento-explore`
 - `executar-orquestracao-general`

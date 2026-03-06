@@ -1,0 +1,22 @@
+---
+description: Diretrizes para orquestração de tarefas de testes com skills dedicadas
+globs:
+alwaysApply: true
+---
+
+# Orquestração de Testes
+
+Para pedidos relacionados a testes, priorize este fluxo:
+
+1. Planejar com `planejar-testes-estrategia`
+2. Implementar com `criar-testes-implementacao`
+3. Revisar qualidade com `analisar-testes-qualidade`
+4. Orquestrar ciclo completo com `agente-orquestrador-testes`
+
+## Regras práticas
+- Começar por módulos de maior risco de negócio.
+- Garantir validação com testes focados e suíte completa.
+- Ao final, reportar:
+  - cobertura adicionada,
+  - status por lote (`feito/falhou/pendente`),
+  - lacunas remanescentes.
