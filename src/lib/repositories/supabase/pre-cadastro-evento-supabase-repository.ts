@@ -43,17 +43,10 @@ export class PreCadastroEventoSupabaseRepository extends BaseSupabaseRepository<
         // Converter UTC para timezone local preservando o dia
         return dateToLocalMidnight(utcDate);
       })() : undefined,
-      local: row.local,
-      endereco: row.endereco,
       tipoEvento: row.tipo_evento,
       tipoEventoId: row.tipo_evento_id,
-      contratante: row.contratante,
-      numeroConvidados: row.numero_convidados || 0,
-      quantidadeMesas: row.quantidade_mesas,
-      hashtag: row.hashtag,
       horarioInicio: row.horario_inicio,
       horarioTermino: row.horario_termino,
-      cerimonialista: row.cerimonialista as { nome?: string; telefone?: string } | undefined,
       observacoes: row.observacoes,
       
       // Metadados
@@ -100,17 +93,10 @@ export class PreCadastroEventoSupabaseRepository extends BaseSupabaseRepository<
         data.data_evento = entity.dataEvento || null;
       }
     }
-    if (entity.local !== undefined) data.local = entity.local || null;
-    if (entity.endereco !== undefined) data.endereco = entity.endereco || null;
     if (entity.tipoEvento !== undefined) data.tipo_evento = entity.tipoEvento || null;
     if (entity.tipoEventoId !== undefined) data.tipo_evento_id = entity.tipoEventoId || null;
-    if (entity.contratante !== undefined) data.contratante = entity.contratante || null;
-    if (entity.numeroConvidados !== undefined) data.numero_convidados = entity.numeroConvidados || 0;
-    if (entity.quantidadeMesas !== undefined) data.quantidade_mesas = entity.quantidadeMesas || null;
-    if (entity.hashtag !== undefined) data.hashtag = entity.hashtag || null;
     if (entity.horarioInicio !== undefined) data.horario_inicio = entity.horarioInicio || null;
     if (entity.horarioTermino !== undefined) data.horario_termino = entity.horarioTermino || null;
-    if (entity.cerimonialista !== undefined) data.cerimonialista = entity.cerimonialista || null;
     if (entity.observacoes !== undefined) data.observacoes = entity.observacoes || null;
     
     // Metadados

@@ -9,7 +9,6 @@ import { ptBR } from 'date-fns/locale';
 import { dateToLocalMidnight } from '@/lib/utils/date-helpers';
 import {
   CalendarIcon,
-  MapPinIcon,
   ClockIcon,
   UserIcon,
   EnvelopeIcon,
@@ -112,11 +111,6 @@ export default function PreCadastroCard({
                 <span className="block text-text-primary font-medium truncate lg:whitespace-normal">
                   {preCadastro.clienteNome || 'Cliente não informado'}
                 </span>
-                {preCadastro.contratante && (
-                  <span className="block text-xs text-text-secondary truncate lg:whitespace-normal">
-                    Contratante: {preCadastro.contratante}
-                  </span>
-                )}
               </CardDescription>
             </div>
             <div className="flex-shrink-0">
@@ -147,12 +141,6 @@ export default function PreCadastroCard({
               <CalendarIcon className="h-4 w-4 mr-2" />
               {format(dateToLocalMidnight(new Date(preCadastro.dataEvento)), 'dd/MM/yyyy', { locale: ptBR })}
             </div>
-            {preCadastro.local && (
-              <div className="flex items-center text-sm text-text-secondary">
-                <MapPinIcon className="h-4 w-4 mr-2" />
-                {preCadastro.local}
-              </div>
-            )}
             {preCadastro.horarioInicio && (
               <div className="flex items-center text-sm text-text-secondary">
                 <ClockIcon className="h-4 w-4 mr-2" />

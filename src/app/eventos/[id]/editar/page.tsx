@@ -90,7 +90,7 @@ export default function EditarEventoPage() {
             <div>
               <h1 className="text-2xl font-bold text-text-primary">Editar Evento</h1>
               <p className="text-gray-600">
-                {evento.nomeEvento || evento.cliente.nome} - {evento.contratante}
+                {evento.nomeEvento || evento.cliente.nome}
               </p>
             </div>
           </div>

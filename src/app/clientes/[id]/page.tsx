@@ -177,6 +177,12 @@ export default function ClienteDetalhePage() {
               Cliente cadastrado em {formatDateLong(cliente.dataCadastro)}
             </p>
           </div>
+          <Button
+            onClick={() => router.push(`/eventos/novo?clienteId=${cliente.id}`)}
+            className="w-full md:w-auto"
+          >
+            Novo Evento
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

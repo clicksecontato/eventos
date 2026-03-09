@@ -76,7 +76,7 @@ export async function POST(
     // Validar campos obrigatórios
     const camposObrigatorios = {
       cliente: ['clienteNome', 'clienteEmail', 'clienteTelefone'],
-      evento: ['dataEvento', 'local', 'endereco', 'contratante', 'numeroConvidados']
+      evento: ['dataEvento', 'tipoEventoId']
     };
     
     const camposFaltando: string[] = [];
@@ -93,10 +93,6 @@ export async function POST(
     for (const campo of camposObrigatorios.evento) {
       const valor = dados[campo];
       if (!valor || (typeof valor === 'string' && valor.trim() === '')) {
-        camposFaltando.push(campo);
-      }
-      // Validação especial para numeroConvidados
-      if (campo === 'numeroConvidados' && (!valor || Number(valor) <= 0)) {
         camposFaltando.push(campo);
       }
     }

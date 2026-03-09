@@ -86,4 +86,17 @@ describe('/clientes/[id] page', () => {
 
     expect(pushMock).toHaveBeenCalledWith('/eventos/ev-1');
   });
+
+  it('inicia criação de evento com cliente pré-selecionado', async () => {
+    const user = userEvent.setup();
+    render(<ClienteDetalhePage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Cliente XPTO')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Novo Evento' }));
+
+    expect(pushMock).toHaveBeenCalledWith('/eventos/novo?clienteId=cli-1');
+  });
 });

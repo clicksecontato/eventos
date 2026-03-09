@@ -71,17 +71,19 @@ export interface Evento {
   cliente: Cliente;
   dataEvento: Date;
   diaSemana: string;
-  local: string;
-  endereco: string;
   tipoEvento: string;
   tipoEventoId?: string;
-  saida: string;
-  chegadaNoLocal: string;
+  // Campos legados mantidos opcionais para compatibilidade de tipos
+  local?: string;
+  endereco?: string;
+  saida?: string;
+  chegadaNoLocal?: string;
   horarioInicio: string;
-  horarioDesmontagem: string;
-  tempoEvento: string;
-  contratante: string;
-  numeroConvidados: number;
+  horarioFim: string;
+  horarioDesmontagem?: string;
+  tempoEvento?: string;
+  contratante?: string;
+  numeroConvidados?: number;
   quantidadeMesas?: number;
   hashtag?: string;
   numeroImpressoes?: number;
@@ -358,11 +360,10 @@ export interface RelatorioFinanceiro {
 export interface DashboardEventoResumo {
   id: string;
   clienteNome: string;
-  local: string;
+  local?: string;
   tipoEvento: string;
   status: string;
   dataEvento: Date;
-  chegadaNoLocal?: string;
 }
 
 export interface DashboardPeriodoResumo {
@@ -642,7 +643,7 @@ export interface PreCadastroEvento {
   quantidadeMesas?: number;
   hashtag?: string;
   horarioInicio?: string;
-  horarioTermino?: string; // Horário de Desmontagem (horarioDesmontagem no Evento)
+  horarioTermino?: string;
   cerimonialista?: {
     nome?: string;
     telefone?: string;

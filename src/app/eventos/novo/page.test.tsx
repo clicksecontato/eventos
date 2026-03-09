@@ -4,9 +4,13 @@ import userEvent from '@testing-library/user-event';
 import NovoEventoPage from './page';
 
 const pushMock = vi.fn();
+const eventoFormMock = vi.fn();
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: pushMock })
+  useRouter: () => ({ push: pushMock }),
+  useSearchParams: () => ({
+    get: (key: string) => (key === 'clienteId' ? 'cli-123' : null)
+  })
 }));
 
 vi.mock('@/components/Layout', () => ({
@@ -33,17 +37,22 @@ vi.mock('@/components/ui/button', () => ({
 
 vi.mock('@/components/forms/EventoForm', () => ({
   default: ({
+    clienteInicialId,
     onSave,
     onCancel
   }: {
+    clienteInicialId?: string;
     onSave: (evento: { id: string }) => void;
     onCancel: () => void;
-  }) => (
-    <div>
-      <button onClick={() => onSave({ id: 'ev-novo-1' })}>Salvar Evento Mock</button>
-      <button onClick={onCancel}>Cancelar Evento Mock</button>
-    </div>
-  )
+  }) => {
+    eventoFormMock({ clienteInicialId, onSave, onCancel });
+    return (
+      <div>
+        <button onClick={() => onSave({ id: 'ev-novo-1' })}>Salvar Evento Mock</button>
+        <button onClick={onCancel}>Cancelar Evento Mock</button>
+      </div>
+    );
+  }
 }));
 
 describe('/eventos/novo page', () => {
@@ -57,6 +66,14 @@ describe('/eventos/novo page', () => {
     expect(screen.getByText('Novo Evento')).toBeInTheDocument();
     expect(screen.getByText('Dados do Evento')).toBeInTheDocument();
     expect(screen.getByText('Salvar Evento Mock')).toBeInTheDocument();
+  });
+
+  it('passa clienteInicialId para o formulário quando recebido na URL', () => {
+    render(<NovoEventoPage />);
+
+    expect(eventoFormMock).toHaveBeenCalledWith(
+      expect.objectContaining({ clienteInicialId: 'cli-123' })
+    );
   });
 
   it('volta para lista de eventos no botão Voltar', async () => {

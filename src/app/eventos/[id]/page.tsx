@@ -4,28 +4,21 @@ import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import Layout from '@/components/Layout';
 import {
   ArrowLeftIcon,
   CalendarIcon,
-  MapPinIcon,
-  ClockIcon,
-  UserGroupIcon,
   PencilIcon,
   TrashIcon,
   PhoneIcon,
   EnvelopeIcon,
   HomeIcon,
-  HashtagIcon,
   PrinterIcon,
   UserIcon,
-  BriefcaseIcon,
   ClipboardDocumentIcon,
   CheckIcon,
   DocumentTextIcon,
   LockClosedIcon,
-  XMarkIcon,
   ArrowDownTrayIcon,
   PlusIcon
 } from '@heroicons/react/24/outline';
@@ -61,9 +54,6 @@ export default function EventoViewPage() {
   const [temAcessoCopiar, setTemAcessoCopiar] = useState<boolean | null>(null);
   const [temAcessoContrato, setTemAcessoContrato] = useState<boolean | null>(null);
   const [eventoLocal, setEventoLocal] = useState<Evento | null>(null);
-  const [editandoImpressoes, setEditandoImpressoes] = useState(false);
-  const [valorImpressoes, setValorImpressoes] = useState<string>('');
-  const [salvandoImpressoes, setSalvandoImpressoes] = useState(false);
   
   const { data: evento, loading: loadingEvento, error: errorEvento, refetch: refetchEvento } = useEvento(params.id as string);
   const { data: pagamentos, loading: loadingPagamentos, refetch: refetchPagamentos } = usePagamentosPorEvento(params.id as string);
@@ -96,7 +86,6 @@ export default function EventoViewPage() {
   useEffect(() => {
     if (evento) {
       setEventoLocal(evento);
-      setValorImpressoes(evento.numeroImpressoes?.toString() || '');
     }
   }, [evento]);
 
@@ -166,64 +155,6 @@ export default function EventoViewPage() {
     refetchAnexos();
   };
 
-  const handleIniciarEdicaoImpressoes = () => {
-    if (!evento) return;
-    setValorImpressoes(evento.numeroImpressoes?.toString() || '');
-    setEditandoImpressoes(true);
-  };
-
-  const handleCancelarEdicaoImpressoes = () => {
-    if (!evento) return;
-    setValorImpressoes(evento.numeroImpressoes?.toString() || '');
-    setEditandoImpressoes(false);
-  };
-
-  const handleSalvarImpressoes = async () => {
-    if (!evento || !userId) return;
-
-    const numeroImpressoes = valorImpressoes.trim() === '' ? undefined : parseInt(valorImpressoes.trim(), 10);
-    
-    // Validar se é um número válido
-    if (valorImpressoes.trim() !== '' && (isNaN(numeroImpressoes!) || numeroImpressoes! < 0)) {
-      showToast('Por favor, insira um número válido de impressões', 'error');
-      return;
-    }
-
-    setSalvandoImpressoes(true);
-
-    try {
-      // Atualização otimista
-      const eventoAtualizado = {
-        ...eventoLocal!,
-        numeroImpressoes: numeroImpressoes
-      };
-      setEventoLocal(eventoAtualizado as Evento);
-
-      // Atualizar no banco
-      await dataService.updateEvento(evento.id, { numeroImpressoes }, userId);
-      
-      // Recarregar dados do servidor
-      await refetchEvento();
-      
-      showToast('Número de impressões atualizado com sucesso!', 'success');
-      setEditandoImpressoes(false);
-    } catch (error) {
-      // Reverter atualização otimista
-      setEventoLocal(evento);
-      showToast('Erro ao atualizar número de impressões', 'error');
-    } finally {
-      setSalvandoImpressoes(false);
-    }
-  };
-
-  const handleKeyDownImpressoes = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleSalvarImpressoes();
-    } else if (e.key === 'Escape') {
-      handleCancelarEdicaoImpressoes();
-    }
-  };
-
   // Função auxiliar para formatar dia da semana
   const getDiaSemanaFormatado = (data: Date) => {
     const diaSemana = format(data, 'EEEE', { locale: ptBR });
@@ -251,7 +182,6 @@ export default function EventoViewPage() {
     const nomeEvento =
       (evento as any).nomeEvento ||
       (evento.tipoEvento ? `${evento.tipoEvento}${evento.cliente?.nome ? ` - ${evento.cliente.nome}` : ''}` : '') ||
-      evento.local ||
       'Evento';
     text += 'Nome do Evento\n\n';
     text += `${nomeEvento}\n`;
@@ -261,30 +191,16 @@ export default function EventoViewPage() {
     // Informações do Evento
     text += 'Informações do Evento\n\n';
     text += `Data: ${formatDatePtBR(evento.dataEvento)} - ${getWeekdayPtBR(evento.dataEvento)}\n`;
-    if (evento.local) text += `Local: ${evento.local}\n`;
-    if (evento.endereco) text += `Endereço: ${evento.endereco}\n`;
-    if (evento.numeroConvidados) text += `Convidados: ${evento.numeroConvidados}\n`;
     if (evento.tipoEvento) text += `Tipo: ${evento.tipoEvento}\n`;
 
     text += '\n────────────────────────\n\n';
 
     // Detalhes do Serviço
     text += 'Detalhes do Serviço\n\n';
-    if ((evento as any).saida) text += `Saída: ${(evento as any).saida}\n`;
-    if ((evento as any).chegadaNoLocal) text += `Chegada no local: ${(evento as any).chegadaNoLocal}\n`;
     if ((evento as any).horarioInicio) text += `Horário de início: ${(evento as any).horarioInicio}\n`;
-    if ((evento as any).horarioDesmontagem) text += `Horário de Desmontagem: ${(evento as any).horarioDesmontagem}\n`;
-    if ((evento as any).tempoEvento) text += `Duração: ${(evento as any).tempoEvento}\n`;
-    if ((evento as any).quantidadeMesas) text += `Mesas: ${(evento as any).quantidadeMesas}\n`;
-    if ((evento as any).numeroImpressoes) text += `Impressões: ${(evento as any).numeroImpressoes}\n`;
-    if ((evento as any).hashtag) text += `Hashtag: ${(evento as any).hashtag}\n`;
-
-    text += '\n────────────────────────\n\n';
-
-    // Cerimonialista
-    text += 'Cerimonialista\n\n';
-    if ((evento as any).cerimonialista?.nome) text += `Nome: ${(evento as any).cerimonialista.nome}\n`;
-    if ((evento as any).cerimonialista?.telefone) text += `Telefone: ${(evento as any).cerimonialista.telefone}\n`;
+    if ((evento as any).horarioFim || (evento as any).horarioDesmontagem) {
+      text += `Horário fim: ${(evento as any).horarioFim || (evento as any).horarioDesmontagem}\n`;
+    }
 
     text += '\n────────────────────────\n\n';
 
@@ -450,10 +366,6 @@ export default function EventoViewPage() {
               <div className="flex items-start gap-2 text-text-primary">
                 <UserIcon className="h-5 w-5 text-text-muted flex-shrink-0 mt-0.5" />
                 <span className="font-medium break-words">{evento.cliente.nome}</span>
-              </div>
-              <div className="flex items-start gap-2 text-text-secondary">
-                <BriefcaseIcon className="h-5 w-5 text-text-muted flex-shrink-0 mt-0.5" />
-                <span className="break-words">{evento.contratante}</span>
               </div>
               <p className="text-text-muted text-xs">
                 {format(evento.dataEvento, 'dd/MM/yyyy', { locale: ptBR })} • {getDiaSemanaFormatado(evento.dataEvento)}
@@ -802,172 +714,30 @@ export default function EventoViewPage() {
                   {new Date(evento.dataEvento instanceof Date ? evento.dataEvento : new Date(evento.dataEvento)).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })} - {new Date(evento.dataEvento instanceof Date ? evento.dataEvento : new Date(evento.dataEvento)).toLocaleDateString('pt-BR', { weekday: 'long', timeZone: 'America/Sao_Paulo' }).toUpperCase()}
                 </span>
               </div>
-              <div className="flex items-center text-sm text-text-secondary">
-                <MapPinIcon className="h-4 w-4 mr-2 text-text-muted" />
-                {evento.local}
-              </div>
-              <div className="text-sm text-text-secondary">
-                <div className="font-medium">Endereço:</div>
-                {evento.endereco}
-              </div>
-              <div className="flex items-center text-sm text-text-secondary">
-                <UserGroupIcon className="h-4 w-4 mr-2 text-text-muted" />
-                {evento.numeroConvidados} convidados
-              </div>
               <div className="text-sm">
                 <span className="font-medium text-text-primary">Tipo:</span> {evento.tipoEvento}
               </div>
             </CardContent>
           </Card>
 
-          {/* Detalhes do Serviço */}
+          {/* Agendamento */}
           <Card>
             <CardHeader>
-              <CardTitle>Detalhes do Serviço</CardTitle>
+              <CardTitle>Agendamento</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="font-medium text-text-primary">Saída:</span>
-                  <div className="text-text-secondary">{evento.saida}</div>
-                </div>
-                <div>
-                  <span className="font-medium text-text-primary">Chegada no local:</span>
-                  <div className="text-text-secondary">{evento.chegadaNoLocal}</div>
-                </div>
                 <div>
                   <span className="font-medium text-text-primary">Horário de início:</span>
                   <div className="text-text-secondary">{evento.horarioInicio}</div>
                 </div>
                 <div>
-                  <span className="font-medium text-text-primary">Horário de Desmontagem:</span>
-                  <div className="text-text-secondary">{evento.horarioDesmontagem}</div>
-                </div>
-                <div>
-                  <span className="font-medium text-text-primary">Duração:</span>
-                  <div className="text-text-secondary">{evento.tempoEvento}</div>
+                  <span className="font-medium text-text-primary">Horário fim:</span>
+                  <div className="text-text-secondary">{evento.horarioFim || evento.horarioDesmontagem}</div>
                 </div>
               </div>
-              
-              {evento.quantidadeMesas && (
-                <div className="text-sm">
-                  <span className="font-medium text-text-primary">Mesas:</span> {evento.quantidadeMesas}
-                </div>
-              )}
-              
-              <div className="flex items-center gap-2 text-sm">
-                <PrinterIcon className="h-4 w-4 text-text-muted flex-shrink-0" />
-                {editandoImpressoes ? (
-                  <div className="flex items-center gap-2 flex-1">
-                    <Input
-                      type="number"
-                      min="0"
-                      value={valorImpressoes}
-                      onChange={(e) => setValorImpressoes(e.target.value)}
-                      onKeyDown={handleKeyDownImpressoes}
-                      placeholder="Número de impressões"
-                      className="w-32 h-8 text-sm"
-                      autoFocus
-                      disabled={salvandoImpressoes}
-                    />
-                    <span className="text-text-secondary">impressões</span>
-                    <div className="flex gap-1">
-                      <TooltipProvider delayDuration={200}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="action-view"
-                              size="icon"
-                              onClick={handleSalvarImpressoes}
-                              disabled={salvandoImpressoes}
-                              className="h-7 w-7"
-                            >
-                              {salvandoImpressoes ? (
-                                <span className="h-3 w-3 rounded-full border-2 border-current border-t-transparent animate-spin" />
-                              ) : (
-                                <CheckIcon className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="font-medium">
-                            <p>Salvar</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <TooltipProvider delayDuration={200}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={handleCancelarEdicaoImpressoes}
-                              disabled={salvandoImpressoes}
-                              className="h-7 w-7"
-                            >
-                              <XMarkIcon className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="font-medium">
-                            <p>Cancelar</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 group cursor-pointer" onClick={handleIniciarEdicaoImpressoes}>
-                    <span className="text-text-secondary">
-                      {eventoLocal?.numeroImpressoes || evento.numeroImpressoes || 0} impressões
-                    </span>
-                    <TooltipProvider delayDuration={200}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="action-edit"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleIniciarEdicaoImpressoes();
-                            }}
-                            className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <PencilIcon className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="font-medium">
-                          <p>Clique para editar número de impressões</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                )}
-              </div>
-              
-              {evento.hashtag && (
-                <div className="flex items-center text-sm text-text-secondary">
-                  <HashtagIcon className="h-4 w-4 mr-2 text-text-muted" />
-                  {evento.hashtag}
-                </div>
-              )}
             </CardContent>
           </Card>
-
-          {/* Cerimonialista */}
-          {evento.cerimonialista && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Cerimonialista</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="text-sm">
-                  <span className="font-medium text-text-primary">Nome:</span> {evento.cerimonialista.nome}
-                </div>
-                <div className="text-sm text-text-secondary">
-                  <span className="font-medium">Telefone:</span> {evento.cerimonialista.telefone}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Observações */}
           {evento.observacoes && (

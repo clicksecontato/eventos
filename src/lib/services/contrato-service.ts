@@ -17,8 +17,8 @@ export class ContratoService {
     dados.instagram_cliente = evento.cliente?.instagram || '';
     dados.id_cliente = evento.cliente?.id || '';
     
-    // Dados do contratante (pode ser diferente do cliente)
-    dados.nome_contratante = evento.contratante || evento.cliente?.nome || '';
+    // Dados do contratante
+    dados.nome_contratante = evento.cliente?.nome || '';
     dados.cpf_contratante = evento.cliente?.cpf || '';
     dados.email_contratante = evento.cliente?.email || '';
     dados.telefone_contratante = evento.cliente?.telefone || '';
@@ -39,28 +39,14 @@ export class ContratoService {
       dados.data_evento = '';
     }
     
-    dados.local_evento = evento.local || '';
-    dados.endereco_evento = evento.endereco || '';
-    dados.numero_convidados = evento.numeroConvidados || 0;
+    dados.local_evento = '';
+    dados.endereco_evento = '';
+    dados.numero_convidados = 0;
     dados.valor_total = evento.valorTotal || 0;
     dados.valor_total_formatado = evento.valorTotal ? `R$ ${evento.valorTotal.toFixed(2).replace('.', ',')}` : 'R$ 0,00';
     dados.horario_inicio = evento.horarioInicio || '';
-    dados.horario_termino = evento.horarioDesmontagem || '';
-    
-    // Extrair número de horas do tempoEvento (formato: "X HORAS" ou "X HORAS E Y MINUTOS")
-    // Para o campo duracao_servico que é do tipo number, extrair apenas as horas
-    if (evento.tempoEvento) {
-      const match = evento.tempoEvento.match(/(\d+)\s*HORA/i);
-      if (match) {
-        dados.duracao_servico = parseInt(match[1], 10);
-      } else {
-        // Se não encontrar padrão, tentar extrair qualquer número
-        const numeroMatch = evento.tempoEvento.match(/(\d+)/);
-        dados.duracao_servico = numeroMatch ? parseInt(numeroMatch[1], 10) : '';
-      }
-    } else {
-      dados.duracao_servico = '';
-    }
+    dados.horario_termino = evento.horarioFim || '';
+    dados.duracao_servico = '';
     
     dados.observacoes_evento = evento.observacoes || '';
 

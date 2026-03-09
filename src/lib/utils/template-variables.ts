@@ -18,9 +18,6 @@ export const LABELS_VARIAVEIS: Record<string, string> = {
   nome_evento: 'Nome do Evento',
   tipo_evento: 'Tipo do Evento',
   data_evento: 'Data do Evento',
-  local_evento: 'Local do Evento',
-  endereco_evento: 'Endereço do Evento',
-  numero_convidados: 'Número de Convidados',
   valor_total: 'Valor Total',
   valor_total_formatado: 'Valor Total Formatado',
   horario_inicio: 'Horário de Início',
@@ -51,14 +48,11 @@ export const LABELS_VARIAVEIS: Record<string, string> = {
   marca_dagua_tamanho_percentual: 'Tamanho da Marca d\'agua (%)',
   foro_eleito: 'Foro Eleito',
   numero_contrato: 'Número do Contrato',
-  hashtag: 'Hashtag',
-  numero_impressoes: 'Número de Impressões',
-  quantidade_mesas: 'Quantidade de Mesas',
 };
 
 const CAMPOS_DATA = new Set(['data_evento', 'data_contrato', 'data_assinatura']);
 const CAMPOS_MOEDA = new Set(['valor_total']);
-const CAMPOS_NUMERO = new Set(['numero_convidados', 'numero_impressoes', 'quantidade_mesas']);
+const CAMPOS_NUMERO = new Set<string>([]);
 
 export function extrairPlaceholdersDoTemplate(template: string): { unicas: string[]; multiplas: string[] } {
   const matchesUnicas = template.match(/\{\{(\w+)\}\}/g) || [];

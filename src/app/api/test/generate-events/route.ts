@@ -14,18 +14,6 @@ const STATUS_EVENTOS: Evento['status'][] = ['Agendado', 'Confirmado', 'Em andame
 const FORMAS_PAGAMENTO: Pagamento['formaPagamento'][] = ['Dinheiro', 'Cartão de crédito', 'Depósito bancário', 'PIX', 'Transferência'];
 const STATUS_PAGAMENTO: Pagamento['status'][] = ['Pago', 'Pendente'];
 
-const LOCAIS = [
-  'Salão de Festas Jardim', 'Salão Águas Claras', 'Buffet Espaço Nobre',
-  'Centro de Eventos Horizonte', 'Salão Primavera', 'Espaço Festa & Cia',
-  'Centro de Convenções', 'Casa de Eventos Solar', 'Salão Vip Eventos'
-];
-
-const ENDERECOS = [
-  'Rua das Flores, 123 - Centro', 'Av. Principal, 456 - Jardim América',
-  'Rua da Paz, 789 - Vila Nova', 'Av. Central, 321 - Bairro Novo',
-  'Rua Comercial, 654 - Centro', 'Av. dos Anjos, 987 - Alto da Colina'
-];
-
 const NOMES_EVENTOS = [
   'Casamento Maria e João', '15 Anos da Ana', 'Aniversário do Pedro',
   'Bodas de Prata Silva', 'Formatura Medicina', 'Casamento Silva',
@@ -131,10 +119,6 @@ export async function POST(request: NextRequest) {
 
       // Gerar valores aleatórios
       const valorTotal = getRandomInt(2000, 15000);
-      const numeroConvidados = getRandomInt(50, 500);
-      const quantidadeMesas = Math.ceil(numeroConvidados / 10);
-      const numeroImpressoes = getRandomInt(100, 2000);
-
       // Criar evento
       const eventoData: Omit<Evento, 'id' | 'dataCadastro' | 'dataAtualizacao'> = {
         nomeEvento: getRandomElement(NOMES_EVENTOS),
@@ -142,24 +126,10 @@ export async function POST(request: NextRequest) {
         cliente: cliente,
         dataEvento: dataEvento,
         diaSemana: diaSemana,
-        local: getRandomElement(LOCAIS),
-        endereco: getRandomElement(ENDERECOS),
         tipoEvento: tipoEvento.nome,
         tipoEventoId: tipoEvento.id,
-        saida: `${getRandomInt(6, 8)}:00`,
-        chegadaNoLocal: `${getRandomInt(13, 15)}:00`,
         horarioInicio: `${getRandomInt(16, 18)}:00`,
-        horarioDesmontagem: `${getRandomInt(23, 1)}:00`,
-        tempoEvento: `${getRandomInt(6, 10)} horas`,
-        contratante: cliente.nome,
-        numeroConvidados: numeroConvidados,
-        quantidadeMesas: quantidadeMesas,
-        hashtag: `#evento${getRandomInt(1000, 9999)}`,
-        numeroImpressoes: numeroImpressoes,
-        cerimonialista: {
-          nome: `Cerimonialista ${getRandomElement(['Ana', 'Maria', 'João', 'Pedro'])}`,
-          telefone: `(11) 9${getRandomInt(1000, 9999)}-${getRandomInt(1000, 9999)}`
-        },
+        horarioFim: `${getRandomInt(22, 23)}:00`,
         observacoes: `Evento gerado automaticamente para testes - ${new Date().toISOString()}`,
         status: getRandomElement(STATUS_EVENTOS),
         valorTotal: valorTotal,

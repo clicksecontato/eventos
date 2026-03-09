@@ -30,20 +30,10 @@ interface FormData {
   // Dados do Evento
   nomeEvento: string;
   dataEvento: string;
-  local: string;
-  endereco: string;
   tipoEvento: string;
   tipoEventoId: string;
-  contratante: string;
-  numeroConvidados: number;
-  quantidadeMesas?: number;
-  hashtag: string;
   horarioInicio: string;
-  horarioTermino: string; // Horário de Desmontagem
-  cerimonialista: {
-    nome?: string;
-    telefone?: string;
-  };
+  horarioTermino: string;
   observacoes: string;
   
   // Serviços
@@ -62,20 +52,10 @@ export default function PreCadastroForm({ preCadastroId, preCadastro, onSuccess 
     clienteCanalEntradaId: '',
     nomeEvento: '',
     dataEvento: '',
-    local: '',
-    endereco: '',
     tipoEvento: '',
     tipoEventoId: '',
-    contratante: '',
-    numeroConvidados: 0,
-    quantidadeMesas: 0,
-    hashtag: '',
     horarioInicio: '',
     horarioTermino: '',
-    cerimonialista: {
-      nome: '',
-      telefone: ''
-    },
     observacoes: '',
     servicosIds: new Set()
   });
@@ -106,17 +86,10 @@ export default function PreCadastroForm({ preCadastroId, preCadastro, onSuccess 
         clienteCanalEntradaId: preCadastro.clienteCanalEntradaId || '',
         nomeEvento: preCadastro.nomeEvento || '',
         dataEvento: preCadastro.dataEvento ? formatLocalDate(dateToLocalMidnight(new Date(preCadastro.dataEvento))) : '',
-        local: preCadastro.local || '',
-        endereco: preCadastro.endereco || '',
         tipoEvento: preCadastro.tipoEvento || '',
         tipoEventoId: preCadastro.tipoEventoId || '',
-        contratante: preCadastro.contratante || '',
-        numeroConvidados: preCadastro.numeroConvidados || 0,
-        quantidadeMesas: preCadastro.quantidadeMesas || 0,
-        hashtag: preCadastro.hashtag || '',
         horarioInicio: preCadastro.horarioInicio || '',
         horarioTermino: preCadastro.horarioTermino || '',
-        cerimonialista: preCadastro.cerimonialista || { nome: '', telefone: '' },
         observacoes: preCadastro.observacoes || '',
         servicosIds: new Set()
       });
@@ -193,16 +166,6 @@ export default function PreCadastroForm({ preCadastroId, preCadastro, onSuccess 
         return rest;
       });
     }
-  };
-
-  const handleCerimonialistaChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      cerimonialista: {
-        ...prev.cerimonialista,
-        [field]: value
-      }
-    }));
   };
 
   const handleTipoEventoSelect = (tipoId: string) => {
@@ -295,12 +258,6 @@ export default function PreCadastroForm({ preCadastroId, preCadastro, onSuccess 
 
     // Validar dados do evento
     if (!formData.dataEvento) newErrors.dataEvento = 'Data do evento é obrigatória';
-    if (!formData.local.trim()) newErrors.local = 'Local é obrigatório';
-    if (!formData.endereco.trim()) newErrors.endereco = 'Endereço é obrigatório';
-    if (!formData.contratante.trim()) newErrors.contratante = 'Nome do contratante é obrigatório';
-    if (!formData.numeroConvidados || formData.numeroConvidados <= 0) {
-      newErrors.numeroConvidados = 'Número de convidados deve ser maior que zero';
-    }
     if (!formData.tipoEventoId) newErrors.tipoEvento = 'Selecione um tipo de evento';
 
     setErrors(newErrors);
@@ -330,20 +287,10 @@ export default function PreCadastroForm({ preCadastroId, preCadastro, onSuccess 
         clienteCanalEntradaId: formData.clienteCanalEntradaId || undefined,
         nomeEvento: formData.nomeEvento.trim() || undefined,
         dataEvento: formData.dataEvento,
-        local: formData.local.trim(),
-        endereco: formData.endereco.trim(),
         tipoEvento: formData.tipoEvento,
         tipoEventoId: formData.tipoEventoId,
-        contratante: formData.contratante.trim(),
-        numeroConvidados: formData.numeroConvidados,
-        quantidadeMesas: formData.quantidadeMesas || undefined,
-        hashtag: formData.hashtag.trim() || undefined,
         horarioInicio: formData.horarioInicio || undefined,
         horarioTermino: formData.horarioTermino || undefined,
-        cerimonialista: formData.cerimonialista?.nome ? {
-          nome: formData.cerimonialista.nome,
-          telefone: formData.cerimonialista.telefone || ''
-        } : undefined,
         observacoes: formData.observacoes.trim() || undefined
       };
 
@@ -486,59 +433,15 @@ export default function PreCadastroForm({ preCadastroId, preCadastro, onSuccess 
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              label="Local *"
-              value={formData.local}
-              onChange={(e) => handleInputChange('local', e.target.value)}
-              error={errors.local}
-            />
-            <Input
-              label="Endereço *"
-              value={formData.endereco}
-              onChange={(e) => handleInputChange('endereco', e.target.value)}
-              error={errors.endereco}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              label="Nome do Contratante *"
-              value={formData.contratante}
-              onChange={(e) => handleInputChange('contratante', e.target.value)}
-              error={errors.contratante}
-            />
-            <Input
-              label="Número de Convidados *"
-              type="number"
-              value={formData.numeroConvidados}
-              onChange={(e) => handleInputChange('numeroConvidados', parseInt(e.target.value) || 0)}
-              error={errors.numeroConvidados}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              label="Quantidade de Mesas"
-              type="number"
-              value={formData.quantidadeMesas || ''}
-              onChange={(e) => handleInputChange('quantidadeMesas', parseInt(e.target.value) || undefined)}
-            />
-            <Input
-              label="Hashtag"
-              value={formData.hashtag}
-              onChange={(e) => handleInputChange('hashtag', e.target.value)}
-            />
-          </div>
         </CardContent>
       </Card>
 
-      {/* Horários */}
+      {/* Agendamento */}
       <Card>
         <CardHeader>
-          <CardTitle>Horários</CardTitle>
+          <CardTitle>Agendamento</CardTitle>
           <CardDescription>
-            Defina os horários do evento
+            Defina o horário de início e fim do evento
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -550,7 +453,7 @@ export default function PreCadastroForm({ preCadastroId, preCadastro, onSuccess 
               onChange={(e) => handleInputChange('horarioInicio', e.target.value)}
             />
             <Input
-              label="Horário de término do evento"
+              label="Horário fim"
               type="time"
               value={formData.horarioTermino}
               onChange={(e) => handleInputChange('horarioTermino', e.target.value)}
@@ -564,30 +467,6 @@ export default function PreCadastroForm({ preCadastroId, preCadastro, onSuccess 
               disabled={true}
             />
           )}
-        </CardContent>
-      </Card>
-
-      {/* Cerimonialista */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Cerimonialista</CardTitle>
-          <CardDescription>
-            Informações do cerimonialista (opcional)
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              label="Nome Cerimonialista"
-              value={formData.cerimonialista?.nome || ''}
-              onChange={(e) => handleCerimonialistaChange('nome', e.target.value)}
-            />
-            <Input
-              label="Telefone Cerimonialista"
-              value={formData.cerimonialista?.telefone || ''}
-              onChange={(e) => handleCerimonialistaChange('telefone', e.target.value)}
-            />
-          </div>
         </CardContent>
       </Card>
 

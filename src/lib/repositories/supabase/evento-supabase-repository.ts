@@ -21,21 +21,10 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
       clienteId: row.cliente_id,
       dataEvento,
       diaSemana: diaSemanaCalculado, // Usar o dia calculado em vez do salvo no banco
-      local: row.local,
-      endereco: row.endereco || '',
       tipoEvento: row.tipo_evento,
       tipoEventoId: row.tipo_evento_id,
-      saida: row.saida || '',
-      chegadaNoLocal: row.chegada_no_local || '',
       horarioInicio: row.horario_inicio || '',
-      horarioDesmontagem: row.horario_desmontagem || '',
-      tempoEvento: row.tempo_evento || '',
-      contratante: row.contratante || '',
-      numeroConvidados: row.numero_convidados || 0,
-      quantidadeMesas: row.quantidade_mesas,
-      hashtag: row.hashtag,
-      numeroImpressoes: row.numero_impressoes,
-      cerimonialista: row.cerimonialista as { nome?: string; telefone?: string } | undefined,
+      horarioFim: row.horario_fim || row.horario_desmontagem || '',
       observacoes: row.observacoes,
       status: row.status as Evento['status'],
       modoValorTotal: row.modo_valor_total || 'manual',
@@ -75,21 +64,10 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
       }
     }
     if (entity.diaSemana !== undefined) data.dia_semana = entity.diaSemana || null;
-    if (entity.local !== undefined) data.local = entity.local;
-    if (entity.endereco !== undefined) data.endereco = entity.endereco || null;
     if (entity.tipoEvento !== undefined) data.tipo_evento = entity.tipoEvento;
     if (entity.tipoEventoId !== undefined) data.tipo_evento_id = entity.tipoEventoId || null;
-    if (entity.saida !== undefined) data.saida = entity.saida || null;
-    if (entity.chegadaNoLocal !== undefined) data.chegada_no_local = entity.chegadaNoLocal || null;
     if (entity.horarioInicio !== undefined) data.horario_inicio = entity.horarioInicio || null;
-    if (entity.horarioDesmontagem !== undefined) data.horario_desmontagem = entity.horarioDesmontagem || null;
-    if (entity.tempoEvento !== undefined) data.tempo_evento = entity.tempoEvento || null;
-    if (entity.contratante !== undefined) data.contratante = entity.contratante || null;
-    if (entity.numeroConvidados !== undefined) data.numero_convidados = entity.numeroConvidados;
-    if (entity.quantidadeMesas !== undefined) data.quantidade_mesas = entity.quantidadeMesas || null;
-    if (entity.hashtag !== undefined) data.hashtag = entity.hashtag || null;
-    if (entity.numeroImpressoes !== undefined) data.numero_impressoes = entity.numeroImpressoes || null;
-    if (entity.cerimonialista !== undefined) data.cerimonialista = entity.cerimonialista || null;
+    if (entity.horarioFim !== undefined) data.horario_fim = entity.horarioFim || null;
     if (entity.observacoes !== undefined) data.observacoes = entity.observacoes || null;
     if (entity.status !== undefined) {
       // Garantir que o status seja uma string válida conforme o constraint do banco
@@ -206,7 +184,7 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
       .from(this.tableName)
       .select('*')
       .eq('empresa_id', empresaId)
-      .or(`local.ilike.%${local}%,endereco.ilike.%${local}%`);
+      .or(`nome_evento.ilike.%${local}%,tipo_evento.ilike.%${local}%`);
 
     if (error) {
       throw new Error(`Erro ao buscar eventos por local: ${error.message}`);

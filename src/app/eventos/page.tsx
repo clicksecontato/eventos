@@ -10,7 +10,6 @@ import Layout from '@/components/Layout';
 import {
   PlusIcon,
   CalendarIcon,
-  MapPinIcon,
   ClockIcon,
   EyeIcon,
   PencilIcon,
@@ -155,11 +154,9 @@ export default function EventosPage() {
     return eventosLista.filter(evento => {
       // Verificações de segurança para evitar erros com valores undefined/null
       const clienteNome = evento.cliente?.nome || '';
-      const local = evento.local || '';
       const nomeEvento = evento.nomeEvento || '';
       
       const matchesSearch = clienteNome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           local.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            nomeEvento.toLowerCase().includes(searchTerm.toLowerCase());
       const tipoEventoNome = getTipoEventoNome(evento);
       const matchesTipo = filterTipo === 'todos' || tipoEventoNome === filterTipo;
@@ -534,7 +531,7 @@ export default function EventosPage() {
                 <div>
                   <Input
                     label="Buscar"
-                    placeholder="Nome do evento, cliente ou local..."
+                    placeholder="Nome do evento ou cliente..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -616,9 +613,6 @@ export default function EventosPage() {
                         <span className="block text-text-primary font-medium truncate lg:whitespace-normal">
                           {evento.cliente?.nome || 'Cliente não encontrado'}
                         </span>
-                        <span className="block text-xs text-text-secondary truncate lg:whitespace-normal">
-                          {evento.contratante}
-                        </span>
                       </CardDescription>
                     </div>
                     {/* Status Select no topo direito */}
@@ -647,16 +641,12 @@ export default function EventosPage() {
                         Início: {evento.horarioInicio}
                       </div>
                     )}
-                    {evento.horarioDesmontagem && (
+                    {(evento.horarioFim || evento.horarioDesmontagem) && (
                       <div className="flex items-center text-sm text-text-secondary">
                         <ClockIcon className="h-4 w-4 mr-2" />
-                        Desmontagem: {evento.horarioDesmontagem}
+                        Fim: {evento.horarioFim || evento.horarioDesmontagem}
                       </div>
                     )}
-                  </div>
-                  <div className="flex items-center text-sm text-text-secondary">
-                    <MapPinIcon className="h-4 w-4 mr-2" />
-                    {evento.local}
                   </div>
                 </div>
 

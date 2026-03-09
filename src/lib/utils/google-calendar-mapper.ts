@@ -38,12 +38,8 @@ export function mapEventoToGoogleCalendar(evento: Evento): GoogleCalendarEvent {
   const description = [
     evento.tipoEvento && `Tipo: ${evento.tipoEvento}`,
     clienteNome && `Cliente: ${clienteNome}`,
-    evento.local && `Local: ${evento.local}`,
     evento.observacoes && `Observações: ${evento.observacoes}`
   ].filter(Boolean).join('\n');
-  
-  // Localização (endereço completo)
-  const location = evento.endereco || evento.local || undefined;
   
   return {
     summary,
@@ -57,8 +53,7 @@ export function mapEventoToGoogleCalendar(evento: Evento): GoogleCalendarEvent {
     end: {
       dateTime: startDateTime.toISOString(),
       timeZone: 'America/Sao_Paulo'
-    },
-    location
+    }
   };
 }
 
@@ -85,8 +80,7 @@ export function mapGoogleCalendarToEvento(
     nomeEvento: googleEvent.summary,
     dataEvento: startDate,
     horarioInicio,
-    local: googleEvent.location || '',
-    endereco: googleEvent.location || '',
+    horarioFim: horarioInicio,
     observacoes: googleEvent.description || undefined,
     // googleCalendarEventId será definido separadamente
     // googleCalendarSyncedAt será definido separadamente

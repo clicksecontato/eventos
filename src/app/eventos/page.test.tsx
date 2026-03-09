@@ -249,7 +249,7 @@ describe('/eventos page', () => {
       expect(screen.getByText('Casamento Silva')).toBeInTheDocument();
     });
 
-    await user.type(screen.getByPlaceholderText('Nome do evento, cliente ou local...'), 'inexistente');
+    await user.type(screen.getByPlaceholderText('Nome do evento ou cliente...'), 'inexistente');
 
     await waitFor(() => {
       expect(screen.queryByText('Casamento Silva')).not.toBeInTheDocument();

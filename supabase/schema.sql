@@ -137,21 +137,10 @@ CREATE TABLE IF NOT EXISTS eventos (
     nome_evento VARCHAR(255),
     data_evento TIMESTAMP WITH TIME ZONE NOT NULL,
     dia_semana VARCHAR(20),
-    local VARCHAR(255) NOT NULL,
-    endereco TEXT,
     tipo_evento VARCHAR(255) NOT NULL,
     tipo_evento_id VARCHAR(255) REFERENCES tipo_eventos(id) ON DELETE SET NULL,
-    saida VARCHAR(50),
-    chegada_no_local VARCHAR(50),
     horario_inicio VARCHAR(50),
-    horario_desmontagem VARCHAR(50),
-    tempo_evento VARCHAR(50),
-    contratante VARCHAR(255),
-    numero_convidados INTEGER NOT NULL DEFAULT 0,
-    quantidade_mesas INTEGER,
-    hashtag VARCHAR(255),
-    numero_impressoes INTEGER,
-    cerimonialista JSONB, -- { nome, telefone }
+    horario_fim VARCHAR(50),
     observacoes TEXT,
     status VARCHAR(50) NOT NULL DEFAULT 'Agendado' CHECK (status IN ('Agendado', 'Confirmado', 'Em andamento', 'Concluído', 'Cancelado')),
     modo_valor_total VARCHAR(20) NOT NULL DEFAULT 'manual' CHECK (modo_valor_total IN ('automatico', 'manual')),
@@ -336,17 +325,10 @@ CREATE TABLE IF NOT EXISTS pre_cadastros_eventos (
     -- Dados do Evento (preenchidos pelo cliente)
     nome_evento VARCHAR(255),
     data_evento TIMESTAMP WITH TIME ZONE,
-    local VARCHAR(255),
-    endereco TEXT,
     tipo_evento VARCHAR(255),
     tipo_evento_id VARCHAR(255) REFERENCES tipo_eventos(id) ON DELETE SET NULL,
-    contratante VARCHAR(255),
-    numero_convidados INTEGER DEFAULT 0,
-    quantidade_mesas INTEGER,
-    hashtag VARCHAR(255),
     horario_inicio VARCHAR(50),
-    horario_termino VARCHAR(50), -- Horário de Desmontagem
-    cerimonialista JSONB, -- { nome, telefone }
+    horario_termino VARCHAR(50),
     observacoes TEXT,
     
     -- Metadados

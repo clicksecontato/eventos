@@ -29,6 +29,7 @@ import { parseLocalDate, getDiaSemana } from '@/lib/utils/date-helpers';
 
 interface EventoFormProps {
   evento?: Evento;
+  clienteInicialId?: string;
   onSave: (evento: Evento) => void;
   onCancel: () => void;
 }
@@ -47,24 +48,10 @@ interface FormData {
     canalEntradaId?: string;
   };
   dataEvento: string;
-  local: string;
-  endereco: string;
   tipoEvento: string;
   tipoEventoId: string;
-  saida: string;
-  chegadaNoLocal: string;
   horarioInicio: string;
-  horarioDesmontagem: string;
-  tempoEvento: string;
-  contratante: string;
-  numeroConvidados: number;
-  quantidadeMesas?: number;
-  hashtag?: string;
-  numeroImpressoes?: number;
-  cerimonialista?: {
-    nome?: string;
-    telefone?: string;
-  };
+  horarioFim: string;
   observacoes?: string;
   status: StatusEvento;
   modoValorTotal: 'automatico' | 'manual';
@@ -89,7 +76,7 @@ const statusOptions = [
   { value: StatusEvento.EM_ANDAMENTO, label: 'Em andamento' }
 ];
 
-export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps) {
+export default function EventoForm({ evento, clienteInicialId, onSave, onCancel }: EventoFormProps) {
   const router = useRouter();
   const { showToast } = useToast();
   const { data: clientes } = useClientes();
@@ -111,24 +98,10 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
       canalEntradaId: ''
     },
     dataEvento: '',
-    local: '',
-    endereco: '',
     tipoEvento: '',
     tipoEventoId: '',
-    saida: '',
-    chegadaNoLocal: '',
     horarioInicio: '',
-    horarioDesmontagem: '',
-    tempoEvento: '',
-    contratante: '',
-    numeroConvidados: 0,
-    quantidadeMesas: 0,
-    hashtag: '',
-    numeroImpressoes: 0,
-    cerimonialista: {
-      nome: '',
-      telefone: ''
-    },
+    horarioFim: '',
     observacoes: '',
     status: StatusEvento.AGENDADO,
     modoValorTotal: 'automatico',
@@ -205,21 +178,10 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
         dataEvento: evento.dataEvento 
           ? new Date(evento.dataEvento.getTime() - evento.dataEvento.getTimezoneOffset() * 60000).toISOString().split('T')[0]
           : '',
-        local: evento.local,
-        endereco: evento.endereco,
         tipoEvento: evento.tipoEvento || '',
         tipoEventoId: evento.tipoEventoId || '',
-        saida: evento.saida,
-        chegadaNoLocal: evento.chegadaNoLocal,
         horarioInicio: evento.horarioInicio,
-        horarioDesmontagem: evento.horarioDesmontagem,
-        tempoEvento: evento.tempoEvento,
-        contratante: evento.contratante,
-        numeroConvidados: evento.numeroConvidados,
-        quantidadeMesas: evento.quantidadeMesas || 0,
-        hashtag: evento.hashtag || '',
-        numeroImpressoes: evento.numeroImpressoes || 0,
-        cerimonialista: evento.cerimonialista || { nome: '', telefone: '' },
+        horarioFim: evento.horarioFim || evento.horarioDesmontagem || '',
         observacoes: evento.observacoes || '',
         status: statusInicial,
         modoValorTotal: evento.modoValorTotal || 'manual',
@@ -248,6 +210,30 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
       setClientesFiltrados([]);
     }
   }, [clienteSearch, clientes]);
+
+  useEffect(() => {
+    if (evento || !clienteInicialId || isNovoCliente || !clientes || clientes.length === 0) {
+      return;
+    }
+
+    const clienteSelecionado = clientes.find((cliente) => cliente.id === clienteInicialId);
+    if (!clienteSelecionado) {
+      return;
+    }
+
+    setFormData((prev) => {
+      if (prev.clienteId === clienteSelecionado.id) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        clienteId: clienteSelecionado.id
+      };
+    });
+    setClienteSearch(clienteSelecionado.nome);
+    setClientesFiltrados([]);
+  }, [evento, clienteInicialId, isNovoCliente, clientes]);
 
   useEffect(() => {
     const carregarTiposEvento = async () => {
@@ -418,16 +404,6 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
       ...prev,
       novoCliente: {
         ...prev.novoCliente,
-        [field]: value
-      }
-    }));
-  };
-
-  const handleCerimonialistaChange = (field: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      cerimonialista: {
-        ...prev.cerimonialista,
         [field]: value
       }
     }));
@@ -778,56 +754,6 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
     }
   };
 
-  // getDiaSemana agora é importado de date-helpers
-
-  const calcularTempoEvento = (inicio: string, fim: string): string => {
-    if (!inicio || !fim) return '';
-    
-    // Converter horários para minutos desde meia-noite
-    const [horaInicio, minutoInicio] = inicio.split(':').map(Number);
-    const [horaFim, minutoFim] = fim.split(':').map(Number);
-    
-    const minutosInicio = horaInicio * 60 + minutoInicio;
-    let minutosFim = horaFim * 60 + minutoFim;
-    
-    // Se o horário de fim for menor que o de início, assumir que é no dia seguinte
-    if (minutosFim < minutosInicio) {
-      minutosFim += 24 * 60; // Adicionar 24 horas em minutos
-    }
-    
-    const diferencaMinutos = minutosFim - minutosInicio;
-    
-    const horas = Math.floor(diferencaMinutos / 60);
-    const minutos = diferencaMinutos % 60;
-    
-    if (horas === 0 && minutos === 0) return '';
-    
-    if (minutos === 0) {
-      return horas === 1 ? '1 HORA' : `${horas} HORAS`;
-    }
-    
-    if (horas === 0) {
-      return `${minutos} MINUTOS`;
-    }
-    
-    const horasTexto = horas === 1 ? '1 HORA' : `${horas} HORAS`;
-    return `${horasTexto} E ${minutos} MINUTOS`;
-  };
-
-  // Calcular automaticamente o tempo de evento quando os horários mudarem
-  useEffect(() => {
-    if (formData.horarioInicio && formData.horarioDesmontagem) {
-      const tempoCalculado = calcularTempoEvento(formData.horarioInicio, formData.horarioDesmontagem);
-      if (tempoCalculado !== formData.tempoEvento) {
-        setFormData(prev => ({
-          ...prev,
-          tempoEvento: tempoCalculado
-        }));
-      }
-    }
-  }, [formData.horarioInicio, formData.horarioDesmontagem, formData.tempoEvento]);
-
-
   const handleCreateCanalEntrada = async (nome: string) => {
     if (!userId) return;
     
@@ -869,11 +795,7 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
     }
 
     if (!formData.dataEvento) newErrors.dataEvento = 'Data do evento é obrigatória';
-    if (!formData.local) newErrors.local = 'Local é obrigatório';
-    if (!formData.endereco) newErrors.endereco = 'Endereço é obrigatório';
     if (!formData.tipoEventoId) newErrors.tipoEvento = 'Selecione um tipo de evento';
-    if (!formData.contratante) newErrors.contratante = 'Nome do contratante é obrigatório';
-    if (!formData.numeroConvidados || formData.numeroConvidados <= 0) newErrors.numeroConvidados = 'Número de convidados deve ser maior que zero';
     if (!formData.valorTotal || formData.valorTotal <= 0) newErrors.valorTotal = 'Valor total deve ser maior que zero';
     if (!formData.diaFinalPagamento) newErrors.diaFinalPagamento = 'Dia final de pagamento é obrigatório';
     if (
@@ -930,24 +852,10 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
         cliente,
         dataEvento: parseLocalDate(formData.dataEvento),
         diaSemana: getDiaSemana(formData.dataEvento),
-        local: formData.local,
-        endereco: formData.endereco,
         tipoEvento: formData.tipoEvento,
         tipoEventoId: formData.tipoEventoId || undefined,
-        saida: formData.saida,
-        chegadaNoLocal: formData.chegadaNoLocal,
         horarioInicio: formData.horarioInicio,
-        horarioDesmontagem: formData.horarioDesmontagem,
-        tempoEvento: formData.tempoEvento,
-        contratante: formData.contratante,
-        numeroConvidados: formData.numeroConvidados,
-        quantidadeMesas: formData.quantidadeMesas || undefined,
-        hashtag: formData.hashtag || undefined,
-        numeroImpressoes: formData.numeroImpressoes || undefined,
-        cerimonialista: formData.cerimonialista?.nome ? {
-          nome: formData.cerimonialista.nome,
-          telefone: formData.cerimonialista.telefone || ''
-        } : undefined,
+        horarioFim: formData.horarioFim,
         observacoes: formData.observacoes || undefined,
         status: (typeof formData.status === 'string' ? formData.status : String(formData.status)) as Evento['status'],
         modoValorTotal: formData.modoValorTotal,
@@ -1183,58 +1091,6 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
           </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              label="Local *"
-              value={formData.local}
-              onChange={(e) => handleInputChange('local', e.target.value)}
-              error={errors.local}
-            />
-            <Input
-              label="Endereço *"
-              value={formData.endereco}
-              onChange={(e) => handleInputChange('endereco', e.target.value)}
-              error={errors.endereco}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              label="Nome do Contratante *"
-              value={formData.contratante}
-              onChange={(e) => handleInputChange('contratante', e.target.value)}
-              error={errors.contratante}
-            />
-            <Input
-              label="Número de Convidados *"
-              type="number"
-              value={formData.numeroConvidados}
-              onChange={(e) => handleInputChange('numeroConvidados', parseInt(e.target.value) || 0)}
-              error={errors.numeroConvidados}
-            />
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              label="Quantidade de Mesas"
-              type="number"
-              value={formData.quantidadeMesas || ''}
-              onChange={(e) => handleInputChange('quantidadeMesas', parseInt(e.target.value) || undefined)}
-            />
-            <Input
-              label="Hashtag"
-              value={formData.hashtag || ''}
-              onChange={(e) => handleInputChange('hashtag', e.target.value)}
-            />
-          </div>
-
-          <Input
-            label="Número de Impressões"
-            type="number"
-            value={formData.numeroImpressoes || ''}
-            onChange={(e) => handleInputChange('numeroImpressoes', parseInt(e.target.value) || undefined)}
-          />
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Select
               label="Modo do valor total"
               value={formData.modoValorTotal}
@@ -1303,30 +1159,15 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
         </CardContent>
       </Card>
 
-      {/* Horários */}
+      {/* Agendamento */}
       <Card>
         <CardHeader>
-          <CardTitle>Horários</CardTitle>
+          <CardTitle>Agendamento</CardTitle>
           <CardDescription>
-            Defina os horários do evento e do serviço
+            Defina o horário de início e fim do evento
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              label="Saída"
-              type="time"
-              value={formData.saida}
-              onChange={(e) => handleInputChange('saida', e.target.value)}
-            />
-            <Input
-              label="Chegada no local"
-              type="time"
-              value={formData.chegadaNoLocal}
-              onChange={(e) => handleInputChange('chegadaNoLocal', e.target.value)}
-            />
-          </div>
-
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
               label="Horário de início"
@@ -1335,42 +1176,10 @@ export default function EventoForm({ evento, onSave, onCancel }: EventoFormProps
               onChange={(e) => handleInputChange('horarioInicio', e.target.value)}
             />
             <Input
-              label="Horário de Desmontagem"
+              label="Horário fim"
               type="time"
-              value={formData.horarioDesmontagem}
-              onChange={(e) => handleInputChange('horarioDesmontagem', e.target.value)}
-            />
-          </div>
-
-          <Input
-            label="Tempo de Evento (calculado automaticamente)"
-            value={formData.tempoEvento}
-            onChange={(e) => handleInputChange('tempoEvento', e.target.value)}
-            placeholder="Preencha os horários de início e desmontagem"
-            disabled={true}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Cerimonialista */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Cerimonialista</CardTitle>
-          <CardDescription>
-            Informações do cerimonialista (opcional)
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              label="Nome do Cerimonialista"
-              value={formData.cerimonialista?.nome || ''}
-              onChange={(e) => handleCerimonialistaChange('nome', e.target.value)}
-            />
-            <Input
-              label="Telefone do Cerimonialista"
-              value={formData.cerimonialista?.telefone || ''}
-              onChange={(e) => handleCerimonialistaChange('telefone', e.target.value)}
+              value={formData.horarioFim}
+              onChange={(e) => handleInputChange('horarioFim', e.target.value)}
             />
           </div>
         </CardContent>

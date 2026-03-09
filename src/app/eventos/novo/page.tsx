@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Layout from '@/components/Layout';
@@ -14,6 +14,8 @@ import {
 
 export default function NovoEventoPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const clienteInicialId = searchParams.get('clienteId') || undefined;
 
   const handleSave = (novoEvento: Evento) => {
     // O evento foi criado no Firestore via dataService
@@ -59,6 +61,7 @@ export default function NovoEventoPage() {
             </CardHeader>
             <CardContent>
               <EventoForm
+                clienteInicialId={clienteInicialId}
                 onSave={handleSave}
                 onCancel={handleCancel}
               />

@@ -195,14 +195,6 @@ export class PreCadastroEventoService {
       throw new Error('Data do evento é obrigatória');
     }
     
-    if (!preCadastro.local) {
-      throw new Error('Local do evento é obrigatório');
-    }
-    
-    if (!preCadastro.endereco) {
-      throw new Error('Endereço do evento é obrigatório');
-    }
-    
     if (!preCadastro.tipoEvento) {
       throw new Error('Tipo de evento é obrigatório');
     }
@@ -235,21 +227,10 @@ export class PreCadastroEventoService {
       cliente, // Incluído para satisfazer o tipo, mas não será salvo no banco (apenas clienteId)
       dataEvento,
       diaSemana: getDiaSemana(dataEvento),
-      local: preCadastro.local,
-      endereco: preCadastro.endereco,
       tipoEvento: preCadastro.tipoEvento,
       tipoEventoId: preCadastro.tipoEventoId,
-      saida: '', // Não preenchido no pré-cadastro
-      chegadaNoLocal: '', // Não preenchido no pré-cadastro
       horarioInicio: preCadastro.horarioInicio || '',
-      horarioDesmontagem: preCadastro.horarioTermino || '', // horarioTermino do pré-cadastro = horarioDesmontagem do evento
-      tempoEvento: '', // Será calculado depois se necessário
-      contratante: preCadastro.contratante || cliente.nome,
-      numeroConvidados: preCadastro.numeroConvidados || 0,
-      quantidadeMesas: preCadastro.quantidadeMesas,
-      hashtag: preCadastro.hashtag,
-      numeroImpressoes: undefined,
-      cerimonialista: preCadastro.cerimonialista,
+      horarioFim: preCadastro.horarioTermino || '',
       observacoes: preCadastro.observacoes,
       status: StatusEvento.AGENDADO,
       valorTotal: 0, // Será preenchido depois

@@ -133,8 +133,7 @@ export class VariavelContratoService {
       'nome_contratante', 'cpf_contratante', 'email_contratante', 'telefone_contratante',
       'endereco_contratante', 'cep_contratante',
       // Dados do evento
-      'nome_evento', 'tipo_evento', 'data_evento', 'local_evento', 'endereco_evento', 
-      'numero_convidados', 'valor_total', 'valor_total_formatado', 'horario_inicio', 
+      'nome_evento', 'tipo_evento', 'data_evento', 'valor_total', 'valor_total_formatado', 'horario_inicio', 
       'horario_termino', 'duracao_servico', 'observacoes_evento', 'tipo_servico', 
       'tipos_servico', 'data_contrato'
     ];

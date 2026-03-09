@@ -9,7 +9,6 @@ import { ptBR } from 'date-fns/locale';
 import { dateToLocalMidnight } from '@/lib/utils/date-helpers';
 import {
   CalendarIcon,
-  MapPinIcon,
   ClockIcon,
   UserIcon,
   EnvelopeIcon,
@@ -185,45 +184,6 @@ export default function PreCadastroDetailsModal({
                   <p className="text-base text-text-primary mt-1">{preCadastro.tipoEvento}</p>
                 </div>
               )}
-              {preCadastro.local && (
-                <div>
-                  <p className="text-sm font-medium text-text-secondary">Local</p>
-                  <p className="text-base text-text-primary mt-1 flex items-center gap-2">
-                    <MapPinIcon className="h-4 w-4" />
-                    {preCadastro.local}
-                  </p>
-                </div>
-              )}
-              {preCadastro.endereco && (
-                <div>
-                  <p className="text-sm font-medium text-text-secondary">Endereço</p>
-                  <p className="text-base text-text-primary mt-1">{preCadastro.endereco}</p>
-                </div>
-              )}
-              {preCadastro.contratante && (
-                <div>
-                  <p className="text-sm font-medium text-text-secondary">Contratante</p>
-                  <p className="text-base text-text-primary mt-1">{preCadastro.contratante}</p>
-                </div>
-              )}
-              {preCadastro.numeroConvidados !== undefined && (
-                <div>
-                  <p className="text-sm font-medium text-text-secondary">Número de Convidados</p>
-                  <p className="text-base text-text-primary mt-1">{preCadastro.numeroConvidados}</p>
-                </div>
-              )}
-              {preCadastro.quantidadeMesas !== undefined && (
-                <div>
-                  <p className="text-sm font-medium text-text-secondary">Quantidade de Mesas</p>
-                  <p className="text-base text-text-primary mt-1">{preCadastro.quantidadeMesas}</p>
-                </div>
-              )}
-              {preCadastro.hashtag && (
-                <div>
-                  <p className="text-sm font-medium text-text-secondary">Hashtag</p>
-                  <p className="text-base text-text-primary mt-1">{preCadastro.hashtag}</p>
-                </div>
-              )}
               {preCadastro.horarioInicio && (
                 <div>
                   <p className="text-sm font-medium text-text-secondary">Horário de Início</p>
@@ -244,25 +204,6 @@ export default function PreCadastroDetailsModal({
               )}
             </div>
           </div>
-
-          {/* Cerimonialista */}
-          {preCadastro.cerimonialista?.nome && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-text-primary">Cerimonialista</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-text-secondary">Nome</p>
-                  <p className="text-base text-text-primary mt-1">{preCadastro.cerimonialista.nome}</p>
-                </div>
-                {preCadastro.cerimonialista.telefone && (
-                  <div>
-                    <p className="text-sm font-medium text-text-secondary">Telefone</p>
-                    <p className="text-base text-text-primary mt-1">{preCadastro.cerimonialista.telefone}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Serviços */}
           {preCadastro.servicos && preCadastro.servicos.length > 0 && (

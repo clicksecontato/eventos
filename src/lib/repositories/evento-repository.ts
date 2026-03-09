@@ -62,11 +62,11 @@ export class EventoRepository extends SubcollectionRepository<Evento> {
   }
 
   async searchByLocal(local: string, userId: string): Promise<Evento[]> {
-    // Busca simples por local - em produção seria melhor usar Algolia
+    // Busca textual simplificada
     const allEventos = await this.findAll(userId);
     return allEventos.filter(evento => 
-      evento.local.toLowerCase().includes(local.toLowerCase()) ||
-      evento.endereco.toLowerCase().includes(local.toLowerCase())
+      (evento.nomeEvento || '').toLowerCase().includes(local.toLowerCase()) ||
+      evento.tipoEvento.toLowerCase().includes(local.toLowerCase())
     );
   }
 
