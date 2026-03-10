@@ -20,6 +20,9 @@ type RecursoDados =
   | 'canais-entrada'
   | 'tipos-servico'
   | 'tipos-evento'
+  | 'agendamento-profissionais'
+  | 'agendamento-alocacoes'
+  | 'agendamento-alocacoes-eventos'
   | 'dashboard';
 
 function isRecursoDados(value: string | null): value is RecursoDados {
@@ -41,12 +44,21 @@ function isRecursoDados(value: string | null): value is RecursoDados {
     'canais-entrada',
     'tipos-servico',
     'tipos-evento',
+    'agendamento-profissionais',
+    'agendamento-alocacoes',
+    'agendamento-alocacoes-eventos',
     'dashboard'
   ].includes(value);
 }
 
 export async function GET(request: NextRequest) {
   try {
+    const parseOptionalNumber = (value: string | null): number | undefined => {
+      if (value === null || value.trim() === '') return undefined;
+      const parsed = Number.parseInt(value, 10);
+      return Number.isNaN(parsed) ? undefined : parsed;
+    };
+
     const user = await getAuthenticatedUser();
     const url = new URL(request.url);
     const recurso = url.searchParams.get('recurso');
@@ -58,6 +70,9 @@ export async function GET(request: NextRequest) {
     const id = url.searchParams.get('id');
     const eventoId = url.searchParams.get('eventoId');
     const eventoIdsRaw = url.searchParams.get('eventoIds');
+    const profissionalId = url.searchParams.get('profissionalId') || undefined;
+    const limit = parseOptionalNumber(url.searchParams.get('limit'));
+    const offset = parseOptionalNumber(url.searchParams.get('offset'));
     const forceRefresh = url.searchParams.get('forceRefresh') === 'true';
 
     switch (recurso) {
@@ -69,11 +84,11 @@ export async function GET(request: NextRequest) {
         if (!id) return createErrorResponse('Parâmetro "id" é obrigatório', 400);
         return createApiResponse(await dataService.getClienteById(id, user.id));
       case 'eventos':
-        return createApiResponse(await dataService.getEventos(user.id));
+        return createApiResponse(await dataService.getEventos(user.id, profissionalId, limit, offset));
       case 'eventos-all':
         return createApiResponse(await dataService.getAllEventos(user.id));
       case 'eventos-arquivados':
-        return createApiResponse(await dataService.getEventosArquivados(user.id));
+        return createApiResponse(await dataService.getEventosArquivados(user.id, profissionalId, limit, offset));
       case 'evento':
         if (!id) return createErrorResponse('Parâmetro "id" é obrigatório', 400);
         return createApiResponse(await dataService.getEventoById(id, user.id));
@@ -109,6 +124,22 @@ export async function GET(request: NextRequest) {
         return createApiResponse(await dataService.getAllServicosCatalogo(user.id));
       case 'tipos-evento':
         return createApiResponse(await dataService.getTiposEvento(user.id));
+      case 'agendamento-profissionais':
+        return createApiResponse(await dataService.getAgendamentoProfissionaisAtivos(user.id));
+      case 'agendamento-alocacoes':
+        if (!eventoId) return createErrorResponse('Parâmetro "eventoId" é obrigatório', 400);
+        return createApiResponse(await dataService.getAgendamentoAlocacoesPorEvento(user.id, eventoId));
+      case 'agendamento-alocacoes-eventos': {
+        const ids = (eventoIdsRaw || '')
+          .split(',')
+          .map((item) => item.trim())
+          .filter(Boolean);
+        if (ids.length === 0) {
+          return createApiResponse({});
+        }
+        const alocacoesPorEvento = await dataService.getAgendamentoAlocacoesPorEventos(user.id, ids, profissionalId);
+        return createApiResponse(Object.fromEntries(alocacoesPorEvento.entries()));
+      }
       case 'dashboard':
         return createApiResponse(await dataService.getDashboardData(user.id, { forceRefresh }));
       default:

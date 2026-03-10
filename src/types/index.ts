@@ -110,6 +110,60 @@ export interface Evento {
   googleCalendarSyncedAt?: Date;
 }
 
+export type StatusAgendamentoAlocacao = 'agendado' | 'confirmado' | 'cancelado';
+
+export interface AgendamentoProfissional {
+  id: string;
+  userId: string;
+  empresaId: string;
+  nome: string;
+  especialidade?: string;
+  observacoes?: string;
+  ativo: boolean;
+  dataCadastro: Date;
+  dataAtualizacao: Date;
+}
+
+export interface AgendamentoDisponibilidade {
+  id: string;
+  userId: string;
+  empresaId: string;
+  profissionalId: string;
+  diaSemana: number;
+  horaInicio: string;
+  horaFim: string;
+  ativo: boolean;
+  dataCadastro: Date;
+  dataAtualizacao: Date;
+}
+
+export interface AgendamentoBloqueio {
+  id: string;
+  userId: string;
+  empresaId: string;
+  profissionalId: string;
+  inicioTs: Date;
+  fimTs: Date;
+  motivo?: string;
+  dataCadastro: Date;
+  dataAtualizacao: Date;
+}
+
+export interface AgendamentoAlocacao {
+  id: string;
+  userId: string;
+  empresaId: string;
+  eventoId: string;
+  servicoEventoId?: string;
+  profissionalId: string;
+  inicioTs: Date;
+  fimTs: Date;
+  status: StatusAgendamentoAlocacao;
+  observacoes?: string;
+  dataCadastro: Date;
+  dataAtualizacao: Date;
+}
+
 export interface Servico {
   id: string;
   nome: string;

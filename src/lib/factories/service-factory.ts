@@ -9,6 +9,7 @@ import { PDFService } from '../services/pdf-service';
 import { TemplateService } from '../services/template-service';
 // RelatoriosReportService e DashboardReportService importados dinamicamente para evitar dependência circular
 import { RelatorioCacheService } from '../services/relatorio-cache-service';
+import { AgendamentoService } from '../services/agendamento-service';
 import { S3Service } from '../s3-service';
 import { setEmailProvider } from '../services/resend-email-service';
 import type { RepositoryFactory } from '../repositories/repository-factory';
@@ -42,6 +43,10 @@ type RepositoryFactoryPort = Pick<
   | 'getEventoRepository'
   | 'getClienteRepository'
   | 'getGoogleCalendarTokenRepository'
+  | 'getAgendamentoProfissionalRepository'
+  | 'getAgendamentoDisponibilidadeRepository'
+  | 'getAgendamentoBloqueioRepository'
+  | 'getAgendamentoAlocacaoRepository'
 >;
 
 /**
@@ -63,6 +68,7 @@ export class ServiceFactory {
   private pdfService?: PDFService;
   private templateService?: TemplateService;
   private relatorioCacheService?: RelatorioCacheService;
+  private agendamentoService?: AgendamentoService;
   private s3Service?: S3Service;
   private googleCalendarSdk?: GoogleCalendarSdkPort;
   private emailProvider?: EmailProviderPort;
@@ -152,6 +158,12 @@ export class ServiceFactory {
     setEmailProvider(emailProvider);
     this.templateService = new TemplateService();
     this.relatorioCacheService = new RelatorioCacheService();
+    this.agendamentoService = new AgendamentoService({
+      profissionalRepo: repoFactory.getAgendamentoProfissionalRepository(),
+      disponibilidadeRepo: repoFactory.getAgendamentoDisponibilidadeRepository(),
+      bloqueioRepo: repoFactory.getAgendamentoBloqueioRepository(),
+      alocacaoRepo: repoFactory.getAgendamentoAlocacaoRepository()
+    });
     this.s3Service = new S3Service();
   }
 
@@ -216,6 +228,13 @@ export class ServiceFactory {
       this.getPlanoService(); // Inicializa todos os serviços
     }
     return this.relatorioCacheService!;
+  }
+
+  public getAgendamentoService(): AgendamentoService {
+    if (!this.agendamentoService) {
+      this.getPlanoService(); // Inicializa todos os serviços
+    }
+    return this.agendamentoService!;
   }
 
   public getS3Service(): S3Service {

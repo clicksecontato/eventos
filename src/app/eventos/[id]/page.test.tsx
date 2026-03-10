@@ -41,7 +41,9 @@ vi.mock('@/hooks/useAuth', () => ({
 vi.mock('@/lib/data-service', () => ({
   dataService: {
     deleteEvento: vi.fn(),
-    updateEvento: vi.fn()
+    updateEvento: vi.fn(),
+    getAgendamentoAlocacoesPorEvento: vi.fn(),
+    getAgendamentoProfissionaisAtivos: vi.fn()
   }
 }));
 
@@ -163,6 +165,12 @@ describe('/eventos/[id] page', () => {
     vi.mocked(useAnexos).mockReturnValue({ anexos: [], loading: false, refetch: vi.fn() } as never);
     vi.mocked(dataService.deleteEvento).mockResolvedValue(undefined as never);
     vi.mocked(dataService.updateEvento).mockResolvedValue(undefined as never);
+    vi.mocked(dataService.getAgendamentoAlocacoesPorEvento).mockResolvedValue([
+      { id: 'aloc-1', profissionalId: 'prof-1', status: 'agendado' }
+    ] as never);
+    vi.mocked(dataService.getAgendamentoProfissionaisAtivos).mockResolvedValue([
+      { id: 'prof-1', nome: 'Dra. Clarice' }
+    ] as never);
   });
 
   it('renderiza detalhes do evento', async () => {
@@ -172,6 +180,9 @@ describe('/eventos/[id] page', () => {
     });
     expect(screen.getAllByText('Cliente Detalhe').length).toBeGreaterThan(0);
     expect(screen.getByText('Resumo Financeiro')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/Dra\. Clarice/i)).toBeInTheDocument();
+    });
   });
 
   it('arquiva evento com confirmação', async () => {

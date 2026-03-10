@@ -1,5 +1,9 @@
 import { repositoryFactory } from './repositories/repository-factory';
 import {
+  AgendamentoAlocacao,
+  AgendamentoBloqueio,
+  AgendamentoDisponibilidade,
+  AgendamentoProfissional,
   Cliente,
   Evento,
   Pagamento,
@@ -15,10 +19,12 @@ import {
   TipoEvento,
   DEFAULT_TIPOS_EVENTO,
   HistoricoServicoEvento,
-  HistoricoValorEvento
+  HistoricoValorEvento,
+  StatusAgendamentoAlocacao
 } from '@/types';
 import { initializeAllCollections, initializeTiposCusto } from './collections-init';
 import { FuncionalidadeService } from './services/funcionalidade-service';
+import { AgendamentoService } from './services/agendamento-service';
 import { DashboardReportService } from './services/dashboard-report-service';
 // RelatoriosReportService importado dinamicamente para evitar dependência circular
 
@@ -33,6 +39,7 @@ export class DataService {
   private canalEntradaRepo = repositoryFactory.getCanalEntradaRepository();
   private tipoEventoRepo = repositoryFactory.getTipoEventoRepository();
   private _funcionalidadeService?: FuncionalidadeService;
+  private _agendamentoService?: AgendamentoService;
   
   private get funcionalidadeService(): FuncionalidadeService {
     // Lazy initialization: só inicializar quando necessário e apenas no servidor
@@ -57,6 +64,34 @@ export class DataService {
       this._funcionalidadeService = new FuncionalidadeService();
     }
     return this._funcionalidadeService;
+  }
+
+  private get agendamentoService(): AgendamentoService {
+    if (!this._agendamentoService) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const { getServiceFactory } = require('./factories/service-factory');
+        this._agendamentoService = getServiceFactory().getAgendamentoService();
+      } catch {
+        this._agendamentoService = new AgendamentoService({
+          profissionalRepo: repositoryFactory.getAgendamentoProfissionalRepository(),
+          disponibilidadeRepo: repositoryFactory.getAgendamentoDisponibilidadeRepository(),
+          bloqueioRepo: repositoryFactory.getAgendamentoBloqueioRepository(),
+          alocacaoRepo: repositoryFactory.getAgendamentoAlocacaoRepository()
+        });
+      }
+    }
+
+    if (!this._agendamentoService) {
+      this._agendamentoService = new AgendamentoService({
+        profissionalRepo: repositoryFactory.getAgendamentoProfissionalRepository(),
+        disponibilidadeRepo: repositoryFactory.getAgendamentoDisponibilidadeRepository(),
+        bloqueioRepo: repositoryFactory.getAgendamentoBloqueioRepository(),
+        alocacaoRepo: repositoryFactory.getAgendamentoAlocacaoRepository()
+      });
+    }
+
+    return this._agendamentoService;
   }
   private dashboardReportService = DashboardReportService.getInstance();
   private _relatoriosReportService?: any; // Lazy initialization para evitar dependência circular
@@ -358,12 +393,38 @@ export class DataService {
   }
 
   // Métodos para Eventos
-  async getEventos(userId: string): Promise<Evento[]> {
+  async getEventos(
+    userId: string,
+    profissionalId?: string,
+    limit?: number,
+    offset?: number
+  ): Promise<Evento[]> {
     if (!userId) {
       throw new Error('userId é obrigatório para buscar eventos');
     }
     // Retornar apenas eventos não arquivados por padrão
-    return this.eventoRepo.getAtivos(userId);
+    const eventos = await this.eventoRepo.getAtivos(userId);
+
+    const aplicarPaginacao = (lista: Evento[]) => {
+      const inicio = Math.max(0, offset ?? 0);
+      const fim = limit !== undefined ? inicio + Math.max(0, limit) : undefined;
+      return lista.slice(inicio, fim);
+    };
+
+    if (!profissionalId || eventos.length === 0) {
+      return aplicarPaginacao(eventos);
+    }
+
+    const alocacoesPorEvento = await this.getAgendamentoAlocacoesPorEventos(
+      userId,
+      eventos.map((evento) => evento.id),
+      profissionalId
+    );
+
+    const eventosFiltrados = eventos.filter((evento) =>
+      (alocacoesPorEvento.get(evento.id) || []).some((alocacao) => alocacao.status !== 'cancelado')
+    );
+    return aplicarPaginacao(eventosFiltrados);
   }
   
   async getAllEventos(userId: string): Promise<Evento[]> {
@@ -498,8 +559,34 @@ export class DataService {
     */
   }
   
-  async getEventosArquivados(userId: string): Promise<Evento[]> {
-    return this.eventoRepo.getArquivados(userId);
+  async getEventosArquivados(
+    userId: string,
+    profissionalId?: string,
+    limit?: number,
+    offset?: number
+  ): Promise<Evento[]> {
+    const eventosArquivados = await this.eventoRepo.getArquivados(userId);
+
+    const aplicarPaginacao = (lista: Evento[]) => {
+      const inicio = Math.max(0, offset ?? 0);
+      const fim = limit !== undefined ? inicio + Math.max(0, limit) : undefined;
+      return lista.slice(inicio, fim);
+    };
+
+    if (!profissionalId || eventosArquivados.length === 0) {
+      return aplicarPaginacao(eventosArquivados);
+    }
+
+    const alocacoesPorEvento = await this.getAgendamentoAlocacoesPorEventos(
+      userId,
+      eventosArquivados.map((evento) => evento.id),
+      profissionalId
+    );
+
+    const eventosFiltrados = eventosArquivados.filter((evento) =>
+      (alocacoesPorEvento.get(evento.id) || []).some((alocacao) => alocacao.status !== 'cancelado')
+    );
+    return aplicarPaginacao(eventosFiltrados);
   }
 
   async getEventosHoje(userId: string): Promise<Evento[]> {
@@ -1279,6 +1366,198 @@ export class DataService {
       throw new Error('userId é obrigatório para buscar tipos de serviços');
     }
     return this.tipoServicoRepo.findAll(userId);
+  }
+
+  // Métodos de Agendamento
+  async getAgendamentoProfissionaisAtivos(userId: string): Promise<AgendamentoProfissional[]> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para buscar profissionais de agendamento');
+    }
+    return this.agendamentoService.listarProfissionaisAtivos(userId);
+  }
+
+  async getAgendamentoProfissionais(userId: string): Promise<AgendamentoProfissional[]> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para buscar profissionais de agendamento');
+    }
+    return this.agendamentoService.listarProfissionais(userId);
+  }
+
+  async createAgendamentoProfissional(
+    userId: string,
+    payload: Omit<AgendamentoProfissional, 'id' | 'empresaId' | 'userId' | 'dataCadastro' | 'dataAtualizacao'>
+  ): Promise<AgendamentoProfissional> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para criar profissional de agendamento');
+    }
+    return this.agendamentoService.criarProfissional(userId, payload);
+  }
+
+  async updateAgendamentoProfissional(
+    userId: string,
+    id: string,
+    payload: Partial<Pick<AgendamentoProfissional, 'nome' | 'especialidade' | 'observacoes' | 'ativo'>>
+  ): Promise<AgendamentoProfissional> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para atualizar profissional de agendamento');
+    }
+    return this.agendamentoService.atualizarProfissional(userId, id, payload);
+  }
+
+  async createAgendamentoDisponibilidade(
+    userId: string,
+    payload: Omit<AgendamentoDisponibilidade, 'id' | 'empresaId' | 'userId' | 'dataCadastro' | 'dataAtualizacao'>
+  ): Promise<AgendamentoDisponibilidade> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para criar disponibilidade');
+    }
+    return this.agendamentoService.criarDisponibilidade(userId, payload);
+  }
+
+  async createAgendamentoBloqueio(
+    userId: string,
+    payload: Omit<AgendamentoBloqueio, 'id' | 'empresaId' | 'userId' | 'dataCadastro' | 'dataAtualizacao'>
+  ): Promise<AgendamentoBloqueio> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para criar bloqueio');
+    }
+    return this.agendamentoService.criarBloqueio(userId, payload);
+  }
+
+  async updateAgendamentoDisponibilidade(
+    userId: string,
+    id: string,
+    payload: Partial<Pick<AgendamentoDisponibilidade, 'diaSemana' | 'horaInicio' | 'horaFim' | 'ativo'>>
+  ): Promise<AgendamentoDisponibilidade> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para atualizar disponibilidade');
+    }
+    return this.agendamentoService.atualizarDisponibilidade(userId, id, payload);
+  }
+
+  async deleteAgendamentoDisponibilidade(userId: string, id: string): Promise<void> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para remover disponibilidade');
+    }
+    return this.agendamentoService.removerDisponibilidade(userId, id);
+  }
+
+  async updateAgendamentoBloqueio(
+    userId: string,
+    id: string,
+    payload: Partial<Pick<AgendamentoBloqueio, 'inicioTs' | 'fimTs' | 'motivo'>>
+  ): Promise<AgendamentoBloqueio> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para atualizar bloqueio');
+    }
+    return this.agendamentoService.atualizarBloqueio(userId, id, payload);
+  }
+
+  async deleteAgendamentoBloqueio(userId: string, id: string): Promise<void> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para remover bloqueio');
+    }
+    return this.agendamentoService.removerBloqueio(userId, id);
+  }
+
+  async validarConflitoAgendamento(
+    userId: string,
+    profissionalId: string,
+    inicio: Date,
+    fim: Date,
+    ignorarAlocacaoId?: string
+  ): Promise<{ temConflito: boolean; motivo?: string }> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para validar conflito de agendamento');
+    }
+    return this.agendamentoService.validarConflitoHorario(userId, profissionalId, inicio, fim, ignorarAlocacaoId);
+  }
+
+  async getDisponibilidadeAgendamentoProfissional(
+    userId: string,
+    profissionalId: string,
+    inicio: Date,
+    fim: Date
+  ): Promise<{
+    alocacoes: AgendamentoAlocacao[];
+    bloqueios: AgendamentoBloqueio[];
+    disponibilidades: AgendamentoDisponibilidade[];
+    disponibilidadesDia: AgendamentoDisponibilidade[];
+  }> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para buscar disponibilidade');
+    }
+    return this.agendamentoService.obterDisponibilidadeProfissional(userId, profissionalId, inicio, fim);
+  }
+
+  async createAgendamentoAlocacao(
+    userId: string,
+    payload: Omit<AgendamentoAlocacao, 'id' | 'empresaId' | 'userId' | 'dataCadastro' | 'dataAtualizacao'>
+  ): Promise<AgendamentoAlocacao> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para criar alocação');
+    }
+    return this.agendamentoService.criarAlocacao(userId, payload);
+  }
+
+  async getAgendamentoAlocacoesPorEvento(userId: string, eventoId: string): Promise<AgendamentoAlocacao[]> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para buscar alocações');
+    }
+    return this.agendamentoService.listarAlocacoesPorEvento(userId, eventoId);
+  }
+
+  async getAgendamentoAlocacoesPorEventos(
+    userId: string,
+    eventoIds: string[],
+    profissionalId?: string
+  ): Promise<Map<string, AgendamentoAlocacao[]>> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para buscar alocações');
+    }
+
+    const mapa = new Map<string, AgendamentoAlocacao[]>();
+    if (!eventoIds || eventoIds.length === 0) {
+      return mapa;
+    }
+
+    const alocacoesPorEvento = await Promise.all(
+      eventoIds.map(async (eventoId) => {
+        const alocacoes = await this.agendamentoService.listarAlocacoesPorEvento(userId, eventoId);
+        const filtradas = profissionalId
+          ? alocacoes.filter((alocacao) => alocacao.profissionalId === profissionalId)
+          : alocacoes;
+        return [eventoId, filtradas] as const;
+      })
+    );
+
+    alocacoesPorEvento.forEach(([eventoId, alocacoes]) => {
+      mapa.set(eventoId, alocacoes);
+    });
+
+    return mapa;
+  }
+
+  async updateAgendamentoAlocacaoStatus(
+    userId: string,
+    id: string,
+    status: StatusAgendamentoAlocacao
+  ): Promise<AgendamentoAlocacao> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para atualizar alocação');
+    }
+    return this.agendamentoService.atualizarStatusAlocacao(userId, id, status);
+  }
+
+  async updateAgendamentoAlocacao(
+    userId: string,
+    id: string,
+    payload: Partial<Pick<AgendamentoAlocacao, 'profissionalId' | 'inicioTs' | 'fimTs' | 'status' | 'observacoes' | 'servicoEventoId'>>
+  ): Promise<AgendamentoAlocacao> {
+    if (!userId) {
+      throw new Error('userId é obrigatório para atualizar alocação');
+    }
+    return this.agendamentoService.atualizarAlocacao(userId, id, payload);
   }
 }
 

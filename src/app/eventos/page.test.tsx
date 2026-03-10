@@ -3,6 +3,8 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import EventosPage from './page';
 import {
+  useAgendamentoAlocacoesPorEventos,
+  useAgendamentoProfissionais,
   useEventos,
   useEventosArquivados,
   usePreCadastros,
@@ -13,12 +15,15 @@ import { dataService } from '@/lib/data-service';
 import { useCurrentUser } from '@/hooks/useAuth';
 
 const pushMock = vi.fn();
+const replaceMock = vi.fn();
 const refetchAtivosMock = vi.fn();
 const refetchArquivadosMock = vi.fn();
 const showToastMock = vi.fn();
+const searchParamsMock = new URLSearchParams();
 
 vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: pushMock })
+  useRouter: () => ({ push: pushMock, replace: replaceMock }),
+  useSearchParams: () => searchParamsMock
 }));
 
 vi.mock('@/hooks/useAuth', () => ({
@@ -30,6 +35,8 @@ vi.mock('@/hooks/useData', () => ({
   useEventosArquivados: vi.fn(),
   useTiposEvento: vi.fn(),
   useServicosPorEventos: vi.fn(),
+  useAgendamentoAlocacoesPorEventos: vi.fn(),
+  useAgendamentoProfissionais: vi.fn(),
   usePreCadastros: vi.fn()
 }));
 
@@ -70,7 +77,38 @@ vi.mock('@/components/ServicosBadges', () => ({
 }));
 
 vi.mock('@/components/filters/DateRangeFilter', () => ({
-  default: () => <div>DateRangeFilter</div>,
+  default: ({ onFilterChange }: { onFilterChange: (filter: any) => void }) => (
+    <div>
+      <button
+        onClick={() =>
+          onFilterChange({
+            type: 'custom',
+            range: {
+              startDate: new Date('2026-03-01T12:00:00'),
+              endDate: new Date('2026-03-31T12:00:00')
+            }
+          })
+        }
+      >
+        Aplicar período de teste
+      </button>
+      <button
+        onClick={() =>
+          onFilterChange({
+            type: 'quick',
+            quickFilter: 'thisWeek',
+            range: {
+              startDate: new Date('2026-03-01T12:00:00'),
+              endDate: new Date('2026-03-07T12:00:00')
+            }
+          })
+        }
+      >
+        Aplicar rápido de teste
+      </button>
+      <button onClick={() => onFilterChange(null)}>Limpar período de teste</button>
+    </div>
+  ),
   isDateInFilter: () => true
 }));
 
@@ -201,6 +239,7 @@ describe('/eventos page', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    searchParamsMock.forEach((_, key) => searchParamsMock.delete(key));
     vi.mocked(useCurrentUser).mockReturnValue({ userId: 'user-1' } as never);
     vi.mocked(useEventos).mockReturnValue({
       data: eventosAtivos,
@@ -226,6 +265,20 @@ describe('/eventos page', () => {
       loading: false,
       error: null
     } as never);
+    vi.mocked(useAgendamentoProfissionais).mockReturnValue({
+      data: [{ id: 'prof-1', nome: 'Dra. Clarice' }],
+      loading: false,
+      error: null,
+      refetch: vi.fn()
+    } as never);
+    vi.mocked(useAgendamentoAlocacoesPorEventos).mockReturnValue({
+      alocacoesPorEvento: new Map([
+        ['ev-1', [{ id: 'aloc-1', profissionalId: 'prof-1', status: 'agendado' }]]
+      ]),
+      loading: false,
+      error: null,
+      refetch: vi.fn()
+    } as never);
     vi.mocked(dataService.deleteEvento).mockResolvedValue(undefined as never);
     vi.mocked(dataService.desarquivarEvento).mockResolvedValue(undefined as never);
     vi.mocked(dataService.updateEvento).mockResolvedValue(undefined as never);
@@ -239,6 +292,7 @@ describe('/eventos page', () => {
     });
     expect(screen.getByText('Eventos')).toBeInTheDocument();
     expect(screen.getAllByText('João Silva').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Dra. Clarice').length).toBeGreaterThan(0);
   });
 
   it('filtra eventos por busca textual', async () => {
@@ -316,5 +370,164 @@ describe('/eventos page', () => {
       );
     });
     expect(showToastMock).toHaveBeenCalledWith('Status atualizado com sucesso!', 'success');
+  });
+
+  it('filtra eventos por profissional de agendamento', async () => {
+    const user = userEvent.setup();
+    vi.mocked(useEventos).mockReturnValue({
+      data: [
+        ...eventosAtivos,
+        {
+          id: 'ev-3',
+          nomeEvento: 'Evento Sem Profissional',
+          cliente: { nome: 'Cliente Sem Profissional' },
+          dataEvento: new Date('2026-03-05'),
+          diaSemana: 'Quinta',
+          status: 'Agendado',
+          tipoEvento: 'Casamento',
+          tipoEventoId: 'tipo-1',
+          horarioInicio: '10:00'
+        }
+      ],
+      loading: false,
+      error: null,
+      refetch: refetchAtivosMock
+    } as never);
+    vi.mocked(useAgendamentoAlocacoesPorEventos).mockReturnValue({
+      alocacoesPorEvento: new Map([
+        ['ev-1', [{ id: 'aloc-1', profissionalId: 'prof-1', status: 'agendado' }]],
+        ['ev-3', []]
+      ]),
+      loading: false,
+      error: null,
+      refetch: vi.fn()
+    } as never);
+
+    render(<EventosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Casamento Silva')).toBeInTheDocument();
+      expect(screen.getByText('Evento Sem Profissional')).toBeInTheDocument();
+    });
+
+    await user.selectOptions(screen.getByLabelText('Profissional'), 'prof-1');
+
+    await waitFor(() => {
+      expect(screen.getByText('Casamento Silva')).toBeInTheDocument();
+      expect(screen.queryByText('Evento Sem Profissional')).not.toBeInTheDocument();
+      expect(useEventos).toHaveBeenLastCalledWith('prof-1', { limit: 10, offset: 0 });
+      expect(useEventosArquivados).toHaveBeenLastCalledWith('prof-1', { limit: 10, offset: 0 });
+    });
+  });
+
+  it('avança página e sincroniza querystring', async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(useEventos).mockReturnValue({
+      data: Array.from({ length: 10 }).map((_, index) => ({
+        id: `ev-${index + 1}`,
+        nomeEvento: `Evento ${index + 1}`,
+        cliente: { nome: `Cliente ${index + 1}` },
+        dataEvento: new Date('2026-03-01'),
+        diaSemana: 'Domingo',
+        status: 'Agendado',
+        tipoEvento: 'Casamento',
+        tipoEventoId: 'tipo-1',
+        horarioInicio: '18:00'
+      })),
+      loading: false,
+      error: null,
+      refetch: refetchAtivosMock
+    } as never);
+
+    render(<EventosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Página 1')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Próxima' })).toBeEnabled();
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Próxima' }));
+
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledWith('/eventos?paginaAtivos=2');
+    });
+  });
+
+  it('altera itens por página e reinicia paginação', async () => {
+    const user = userEvent.setup();
+
+    render(<EventosPage />);
+
+    await waitFor(() => {
+      expect(useEventos).toHaveBeenLastCalledWith(undefined, { limit: 10, offset: 0 });
+    });
+
+    await user.selectOptions(screen.getByLabelText('Itens por página'), '25');
+
+    await waitFor(() => {
+      expect(useEventos).toHaveBeenLastCalledWith(undefined, { limit: 25, offset: 0 });
+      expect(useEventosArquivados).toHaveBeenLastCalledWith(undefined, { limit: 25, offset: 0 });
+      expect(replaceMock).toHaveBeenCalledWith('/eventos?itensPorPagina=25&paginaAtivos=1&paginaArquivados=1');
+    });
+  });
+
+  it('sincroniza busca, tipo e status na querystring', async () => {
+    const user = userEvent.setup();
+    render(<EventosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Casamento Silva')).toBeInTheDocument();
+    });
+
+    await user.type(screen.getByPlaceholderText('Nome do evento ou cliente...'), 'clarice');
+    await user.selectOptions(screen.getByLabelText('Tipo'), 'Casamento');
+    await user.click(screen.getByRole('button', { name: /Confirmado \(/i }));
+
+    await waitFor(() => {
+      const chamadas = replaceMock.mock.calls.map((args) => String(args[0]));
+      expect(chamadas.some((url) => url.includes('busca=clarice'))).toBe(true);
+      expect(chamadas.some((url) => url.includes('tipo=Casamento'))).toBe(true);
+      expect(chamadas.some((url) => url.includes('status=Confirmado'))).toBe(true);
+    });
+  });
+
+  it('sincroniza período personalizado na querystring', async () => {
+    const user = userEvent.setup();
+    render(<EventosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Casamento Silva')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Aplicar período de teste' }));
+
+    await waitFor(() => {
+      const chamadas = replaceMock.mock.calls.map((args) => String(args[0]));
+      expect(chamadas.some((url) => url.includes('dateType=custom'))).toBe(true);
+      expect(chamadas.some((url) => url.includes('start=2026-03-01'))).toBe(true);
+      expect(chamadas.some((url) => url.includes('end=2026-03-31'))).toBe(true);
+    });
+  });
+
+  it('sincroniza período rápido sem start/end na querystring', async () => {
+    const user = userEvent.setup();
+    render(<EventosPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Casamento Silva')).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole('button', { name: 'Aplicar rápido de teste' }));
+
+    await waitFor(() => {
+      const chamadas = replaceMock.mock.calls.map((args) => String(args[0]));
+      const possuiQuick = chamadas.some((url) => url.includes('dateType=quick') && url.includes('quick=thisWeek'));
+      const possuiDatasNoQuick = chamadas.some((url) =>
+        url.includes('dateType=quick') && (url.includes('start=') || url.includes('end='))
+      );
+      expect(possuiQuick).toBe(true);
+      expect(possuiDatasNoQuick).toBe(false);
+    });
   });
 });

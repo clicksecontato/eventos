@@ -37,6 +37,10 @@ import { AnexoCustoSupabaseRepository } from './supabase/anexo-custo-supabase-re
 import { PreCadastroEventoSupabaseRepository } from './supabase/pre-cadastro-evento-supabase-repository';
 import { PreCadastroServicoSupabaseRepository } from './supabase/pre-cadastro-servico-supabase-repository';
 import { ValoresAtrasadosSupabaseRepository } from './supabase/valores-atrasados-supabase-repository';
+import { AgendamentoProfissionalSupabaseRepository } from './supabase/agendamento-profissional-supabase-repository';
+import { AgendamentoDisponibilidadeSupabaseRepository } from './supabase/agendamento-disponibilidade-supabase-repository';
+import { AgendamentoBloqueioSupabaseRepository } from './supabase/agendamento-bloqueio-supabase-repository';
+import { AgendamentoAlocacaoSupabaseRepository } from './supabase/agendamento-alocacao-supabase-repository';
 
 type ClassConstructor<T> = new () => T;
 
@@ -154,6 +158,10 @@ export class RepositoryFactory {
   private preCadastroEventoRepository: PreCadastroEventoSupabaseRepository;
   private preCadastroServicoRepository: PreCadastroServicoSupabaseRepository;
   private valoresAtrasadosRepository: ValoresAtrasadosSupabaseRepository;
+  private agendamentoProfissionalRepository: AgendamentoProfissionalSupabaseRepository;
+  private agendamentoDisponibilidadeRepository: AgendamentoDisponibilidadeSupabaseRepository;
+  private agendamentoBloqueioRepository: AgendamentoBloqueioSupabaseRepository;
+  private agendamentoAlocacaoRepository: AgendamentoAlocacaoSupabaseRepository;
 
   // Repositórios Firestore (sempre)
   private userRepository: UserRepository;
@@ -203,6 +211,10 @@ export class RepositoryFactory {
     this.preCadastroEventoRepository = new PreCadastroEventoSupabaseRepository();
     this.preCadastroServicoRepository = new PreCadastroServicoSupabaseRepository();
     this.valoresAtrasadosRepository = new ValoresAtrasadosSupabaseRepository();
+    this.agendamentoProfissionalRepository = new AgendamentoProfissionalSupabaseRepository();
+    this.agendamentoDisponibilidadeRepository = new AgendamentoDisponibilidadeSupabaseRepository();
+    this.agendamentoBloqueioRepository = new AgendamentoBloqueioSupabaseRepository();
+    this.agendamentoAlocacaoRepository = new AgendamentoAlocacaoSupabaseRepository();
 
     // Inicializar repositórios Firestore
     this.userRepository = new UserRepository();
@@ -311,6 +323,22 @@ export class RepositoryFactory {
 
   public getValoresAtrasadosRepository(): ValoresAtrasadosSupabaseRepository {
     return this.valoresAtrasadosRepository;
+  }
+
+  public getAgendamentoProfissionalRepository(): AgendamentoProfissionalSupabaseRepository {
+    return this.agendamentoProfissionalRepository;
+  }
+
+  public getAgendamentoDisponibilidadeRepository(): AgendamentoDisponibilidadeSupabaseRepository {
+    return this.agendamentoDisponibilidadeRepository;
+  }
+
+  public getAgendamentoBloqueioRepository(): AgendamentoBloqueioSupabaseRepository {
+    return this.agendamentoBloqueioRepository;
+  }
+
+  public getAgendamentoAlocacaoRepository(): AgendamentoAlocacaoSupabaseRepository {
+    return this.agendamentoAlocacaoRepository;
   }
 
   // Métodos getter - Repositórios Firestore

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,7 @@ import {
   TrashIcon,
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
-import { useEventos, useEventosArquivados, useTiposEvento, useServicosPorEventos, usePreCadastros } from '@/hooks/useData';
+import { useAgendamentoAlocacoesPorEventos, useAgendamentoProfissionais, useEventos, useEventosArquivados, useTiposEvento, useServicosPorEventos, usePreCadastros } from '@/hooks/useData';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { dataService } from '@/lib/data-service';
 import { usePlano } from '@/lib/hooks/usePlano';
@@ -25,7 +25,7 @@ import PlanOverlay from '@/components/PlanOverlay';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Evento, DEFAULT_TIPOS_EVENTO } from '@/types';
-import DateRangeFilter, { DateFilter, isDateInFilter } from '@/components/filters/DateRangeFilter';
+import DateRangeFilter, { DateFilter, getQuickFilterRange, isDateInFilter } from '@/components/filters/DateRangeFilter';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/components/ui/toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -34,12 +34,26 @@ import EventoStatusSelect from '@/components/EventoStatusSelect';
 import PreCadastrosSection from '@/components/PreCadastrosSection';
 
 export default function EventosPage() {
+  const ITENS_POR_PAGINA_PADRAO = 10;
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { userId } = useCurrentUser();
-  const { data: eventos, loading: loadingAtivos, error: errorAtivos, refetch: refetchAtivos } = useEventos();
-  const { data: eventosArquivados, loading: loadingArquivados, error: errorArquivados, refetch: refetchArquivados } = useEventosArquivados();
+  const [filterProfissional, setFilterProfissional] = useState<string>('todos');
+  const [paginaAtivos, setPaginaAtivos] = useState(1);
+  const [paginaArquivados, setPaginaArquivados] = useState(1);
+  const [itensPorPagina, setItensPorPagina] = useState(ITENS_POR_PAGINA_PADRAO);
+  const profissionalFiltroAtivo = filterProfissional !== 'todos' ? filterProfissional : undefined;
+  const { data: eventos, loading: loadingAtivos, error: errorAtivos, refetch: refetchAtivos } = useEventos(
+    profissionalFiltroAtivo,
+    { limit: itensPorPagina, offset: (paginaAtivos - 1) * itensPorPagina }
+  );
+  const { data: eventosArquivados, loading: loadingArquivados, error: errorArquivados, refetch: refetchArquivados } = useEventosArquivados(
+    profissionalFiltroAtivo,
+    { limit: itensPorPagina, offset: (paginaArquivados - 1) * itensPorPagina }
+  );
   const { data: tiposEventoData } = useTiposEvento();
   const { data: preCadastros } = usePreCadastros();
+  const { data: profissionaisAgendamento } = useAgendamentoProfissionais();
   const { limites } = usePlano();
   const { showToast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,6 +63,31 @@ export default function EventosPage() {
   const [filterStatus, setFilterStatus] = useState<string>('todos');
   const [eventoParaArquivar, setEventoParaArquivar] = useState<Evento | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+
+  const serializarFiltroData = React.useCallback((filtro: DateFilter | null) => {
+    if (!filtro?.range.startDate || !filtro?.range.endDate) return 'null';
+    return JSON.stringify({
+      type: filtro.type,
+      quickFilter: filtro.quickFilter || '',
+      start: format(filtro.range.startDate, 'yyyy-MM-dd'),
+      end: format(filtro.range.endDate, 'yyyy-MM-dd')
+    });
+  }, []);
+
+  const atualizarQueryParams = React.useCallback((updates: Record<string, string | undefined>) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    Object.entries(updates).forEach(([chave, valor]) => {
+      if (!valor) {
+        params.delete(chave);
+        return;
+      }
+      params.set(chave, valor);
+    });
+
+    const query = params.toString();
+    router.replace(query ? `/eventos?${query}` : '/eventos');
+  }, [router, searchParams]);
   
   const loading = loadingAtivos || loadingArquivados;
   const error = errorAtivos || errorArquivados;
@@ -69,6 +108,68 @@ export default function EventosPage() {
       setEventosArquivadosLocais(eventosArquivados);
     }
   }, [eventosArquivados]);
+
+  useEffect(() => {
+    const abaParam = searchParams.get('aba');
+    const buscaParam = searchParams.get('busca') || '';
+    const tipoParam = searchParams.get('tipo') || 'todos';
+    const statusParam = searchParams.get('status') || 'todos';
+    const dateTypeParam = searchParams.get('dateType');
+    const quickParam = searchParams.get('quick');
+    const startParam = searchParams.get('start');
+    const endParam = searchParams.get('end');
+    const profissionalParam = searchParams.get('profissional');
+    const paginaAtivosParam = Number.parseInt(searchParams.get('paginaAtivos') || '1', 10);
+    const paginaArquivadosParam = Number.parseInt(searchParams.get('paginaArquivados') || '1', 10);
+    const itensPorPaginaParam = Number.parseInt(searchParams.get('itensPorPagina') || String(ITENS_POR_PAGINA_PADRAO), 10);
+
+    if (abaParam === 'ativos' || abaParam === 'arquivados' || abaParam === 'pre-cadastros') {
+      setAbaAtiva((atual) => (atual === abaParam ? atual : abaParam));
+    }
+
+    setSearchTerm((atual) => (atual === buscaParam ? atual : buscaParam));
+    setFilterTipo((atual) => (atual === tipoParam ? atual : tipoParam));
+    setFilterStatus((atual) => (atual === statusParam ? atual : statusParam));
+
+    let proximoDateFilter: DateFilter | null = null;
+    if (dateTypeParam === 'quick' && quickParam) {
+      const range = getQuickFilterRange(quickParam);
+      if (range.startDate && range.endDate) {
+        proximoDateFilter = {
+          type: 'quick',
+          quickFilter: quickParam,
+          range
+        };
+      }
+    } else if (dateTypeParam === 'custom' && startParam && endParam) {
+      const startDate = new Date(`${startParam}T00:00:00`);
+      const endDate = new Date(`${endParam}T23:59:59`);
+      if (!Number.isNaN(startDate.getTime()) && !Number.isNaN(endDate.getTime())) {
+        proximoDateFilter = {
+          type: 'custom',
+          range: { startDate, endDate }
+        };
+      }
+    }
+    setDateFilter((atual) => (
+      serializarFiltroData(atual) === serializarFiltroData(proximoDateFilter)
+        ? atual
+        : proximoDateFilter
+    ));
+
+    const profissionalNormalizado = profissionalParam?.trim() ? profissionalParam : 'todos';
+    setFilterProfissional((atual) => (atual === profissionalNormalizado ? atual : profissionalNormalizado));
+
+    const paginaAtivosNormalizada = Number.isNaN(paginaAtivosParam) || paginaAtivosParam < 1 ? 1 : paginaAtivosParam;
+    const paginaArquivadosNormalizada = Number.isNaN(paginaArquivadosParam) || paginaArquivadosParam < 1 ? 1 : paginaArquivadosParam;
+    const itensPorPaginaNormalizado = [10, 25, 50].includes(itensPorPaginaParam)
+      ? itensPorPaginaParam
+      : ITENS_POR_PAGINA_PADRAO;
+
+    setPaginaAtivos((atual) => (atual === paginaAtivosNormalizada ? atual : paginaAtivosNormalizada));
+    setPaginaArquivados((atual) => (atual === paginaArquivadosNormalizada ? atual : paginaArquivadosNormalizada));
+    setItensPorPagina((atual) => (atual === itensPorPaginaNormalizado ? atual : itensPorPaginaNormalizado));
+  }, [searchParams, serializarFiltroData]);
   
   const eventosLista = abaAtiva === 'ativos' 
     ? (eventosLocais ?? eventos ?? []) 
@@ -77,6 +178,90 @@ export default function EventosPage() {
   const recarregarEventos = async () => {
     await Promise.all([refetchAtivos(), refetchArquivados()]);
   };
+
+  const handleChangeProfissional = React.useCallback((value: string) => {
+    setFilterProfissional(value);
+    setPaginaAtivos(1);
+    setPaginaArquivados(1);
+    atualizarQueryParams({
+      profissional: value === 'todos' ? undefined : value,
+      paginaAtivos: '1',
+      paginaArquivados: '1'
+    });
+  }, [atualizarQueryParams]);
+
+  const handleChangeBusca = React.useCallback((value: string) => {
+    setSearchTerm(value);
+    setPaginaAtivos(1);
+    setPaginaArquivados(1);
+    atualizarQueryParams({
+      busca: value.trim() ? value : undefined,
+      paginaAtivos: '1',
+      paginaArquivados: '1'
+    });
+  }, [atualizarQueryParams]);
+
+  const handleChangeTipo = React.useCallback((value: string) => {
+    setFilterTipo(value);
+    setPaginaAtivos(1);
+    setPaginaArquivados(1);
+    atualizarQueryParams({
+      tipo: value === 'todos' ? undefined : value,
+      paginaAtivos: '1',
+      paginaArquivados: '1'
+    });
+  }, [atualizarQueryParams]);
+
+  const handleChangeStatus = React.useCallback((value: string) => {
+    setFilterStatus(value);
+    setPaginaAtivos(1);
+    setPaginaArquivados(1);
+    atualizarQueryParams({
+      status: value === 'todos' ? undefined : value,
+      paginaAtivos: '1',
+      paginaArquivados: '1'
+    });
+  }, [atualizarQueryParams]);
+
+  const handleChangeItensPorPagina = React.useCallback((value: string) => {
+    const itens = Number.parseInt(value, 10);
+    const itensValidados = [10, 25, 50].includes(itens) ? itens : ITENS_POR_PAGINA_PADRAO;
+    setItensPorPagina(itensValidados);
+    setPaginaAtivos(1);
+    setPaginaArquivados(1);
+    atualizarQueryParams({
+      itensPorPagina: String(itensValidados),
+      paginaAtivos: '1',
+      paginaArquivados: '1'
+    });
+  }, [atualizarQueryParams]);
+
+  const handleChangeDateFilter = React.useCallback((filtro: DateFilter | null) => {
+    setDateFilter(filtro);
+    setPaginaAtivos(1);
+    setPaginaArquivados(1);
+
+    if (!filtro?.range.startDate || !filtro?.range.endDate) {
+      atualizarQueryParams({
+        dateType: undefined,
+        quick: undefined,
+        start: undefined,
+        end: undefined,
+        paginaAtivos: '1',
+        paginaArquivados: '1'
+      });
+      return;
+    }
+
+    atualizarQueryParams({
+      dateType: filtro.type,
+      quick: filtro.type === 'quick' ? filtro.quickFilter : undefined,
+      start: filtro.type === 'custom' ? format(filtro.range.startDate, 'yyyy-MM-dd') : undefined,
+      end: filtro.type === 'custom' ? format(filtro.range.endDate, 'yyyy-MM-dd') : undefined,
+      paginaAtivos: '1',
+      paginaArquivados: '1'
+    });
+  }, [atualizarQueryParams]);
 
   // Mapeamento de tipoEventoId -> nome do tipo de evento (otimização)
   const tiposEventoMap = React.useMemo(() => {
@@ -145,6 +330,46 @@ export default function EventosPage() {
     return options;
   }, [tiposEventoData, eventosLista, tiposEventoMap]);
 
+  const eventoIdsTodos = useMemo(() => {
+    return eventosLista.map((evento) => evento.id);
+  }, [eventosLista]);
+
+  const { alocacoesPorEvento, loading: loadingAlocacoes, error: errorAlocacoes } = useAgendamentoAlocacoesPorEventos(eventoIdsTodos, profissionalFiltroAtivo);
+
+  const profissionaisMap = useMemo(() => {
+    const mapa = new Map<string, string>();
+    (profissionaisAgendamento || []).forEach((profissional) => {
+      mapa.set(profissional.id, profissional.nome);
+    });
+    return mapa;
+  }, [profissionaisAgendamento]);
+
+  const profissionaisFilterOptions = useMemo(() => {
+    const options = [{ value: 'todos', label: 'Todos os profissionais' }];
+    const idsUtilizados = new Set<string>();
+
+    for (const alocacoes of alocacoesPorEvento.values()) {
+      const alocacaoAtiva = alocacoes.find((alocacao) => alocacao.status !== 'cancelado');
+      if (alocacaoAtiva?.profissionalId) {
+        idsUtilizados.add(alocacaoAtiva.profissionalId);
+      }
+    }
+
+    idsUtilizados.forEach((profissionalId) => {
+      const nome = profissionaisMap.get(profissionalId) || 'Profissional';
+      options.push({
+        value: profissionalId,
+        label: nome
+      });
+    });
+
+    return options.sort((a, b) => {
+      if (a.value === 'todos') return -1;
+      if (b.value === 'todos') return 1;
+      return a.label.localeCompare(b.label, 'pt-BR');
+    });
+  }, [alocacoesPorEvento, profissionaisMap]);
+
   // Filtrar eventos - chamado antes dos early returns para seguir as regras dos hooks
   const filteredEventos = useMemo(() => {
     if (!eventosLista || eventosLista.length === 0) {
@@ -162,10 +387,12 @@ export default function EventosPage() {
       const matchesTipo = filterTipo === 'todos' || tipoEventoNome === filterTipo;
       const matchesDate = isDateInFilter(evento.dataEvento, dateFilter);
       const matchesStatus = filterStatus === 'todos' || evento.status === filterStatus;
+      const alocacaoAtiva = (alocacoesPorEvento.get(evento.id) || []).find((alocacao) => alocacao.status !== 'cancelado');
+      const matchesProfissional = filterProfissional === 'todos' || alocacaoAtiva?.profissionalId === filterProfissional;
       
-      return matchesSearch && matchesTipo && matchesDate && matchesStatus;
+      return matchesSearch && matchesTipo && matchesDate && matchesStatus && matchesProfissional;
     });
-  }, [eventosLista, searchTerm, filterTipo, dateFilter, filterStatus, tiposEventoMap]);
+  }, [eventosLista, searchTerm, filterTipo, dateFilter, filterStatus, filterProfissional, alocacoesPorEvento, tiposEventoMap]);
 
   // Ordenar eventos por data do evento em ordem crescente - chamado antes dos early returns
   const sortedEventos = useMemo(() => {
@@ -185,10 +412,12 @@ export default function EventosPage() {
     return sortedEventos.map(evento => evento.id);
   }, [sortedEventos]);
 
+  const paginaAtual = abaAtiva === 'ativos' ? paginaAtivos : paginaArquivados;
+  const temPaginaAnterior = paginaAtual > 1;
+  const temProximaPagina = sortedEventos.length === itensPorPagina;
+
   // Buscar serviços de todos os eventos filtrados de uma vez (otimização)
   const { servicosPorEvento, loading: loadingServicos, error: errorServicos } = useServicosPorEventos(eventoIds);
-
-
   // Early returns após todos os hooks
   if (loading) {
     return (
@@ -391,6 +620,7 @@ export default function EventosPage() {
                 onClick={() => {
                   setAbaAtiva('ativos');
                   setFilterStatus('todos'); // Resetar filtro de status ao mudar para ativos
+                  atualizarQueryParams({ aba: 'ativos', status: undefined });
                 }}
                 className={`flex-1 px-6 py-3 text-sm font-medium transition-all rounded-lg cursor-pointer ${
                   abaAtiva === 'ativos'
@@ -404,6 +634,7 @@ export default function EventosPage() {
                 onClick={() => {
                   setAbaAtiva('arquivados');
                   setFilterStatus('todos'); // Resetar filtro de status ao mudar para arquivados
+                  atualizarQueryParams({ aba: 'arquivados', status: undefined });
                 }}
                 className={`flex-1 px-6 py-3 text-sm font-medium transition-all rounded-lg cursor-pointer ${
                   abaAtiva === 'arquivados'
@@ -417,6 +648,7 @@ export default function EventosPage() {
                 onClick={() => {
                   setAbaAtiva('pre-cadastros');
                   setFilterStatus('todos');
+                  atualizarQueryParams({ aba: 'pre-cadastros', status: undefined });
                 }}
                 className={`flex-1 px-6 py-3 text-sm font-medium transition-all rounded-lg cursor-pointer relative ${
                   abaAtiva === 'pre-cadastros'
@@ -449,7 +681,7 @@ export default function EventosPage() {
             <CardContent className="p-0">
               <div className="flex gap-2 p-2 overflow-x-auto">
                 <button
-                  onClick={() => setFilterStatus('todos')}
+                  onClick={() => handleChangeStatus('todos')}
                   className={`px-4 py-2 text-sm font-medium transition-all rounded-lg cursor-pointer whitespace-nowrap ${
                     filterStatus === 'todos'
                       ? 'bg-primary/10 text-primary shadow-sm'
@@ -459,7 +691,7 @@ export default function EventosPage() {
                   Todos
                 </button>
                 <button
-                  onClick={() => setFilterStatus('Agendado')}
+                  onClick={() => handleChangeStatus('Agendado')}
                   className={`px-4 py-2 text-sm font-medium transition-all rounded-lg cursor-pointer whitespace-nowrap ${
                     filterStatus === 'Agendado'
                       ? 'bg-primary/10 text-primary shadow-sm'
@@ -469,7 +701,7 @@ export default function EventosPage() {
                   Agendado ({eventosLista.filter(e => e.status === 'Agendado').length})
                 </button>
                 <button
-                  onClick={() => setFilterStatus('Confirmado')}
+                  onClick={() => handleChangeStatus('Confirmado')}
                   className={`px-4 py-2 text-sm font-medium transition-all rounded-lg cursor-pointer whitespace-nowrap ${
                     filterStatus === 'Confirmado'
                       ? 'bg-primary/10 text-primary shadow-sm'
@@ -479,7 +711,7 @@ export default function EventosPage() {
                   Confirmado ({eventosLista.filter(e => e.status === 'Confirmado').length})
                 </button>
                 <button
-                  onClick={() => setFilterStatus('Em andamento')}
+                  onClick={() => handleChangeStatus('Em andamento')}
                   className={`px-4 py-2 text-sm font-medium transition-all rounded-lg cursor-pointer whitespace-nowrap ${
                     filterStatus === 'Em andamento'
                       ? 'bg-primary/10 text-primary shadow-sm'
@@ -489,7 +721,7 @@ export default function EventosPage() {
                   Em andamento ({eventosLista.filter(e => e.status === 'Em andamento').length})
                 </button>
                 <button
-                  onClick={() => setFilterStatus('Concluído')}
+                  onClick={() => handleChangeStatus('Concluído')}
                   className={`px-4 py-2 text-sm font-medium transition-all rounded-lg cursor-pointer whitespace-nowrap ${
                     filterStatus === 'Concluído'
                       ? 'bg-primary/10 text-primary shadow-sm'
@@ -499,7 +731,7 @@ export default function EventosPage() {
                   Concluído ({eventosLista.filter(e => e.status === 'Concluído').length})
                 </button>
                 <button
-                  onClick={() => setFilterStatus('Cancelado')}
+                  onClick={() => handleChangeStatus('Cancelado')}
                   className={`px-4 py-2 text-sm font-medium transition-all rounded-lg cursor-pointer whitespace-nowrap ${
                     filterStatus === 'Cancelado'
                       ? 'bg-primary/10 text-primary shadow-sm'
@@ -519,7 +751,8 @@ export default function EventosPage() {
           {/* Filtro por Período */}
           <div>
             <DateRangeFilter 
-              onFilterChange={setDateFilter}
+              onFilterChange={handleChangeDateFilter}
+              initialFilter={dateFilter}
               className="w-full"
             />
           </div>
@@ -527,21 +760,29 @@ export default function EventosPage() {
           {/* Filtros Básicos */}
           <Card className="lg:col-span-2 bg-surface/50 backdrop-blur-sm">
             <CardContent className="p-6">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                   <Input
                     label="Buscar"
                     placeholder="Nome do evento ou cliente..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => handleChangeBusca(e.target.value)}
                   />
                 </div>
                 <div>
                   <Select
                     label="Tipo"
                     value={filterTipo}
-                    onValueChange={(value) => setFilterTipo(value)}
+                    onValueChange={handleChangeTipo}
                     options={tiposEventoFilterOptions}
+                  />
+                </div>
+                <div>
+                  <Select
+                    label="Profissional"
+                    value={filterProfissional}
+                    onValueChange={handleChangeProfissional}
+                    options={profissionaisFilterOptions}
                   />
                 </div>
               </div>
@@ -551,7 +792,7 @@ export default function EventosPage() {
         )}
 
         {/* Resumo dos Filtros Ativos - apenas para eventos */}
-        {abaAtiva !== 'pre-cadastros' && (searchTerm || filterTipo !== 'todos' || dateFilter || (abaAtiva === 'ativos' && filterStatus !== 'todos')) && (
+        {abaAtiva !== 'pre-cadastros' && (searchTerm || filterTipo !== 'todos' || filterProfissional !== 'todos' || dateFilter || (abaAtiva === 'ativos' && filterStatus !== 'todos')) && (
           <Card className="bg-surface/50 backdrop-blur-sm">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -566,6 +807,11 @@ export default function EventosPage() {
                     {filterTipo !== 'todos' && (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent/10 text-accent">
                         Tipo: {filterTipo}
+                      </span>
+                    )}
+                    {filterProfissional !== 'todos' && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                        Profissional: {profissionaisMap.get(filterProfissional) || 'Profissional'}
                       </span>
                     )}
                     {abaAtiva === 'ativos' && filterStatus !== 'todos' && (
@@ -596,6 +842,9 @@ export default function EventosPage() {
         <div className="space-y-4">
           {sortedEventos.map((evento) => {
             const servicosDoEvento = servicosPorEvento.get(evento.id) || [];
+            const alocacoesDoEvento = alocacoesPorEvento.get(evento.id) || [];
+            const alocacaoAtiva = alocacoesDoEvento.find((alocacao) => alocacao.status !== 'cancelado');
+            const nomeProfissional = alocacaoAtiva ? (profissionaisMap.get(alocacaoAtiva.profissionalId) || 'Profissional') : null;
             return (
             <Card 
               key={evento.id} 
@@ -648,6 +897,12 @@ export default function EventosPage() {
                       </div>
                     )}
                   </div>
+                  {alocacaoAtiva && (
+                    <div className="text-sm text-text-secondary">
+                      Profissional: <span className="font-medium text-text-primary">{nomeProfissional}</span>
+                      {' '}({alocacaoAtiva.status})
+                    </div>
+                  )}
                 </div>
 
                 {/* Tipos de Serviços */}
@@ -666,6 +921,16 @@ export default function EventosPage() {
                 {errorServicos && (
                   <div className="pt-2 text-xs text-error">
                     Erro ao carregar serviços: {errorServicos}
+                  </div>
+                )}
+                {errorAlocacoes && (
+                  <div className="pt-2 text-xs text-error">
+                    Erro ao carregar agendamento: {errorAlocacoes}
+                  </div>
+                )}
+                {loadingAlocacoes && (
+                  <div className="pt-2 text-xs text-text-secondary">
+                    Carregando agendamento...
                   </div>
                 )}
 
@@ -764,6 +1029,64 @@ export default function EventosPage() {
             );
           })}
         </div>
+        )}
+
+        {abaAtiva !== 'pre-cadastros' && sortedEventos.length > 0 && (
+          <Card className="bg-surface/50 backdrop-blur-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="text-sm text-text-secondary">
+                  Página {paginaAtual}
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-44">
+                    <Select
+                      label="Itens por página"
+                      value={String(itensPorPagina)}
+                      onValueChange={handleChangeItensPorPagina}
+                      options={[
+                        { value: '10', label: '10 por página' },
+                        { value: '25', label: '25 por página' },
+                        { value: '50', label: '50 por página' }
+                      ]}
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    disabled={!temPaginaAnterior}
+                    onClick={() => {
+                      const proximaPagina = Math.max(1, paginaAtual - 1);
+                      if (abaAtiva === 'ativos') {
+                        setPaginaAtivos(proximaPagina);
+                        atualizarQueryParams({ paginaAtivos: String(proximaPagina) });
+                      } else {
+                        setPaginaArquivados(proximaPagina);
+                        atualizarQueryParams({ paginaArquivados: String(proximaPagina) });
+                      }
+                    }}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={!temProximaPagina}
+                    onClick={() => {
+                      const proximaPagina = paginaAtual + 1;
+                      if (abaAtiva === 'ativos') {
+                        setPaginaAtivos(proximaPagina);
+                        atualizarQueryParams({ paginaAtivos: String(proximaPagina) });
+                      } else {
+                        setPaginaArquivados(proximaPagina);
+                        atualizarQueryParams({ paginaArquivados: String(proximaPagina) });
+                      }
+                    }}
+                  >
+                    Próxima
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {sortedEventos.length === 0 && abaAtiva !== 'pre-cadastros' && (

@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import SelectWithSearch from '@/components/ui/SelectWithSearch';
 import { 
+  AgendamentoProfissional,
   Cliente, 
   Evento, 
   ServicoEvento,
@@ -50,6 +51,7 @@ interface FormData {
   dataEvento: string;
   tipoEvento: string;
   tipoEventoId: string;
+  profissionalId: string;
   horarioInicio: string;
   horarioFim: string;
   observacoes?: string;
@@ -100,6 +102,7 @@ export default function EventoForm({ evento, clienteInicialId, onSave, onCancel 
     dataEvento: '',
     tipoEvento: '',
     tipoEventoId: '',
+    profissionalId: '',
     horarioInicio: '',
     horarioFim: '',
     observacoes: '',
@@ -129,6 +132,10 @@ export default function EventoForm({ evento, clienteInicialId, onSave, onCancel 
   const [loadingTiposServico, setLoadingTiposServico] = useState(false);
   const [criandoTipoServico, setCriandoTipoServico] = useState(false);
   const [erroTiposServico, setErroTiposServico] = useState<string | null>(null);
+  const [profissionaisAgendamento, setProfissionaisAgendamento] = useState<AgendamentoProfissional[]>([]);
+  const [loadingProfissionaisAgendamento, setLoadingProfissionaisAgendamento] = useState(false);
+  const [erroConflitoAgendamento, setErroConflitoAgendamento] = useState<string | null>(null);
+  const [alocacaoEventoAtualId, setAlocacaoEventoAtualId] = useState<string | undefined>(undefined);
 
   const tipoEventoOptions = React.useMemo(() => {
     const baseOptions = tiposEvento
@@ -180,6 +187,7 @@ export default function EventoForm({ evento, clienteInicialId, onSave, onCancel 
           : '',
         tipoEvento: evento.tipoEvento || '',
         tipoEventoId: evento.tipoEventoId || '',
+        profissionalId: '',
         horarioInicio: evento.horarioInicio,
         horarioFim: evento.horarioFim || evento.horarioDesmontagem || '',
         observacoes: evento.observacoes || '',
@@ -234,6 +242,52 @@ export default function EventoForm({ evento, clienteInicialId, onSave, onCancel 
     setClienteSearch(clienteSelecionado.nome);
     setClientesFiltrados([]);
   }, [evento, clienteInicialId, isNovoCliente, clientes]);
+
+  useEffect(() => {
+    const carregarProfissionaisAgendamento = async () => {
+      if (!userId) {
+        return;
+      }
+
+      setLoadingProfissionaisAgendamento(true);
+      try {
+        const profissionais = await dataService.getAgendamentoProfissionaisAtivos(userId);
+        setProfissionaisAgendamento(profissionais);
+      } catch (error) {
+        setProfissionaisAgendamento([]);
+      } finally {
+        setLoadingProfissionaisAgendamento(false);
+      }
+    };
+
+    carregarProfissionaisAgendamento();
+  }, [userId]);
+
+  useEffect(() => {
+    const carregarAlocacaoDoEvento = async () => {
+      if (!userId || !evento?.id) {
+        return;
+      }
+
+      try {
+        const alocacoes = await dataService.getAgendamentoAlocacoesPorEvento(userId, evento.id);
+        const alocacaoAtiva = alocacoes.find((item) => item.status !== 'cancelado');
+        if (!alocacaoAtiva) {
+          return;
+        }
+
+        setAlocacaoEventoAtualId(alocacaoAtiva.id);
+        setFormData((prev) => ({
+          ...prev,
+          profissionalId: alocacaoAtiva.profissionalId
+        }));
+      } catch (error) {
+        setAlocacaoEventoAtualId(undefined);
+      }
+    };
+
+    carregarAlocacaoDoEvento();
+  }, [userId, evento?.id]);
 
   useEffect(() => {
     const carregarTiposEvento = async () => {
@@ -398,6 +452,64 @@ export default function EventoForm({ evento, clienteInicialId, onSave, onCancel 
       }));
     }
   };
+
+  const obterIntervaloAgendamento = React.useCallback((): { inicio: Date; fim: Date } | null => {
+    if (!formData.dataEvento || !formData.horarioInicio || !formData.horarioFim) {
+      return null;
+    }
+
+    const inicio = new Date(`${formData.dataEvento}T${formData.horarioInicio}:00`);
+    const fim = new Date(`${formData.dataEvento}T${formData.horarioFim}:00`);
+    if (Number.isNaN(inicio.getTime()) || Number.isNaN(fim.getTime()) || inicio >= fim) {
+      return null;
+    }
+
+    return { inicio, fim };
+  }, [formData.dataEvento, formData.horarioInicio, formData.horarioFim]);
+
+  useEffect(() => {
+    const validarConflito = async () => {
+      if (!userId || !formData.profissionalId) {
+        setErroConflitoAgendamento(null);
+        return;
+      }
+
+      const intervalo = obterIntervaloAgendamento();
+      if (!intervalo) {
+        setErroConflitoAgendamento(null);
+        return;
+      }
+
+      try {
+        const validacao = await dataService.validarConflitoAgendamento(
+          userId,
+          formData.profissionalId,
+          intervalo.inicio,
+          intervalo.fim,
+          alocacaoEventoAtualId
+        );
+
+        if (validacao.temConflito) {
+          setErroConflitoAgendamento(validacao.motivo || 'Conflito de horário detectado para este profissional');
+          return;
+        }
+
+        setErroConflitoAgendamento(null);
+      } catch (error) {
+        setErroConflitoAgendamento('Não foi possível validar o conflito de horário');
+      }
+    };
+
+    validarConflito();
+  }, [
+    userId,
+    formData.profissionalId,
+    formData.dataEvento,
+    formData.horarioInicio,
+    formData.horarioFim,
+    alocacaoEventoAtualId,
+    obterIntervaloAgendamento
+  ]);
 
   const handleNovoClienteChange = (field: string, value: string | number | undefined) => {
     setFormData(prev => ({
@@ -795,6 +907,10 @@ export default function EventoForm({ evento, clienteInicialId, onSave, onCancel 
     }
 
     if (!formData.dataEvento) newErrors.dataEvento = 'Data do evento é obrigatória';
+    if (!evento && !formData.profissionalId) newErrors.profissionalId = 'Selecione o profissional do agendamento';
+    if (formData.profissionalId && !formData.horarioInicio) newErrors.horarioInicio = 'Horário de início é obrigatório';
+    if (formData.profissionalId && !formData.horarioFim) newErrors.horarioFim = 'Horário fim é obrigatório';
+    if (formData.profissionalId && erroConflitoAgendamento) newErrors.profissionalId = erroConflitoAgendamento;
     if (!formData.tipoEventoId) newErrors.tipoEvento = 'Selecione um tipo de evento';
     if (!formData.valorTotal || formData.valorTotal <= 0) newErrors.valorTotal = 'Valor total deve ser maior que zero';
     if (!formData.diaFinalPagamento) newErrors.diaFinalPagamento = 'Dia final de pagamento é obrigatório';
@@ -869,13 +985,71 @@ export default function EventoForm({ evento, clienteInicialId, onSave, onCancel 
         dataAtualizacao: new Date()
       };
 
+      const intervaloAgendamento = formData.profissionalId ? obterIntervaloAgendamento() : null;
+      if (formData.profissionalId && !intervaloAgendamento) {
+        setErrors({
+          general: 'Para alocar profissional, informe data do evento e horários válidos (início e fim).'
+        });
+        setSubmitting(false);
+        return;
+      }
+
+      if (formData.profissionalId && intervaloAgendamento) {
+        const validacaoConflito = await dataService.validarConflitoAgendamento(
+          userId,
+          formData.profissionalId,
+          intervaloAgendamento.inicio,
+          intervaloAgendamento.fim,
+          alocacaoEventoAtualId
+        );
+
+        if (validacaoConflito.temConflito) {
+          const mensagemConflito = validacaoConflito.motivo || 'Conflito de horário detectado para o profissional selecionado';
+          setErroConflitoAgendamento(mensagemConflito);
+          setErrors({ profissionalId: mensagemConflito });
+          setSubmitting(false);
+          return;
+        }
+      }
+
       if (evento) {
         const eventoAtualizado = await dataService.updateEvento(evento.id, eventoData, userId);
         await sincronizarServicosEvento(eventoAtualizado.id);
+
+        if (formData.profissionalId && intervaloAgendamento) {
+          if (alocacaoEventoAtualId) {
+            await dataService.updateAgendamentoAlocacao(userId, alocacaoEventoAtualId, {
+              profissionalId: formData.profissionalId,
+              inicioTs: intervaloAgendamento.inicio,
+              fimTs: intervaloAgendamento.fim
+            });
+          } else {
+            const alocacaoCriada = await dataService.createAgendamentoAlocacao(userId, {
+              eventoId: eventoAtualizado.id,
+              profissionalId: formData.profissionalId,
+              inicioTs: intervaloAgendamento.inicio,
+              fimTs: intervaloAgendamento.fim,
+              status: 'agendado'
+            });
+            setAlocacaoEventoAtualId(alocacaoCriada.id);
+          }
+        }
+
         onSave(eventoAtualizado);
       } else {
         const novoEvento = await dataService.createEvento(eventoData, userId);
         await sincronizarServicosEvento(novoEvento.id);
+
+        if (formData.profissionalId && intervaloAgendamento) {
+          await dataService.createAgendamentoAlocacao(userId, {
+            eventoId: novoEvento.id,
+            profissionalId: formData.profissionalId,
+            inicioTs: intervaloAgendamento.inicio,
+            fimTs: intervaloAgendamento.fim,
+            status: 'agendado'
+          });
+        }
+
         onSave(novoEvento);
       }
     } catch (error: any) {
@@ -1174,14 +1348,30 @@ export default function EventoForm({ evento, clienteInicialId, onSave, onCancel 
               type="time"
               value={formData.horarioInicio}
               onChange={(e) => handleInputChange('horarioInicio', e.target.value)}
+              error={errors.horarioInicio}
             />
             <Input
               label="Horário fim"
               type="time"
               value={formData.horarioFim}
               onChange={(e) => handleInputChange('horarioFim', e.target.value)}
+              error={errors.horarioFim}
             />
           </div>
+
+          <Select
+            label="Profissional responsável"
+            value={formData.profissionalId}
+            onValueChange={(value) => handleInputChange('profissionalId', value)}
+            options={profissionaisAgendamento.map((profissional) => ({
+              value: profissional.id,
+              label: profissional.especialidade
+                ? `${profissional.nome} - ${profissional.especialidade}`
+                : profissional.nome
+            }))}
+            placeholder={loadingProfissionaisAgendamento ? 'Carregando profissionais...' : 'Selecione o profissional'}
+            error={errors.profissionalId || erroConflitoAgendamento || undefined}
+          />
         </CardContent>
       </Card>
 

@@ -5,11 +5,17 @@ import EventoForm from './EventoForm';
 const {
   getTiposEventoMock,
   getServicosCatalogoAtivosMock,
+  getAgendamentoProfissionaisAtivosMock,
+  getAgendamentoAlocacoesPorEventoMock,
+  validarConflitoAgendamentoMock,
   clientesHookResult,
   canaisEntradaHookResult
 } = vi.hoisted(() => ({
   getTiposEventoMock: vi.fn(),
   getServicosCatalogoAtivosMock: vi.fn(),
+  getAgendamentoProfissionaisAtivosMock: vi.fn(),
+  getAgendamentoAlocacoesPorEventoMock: vi.fn(),
+  validarConflitoAgendamentoMock: vi.fn(),
   clientesHookResult: {
     data: [
       {
@@ -53,7 +59,10 @@ vi.mock('@/hooks/useAuth', () => ({
 vi.mock('@/lib/data-service', () => ({
   dataService: {
     getTiposEvento: getTiposEventoMock,
-    getServicosCatalogoAtivos: getServicosCatalogoAtivosMock
+    getServicosCatalogoAtivos: getServicosCatalogoAtivosMock,
+    getAgendamentoProfissionaisAtivos: getAgendamentoProfissionaisAtivosMock,
+    getAgendamentoAlocacoesPorEvento: getAgendamentoAlocacoesPorEventoMock,
+    validarConflitoAgendamento: validarConflitoAgendamentoMock
   }
 }));
 
@@ -95,11 +104,13 @@ vi.mock('@/components/ui/select', () => ({
   Select: ({
     label,
     value,
-    onValueChange
+    onValueChange,
+    options
   }: {
     label?: string;
     value?: string;
     onValueChange?: (value: string) => void;
+    options?: Array<{ value: string; label: string }>;
   }) => (
     <label>
       {label}
@@ -109,6 +120,11 @@ vi.mock('@/components/ui/select', () => ({
         onChange={(e) => onValueChange?.(e.target.value)}
       >
         <option value="">Selecione</option>
+        {options?.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
       </select>
     </label>
   )
@@ -157,6 +173,11 @@ describe('EventoForm', () => {
     vi.clearAllMocks();
     getTiposEventoMock.mockResolvedValue([]);
     getServicosCatalogoAtivosMock.mockResolvedValue([]);
+    getAgendamentoProfissionaisAtivosMock.mockResolvedValue([
+      { id: 'prof-1', nome: 'Dra. Clarice', especialidade: 'Dermatologia', ativo: true }
+    ]);
+    getAgendamentoAlocacoesPorEventoMock.mockResolvedValue([]);
+    validarConflitoAgendamentoMock.mockResolvedValue({ temConflito: false });
   });
 
   it('preenche automaticamente o campo de busca de cliente ao receber clienteInicialId', async () => {
@@ -171,5 +192,21 @@ describe('EventoForm', () => {
     await waitFor(() => {
       expect(screen.getByLabelText('Buscar Cliente')).toHaveValue('Cliente XPTO');
     });
+  });
+
+  it('carrega profissionais de agendamento e renderiza no seletor', async () => {
+    render(
+      <EventoForm
+        clienteInicialId="cli-1"
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+
+    await waitFor(() => {
+      expect(getAgendamentoProfissionaisAtivosMock).toHaveBeenCalledWith('user-1');
+    });
+
+    expect(screen.getByText('Dra. Clarice - Dermatologia')).toBeInTheDocument();
   });
 });

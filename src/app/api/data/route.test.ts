@@ -15,7 +15,8 @@ vi.mock('@/lib/data-service', () => ({
     getAllPagamentos: vi.fn(),
     getAllCustos: vi.fn(),
     getAllServicos: vi.fn(),
-    getDashboardData: vi.fn()
+    getDashboardData: vi.fn(),
+    getAgendamentoAlocacoesPorEventos: vi.fn()
   }
 }));
 
@@ -53,7 +54,7 @@ describe('API /api/data', () => {
 
     const response = await GET(request as never);
 
-    expect(dataService.getEventos).toHaveBeenCalledWith('user-1');
+    expect(dataService.getEventos).toHaveBeenCalledWith('user-1', undefined, undefined, undefined);
     expect(response).toEqual({ ok: true, data: [{ id: 'ev-1', nomeEvento: 'Evento 1' }] });
   });
 
@@ -73,8 +74,32 @@ describe('API /api/data', () => {
 
     const response = await GET(request as never);
 
-    expect(dataService.getEventosArquivados).toHaveBeenCalledWith('user-1');
+    expect(dataService.getEventosArquivados).toHaveBeenCalledWith('user-1', undefined, undefined, undefined);
     expect(response).toEqual({ ok: true, data: [{ id: 'ev-arch-1' }] });
+  });
+
+  it('repasse profissionalId no recurso eventos', async () => {
+    vi.mocked(dataService.getEventos).mockResolvedValue([{ id: 'ev-1' }] as never);
+    const request = {
+      url: 'http://localhost/api/data?recurso=eventos&profissionalId=prof-1'
+    } as unknown as Request;
+
+    const response = await GET(request as never);
+
+    expect(dataService.getEventos).toHaveBeenCalledWith('user-1', 'prof-1', undefined, undefined);
+    expect(response).toEqual({ ok: true, data: [{ id: 'ev-1' }] });
+  });
+
+  it('repasse limit e offset no recurso eventos', async () => {
+    vi.mocked(dataService.getEventos).mockResolvedValue([{ id: 'ev-1' }] as never);
+    const request = {
+      url: 'http://localhost/api/data?recurso=eventos&limit=10&offset=20'
+    } as unknown as Request;
+
+    const response = await GET(request as never);
+
+    expect(dataService.getEventos).toHaveBeenCalledWith('user-1', undefined, 10, 20);
+    expect(response).toEqual({ ok: true, data: [{ id: 'ev-1' }] });
   });
 
   it('retorna evento por id para recurso evento', async () => {
@@ -206,6 +231,26 @@ describe('API /api/data', () => {
 
     expect(dataService.getDashboardData).toHaveBeenCalledWith('user-1', { forceRefresh: true });
     expect(response).toEqual({ ok: true, data: { eventosHoje: 2 } });
+  });
+
+  it('repasse profissionalId no recurso agendamento-alocacoes-eventos', async () => {
+    const map = new Map<string, Array<{ id: string }>>([
+      ['ev-1', [{ id: 'aloc-1' }]]
+    ]);
+    vi.mocked(dataService.getAgendamentoAlocacoesPorEventos).mockResolvedValue(map as never);
+    const request = {
+      url: 'http://localhost/api/data?recurso=agendamento-alocacoes-eventos&eventoIds=ev-1&profissionalId=prof-1'
+    } as unknown as Request;
+
+    const response = await GET(request as never);
+
+    expect(dataService.getAgendamentoAlocacoesPorEventos).toHaveBeenCalledWith('user-1', ['ev-1'], 'prof-1');
+    expect(response).toEqual({
+      ok: true,
+      data: {
+        'ev-1': [{ id: 'aloc-1' }]
+      }
+    });
   });
 });
 

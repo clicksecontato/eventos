@@ -54,6 +54,8 @@ export default function EventoViewPage() {
   const [temAcessoCopiar, setTemAcessoCopiar] = useState<boolean | null>(null);
   const [temAcessoContrato, setTemAcessoContrato] = useState<boolean | null>(null);
   const [eventoLocal, setEventoLocal] = useState<Evento | null>(null);
+  const [nomeProfissionalAgendamento, setNomeProfissionalAgendamento] = useState<string | null>(null);
+  const [statusAgendamento, setStatusAgendamento] = useState<string | null>(null);
   
   const { data: evento, loading: loadingEvento, error: errorEvento, refetch: refetchEvento } = useEvento(params.id as string);
   const { data: pagamentos, loading: loadingPagamentos, refetch: refetchPagamentos } = usePagamentosPorEvento(params.id as string);
@@ -88,6 +90,37 @@ export default function EventoViewPage() {
       setEventoLocal(evento);
     }
   }, [evento]);
+
+  useEffect(() => {
+    const carregarAgendamento = async () => {
+      if (!userId || !evento?.id) {
+        return;
+      }
+
+      try {
+        const [alocacoes, profissionais] = await Promise.all([
+          dataService.getAgendamentoAlocacoesPorEvento(userId, evento.id),
+          dataService.getAgendamentoProfissionaisAtivos(userId)
+        ]);
+
+        const alocacaoAtiva = alocacoes.find((item) => item.status !== 'cancelado');
+        if (!alocacaoAtiva) {
+          setNomeProfissionalAgendamento(null);
+          setStatusAgendamento(null);
+          return;
+        }
+
+        const profissional = profissionais.find((item) => item.id === alocacaoAtiva.profissionalId);
+        setNomeProfissionalAgendamento(profissional?.nome || 'Profissional');
+        setStatusAgendamento(alocacaoAtiva.status);
+      } catch (error) {
+        setNomeProfissionalAgendamento(null);
+        setStatusAgendamento(null);
+      }
+    };
+
+    carregarAgendamento();
+  }, [userId, evento?.id]);
 
   if (loading) {
     return (
@@ -200,6 +233,9 @@ export default function EventoViewPage() {
     if ((evento as any).horarioInicio) text += `Horário de início: ${(evento as any).horarioInicio}\n`;
     if ((evento as any).horarioFim || (evento as any).horarioDesmontagem) {
       text += `Horário fim: ${(evento as any).horarioFim || (evento as any).horarioDesmontagem}\n`;
+    }
+    if (nomeProfissionalAgendamento) {
+      text += `Profissional: ${nomeProfissionalAgendamento}${statusAgendamento ? ` (${statusAgendamento})` : ''}\n`;
     }
 
     text += '\n────────────────────────\n\n';
@@ -736,6 +772,15 @@ export default function EventoViewPage() {
                   <div className="text-text-secondary">{evento.horarioFim || evento.horarioDesmontagem}</div>
                 </div>
               </div>
+              {nomeProfissionalAgendamento && (
+                <div className="text-sm">
+                  <span className="font-medium text-text-primary">Profissional responsável:</span>
+                  <div className="text-text-secondary">
+                    {nomeProfissionalAgendamento}
+                    {statusAgendamento ? ` (${statusAgendamento})` : ''}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

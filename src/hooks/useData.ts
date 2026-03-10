@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Cliente, Evento, Pagamento, CustoEvento, ServicoEvento, TipoServico, CanalEntrada, DashboardData, TipoEvento, PreCadastroEvento, Contrato, ValorAtrasado, ValoresAtrasadosFiltros } from '@/types';
+import { AgendamentoAlocacao, AgendamentoProfissional, Cliente, Evento, Pagamento, CustoEvento, ServicoEvento, TipoServico, CanalEntrada, DashboardData, TipoEvento, PreCadastroEvento, Contrato, ValorAtrasado, ValoresAtrasadosFiltros } from '@/types';
 import { useCurrentUser } from './useAuth';
 import { getJson } from '@/lib/api/client';
 
@@ -28,6 +28,9 @@ type RecursoDadosApi =
   | 'canais-entrada'
   | 'tipos-servico'
   | 'tipos-evento'
+  | 'agendamento-profissionais'
+  | 'agendamento-alocacoes'
+  | 'agendamento-alocacoes-eventos'
   | 'dashboard';
 
 const ISO_DATE_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/;
@@ -171,7 +174,10 @@ export function useCliente(id: string): UseDataResult<Cliente> {
 }
 
 // Hook para eventos (apenas ativos por padrão)
-export function useEventos(): UseDataResult<Evento[]> {
+export function useEventos(
+  profissionalId?: string,
+  options?: { limit?: number; offset?: number }
+): UseDataResult<Evento[]> {
   const [data, setData] = useState<Evento[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -187,14 +193,18 @@ export function useEventos(): UseDataResult<Evento[]> {
     try {
       setLoading(true);
       setError(null);
-      const result = await getDados<Evento[]>('eventos');
+      const result = await getDados<Evento[]>('eventos', {
+        profissionalId,
+        limit: options?.limit,
+        offset: options?.offset
+      });
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar eventos');
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, profissionalId, options?.limit, options?.offset]);
 
   useEffect(() => {
     fetchData();
@@ -237,7 +247,10 @@ export function useAllEventos(): UseDataResult<Evento[]> {
 }
 
 // Hook para eventos arquivados
-export function useEventosArquivados(): UseDataResult<Evento[]> {
+export function useEventosArquivados(
+  profissionalId?: string,
+  options?: { limit?: number; offset?: number }
+): UseDataResult<Evento[]> {
   const [data, setData] = useState<Evento[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -253,14 +266,18 @@ export function useEventosArquivados(): UseDataResult<Evento[]> {
     try {
       setLoading(true);
       setError(null);
-      const result = await getDados<Evento[]>('eventos-arquivados');
+      const result = await getDados<Evento[]>('eventos-arquivados', {
+        profissionalId,
+        limit: options?.limit,
+        offset: options?.offset
+      });
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar eventos arquivados');
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, profissionalId, options?.limit, options?.offset]);
 
   useEffect(() => {
     fetchData();
@@ -641,6 +658,86 @@ export function useTiposEvento(): UseDataResult<TipoEvento[]> {
   }, [fetchData]);
 
   return { data, loading, error, refetch: fetchData };
+}
+
+export function useAgendamentoProfissionais(): UseDataResult<AgendamentoProfissional[]> {
+  const [data, setData] = useState<AgendamentoProfissional[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { userId } = useCurrentUser();
+
+  const fetchData = useCallback(async () => {
+    if (!userId) {
+      setError('Usuário não autenticado');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await getDados<AgendamentoProfissional[]>('agendamento-profissionais');
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar profissionais');
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
+export function useAgendamentoAlocacoesPorEventos(eventoIds: string[], profissionalId?: string): {
+  alocacoesPorEvento: Map<string, AgendamentoAlocacao[]>;
+  loading: boolean;
+  error: string | null;
+  refetch: () => void;
+} {
+  const [alocacoesPorEvento, setAlocacoesPorEvento] = useState<Map<string, AgendamentoAlocacao[]>>(new Map());
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { userId } = useCurrentUser();
+
+  const fetchData = useCallback(async () => {
+    if (!userId) {
+      setError('Usuário não autenticado');
+      setLoading(false);
+      return;
+    }
+
+    if (!eventoIds || eventoIds.length === 0) {
+      setAlocacoesPorEvento(new Map());
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await getDados<Record<string, AgendamentoAlocacao[]>>('agendamento-alocacoes-eventos', {
+        eventoIds: eventoIds.join(','),
+        profissionalId
+      });
+      const mapa = new Map<string, AgendamentoAlocacao[]>(Object.entries(result || {}));
+      setAlocacoesPorEvento(mapa);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar alocações');
+      setAlocacoesPorEvento(new Map());
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, eventoIds.join(','), profissionalId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  return { alocacoesPorEvento, loading, error, refetch: fetchData };
 }
 
 // Hook para dashboard

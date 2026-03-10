@@ -182,6 +182,158 @@ export interface Database {
           data_atualizacao?: string;
         };
       };
+      agendamento_profissionais: {
+        Row: {
+          id: string;
+          user_id: string;
+          empresa_id: string;
+          nome: string;
+          especialidade: string | null;
+          observacoes: string | null;
+          ativo: boolean;
+          data_cadastro: string;
+          data_atualizacao: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          empresa_id?: string;
+          nome: string;
+          especialidade?: string | null;
+          observacoes?: string | null;
+          ativo?: boolean;
+          data_cadastro?: string;
+          data_atualizacao?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          empresa_id?: string;
+          nome?: string;
+          especialidade?: string | null;
+          observacoes?: string | null;
+          ativo?: boolean;
+          data_cadastro?: string;
+          data_atualizacao?: string;
+        };
+      };
+      agendamento_disponibilidades: {
+        Row: {
+          id: string;
+          user_id: string;
+          empresa_id: string;
+          profissional_id: string;
+          dia_semana: number;
+          hora_inicio: string;
+          hora_fim: string;
+          ativo: boolean;
+          data_cadastro: string;
+          data_atualizacao: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          empresa_id?: string;
+          profissional_id: string;
+          dia_semana: number;
+          hora_inicio: string;
+          hora_fim: string;
+          ativo?: boolean;
+          data_cadastro?: string;
+          data_atualizacao?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          empresa_id?: string;
+          profissional_id?: string;
+          dia_semana?: number;
+          hora_inicio?: string;
+          hora_fim?: string;
+          ativo?: boolean;
+          data_cadastro?: string;
+          data_atualizacao?: string;
+        };
+      };
+      agendamento_bloqueios: {
+        Row: {
+          id: string;
+          user_id: string;
+          empresa_id: string;
+          profissional_id: string;
+          inicio_ts: string;
+          fim_ts: string;
+          motivo: string | null;
+          data_cadastro: string;
+          data_atualizacao: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          empresa_id?: string;
+          profissional_id: string;
+          inicio_ts: string;
+          fim_ts: string;
+          motivo?: string | null;
+          data_cadastro?: string;
+          data_atualizacao?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          empresa_id?: string;
+          profissional_id?: string;
+          inicio_ts?: string;
+          fim_ts?: string;
+          motivo?: string | null;
+          data_cadastro?: string;
+          data_atualizacao?: string;
+        };
+      };
+      agendamento_alocacoes: {
+        Row: {
+          id: string;
+          user_id: string;
+          empresa_id: string;
+          evento_id: string;
+          servico_evento_id: string | null;
+          profissional_id: string;
+          inicio_ts: string;
+          fim_ts: string;
+          status: 'agendado' | 'confirmado' | 'cancelado';
+          observacoes: string | null;
+          data_cadastro: string;
+          data_atualizacao: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          empresa_id?: string;
+          evento_id: string;
+          servico_evento_id?: string | null;
+          profissional_id: string;
+          inicio_ts: string;
+          fim_ts: string;
+          status?: 'agendado' | 'confirmado' | 'cancelado';
+          observacoes?: string | null;
+          data_cadastro?: string;
+          data_atualizacao?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          empresa_id?: string;
+          evento_id?: string;
+          servico_evento_id?: string | null;
+          profissional_id?: string;
+          inicio_ts?: string;
+          fim_ts?: string;
+          status?: 'agendado' | 'confirmado' | 'cancelado';
+          observacoes?: string | null;
+          data_cadastro?: string;
+          data_atualizacao?: string;
+        };
+      };
       // Adicione outros tipos conforme necessário
       [key: string]: any;
     };

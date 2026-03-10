@@ -31,7 +31,8 @@ import {
   CalculatorIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  BellIcon
+  BellIcon,
+  UserGroupIcon
 } from '@heroicons/react/24/outline';
 
 interface LayoutProps {
@@ -42,6 +43,7 @@ const navigation = [
   { name: 'Dashboard', href: '/painel', icon: HomeIcon },
   { name: 'Eventos', href: '/eventos', icon: CalendarIcon },
   { name: 'Clientes', href: '/clientes', icon: UserIcon },
+  { name: 'Profissionais', href: '/profissionais', icon: UserGroupIcon },
   { name: 'Relatórios', href: '/relatorios', icon: ChartBarIcon },
   { name: 'Contratos', href: '/contratos', icon: DocumentTextIcon },
   { name: 'Pagamentos', href: '/pagamentos', icon: BanknotesIcon },
