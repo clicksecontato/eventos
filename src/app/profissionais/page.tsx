@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import { AgendamentoBloqueio, AgendamentoDisponibilidade, AgendamentoProfissiona
 import { getJson } from '@/lib/api/client';
 import { useToast } from '@/components/ui/toast';
 
-export default function ProfissionaisPage() {
+function ProfissionaisPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
@@ -815,6 +815,14 @@ export default function ProfissionaisPage() {
         onConfirm={confirmarAlteracaoStatus}
       />
     </Layout>
+  );
+}
+
+export default function ProfissionaisPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProfissionaisPageContent />
+    </Suspense>
   );
 }
 

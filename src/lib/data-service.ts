@@ -28,6 +28,18 @@ import { AgendamentoService } from './services/agendamento-service';
 import { DashboardReportService } from './services/dashboard-report-service';
 // RelatoriosReportService importado dinamicamente para evitar dependência circular
 
+type RequireFn = (id: string) => any;
+
+function loadModuleNoClientBundle(moduleId: string): any {
+  if (typeof window !== 'undefined') {
+    return null;
+  }
+
+  // Evita análise estática do webpack em bundles client.
+  const req = (0, eval)('require') as RequireFn;
+  return req(moduleId);
+}
+
 export class DataService {
   private clienteRepo = repositoryFactory.getClienteRepository();
   private eventoRepo = repositoryFactory.getEventoRepository();
@@ -47,7 +59,7 @@ export class DataService {
       try {
         if (typeof window === 'undefined') {
           // No servidor, usar ServiceFactory com repositórios corretos (importação dinâmica)
-          const { getServiceFactory } = require('./factories/service-factory');
+          const { getServiceFactory } = loadModuleNoClientBundle('./factories/service-factory');
           this._funcionalidadeService = getServiceFactory().getFuncionalidadeService();
         } else {
           // No cliente, criar instância básica (não será usado diretamente no cliente)
@@ -70,7 +82,7 @@ export class DataService {
     if (!this._agendamentoService) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { getServiceFactory } = require('./factories/service-factory');
+        const { getServiceFactory } = loadModuleNoClientBundle('./factories/service-factory');
         this._agendamentoService = getServiceFactory().getAgendamentoService();
       } catch {
         this._agendamentoService = new AgendamentoService({
@@ -100,7 +112,7 @@ export class DataService {
     // Lazy initialization: importação dinâmica para evitar dependência circular
     if (!this._relatoriosReportService) {
       try {
-        const { RelatoriosReportService } = require('./services/relatorios-report-service');
+        const { RelatoriosReportService } = loadModuleNoClientBundle('./services/relatorios-report-service');
         this._relatoriosReportService = RelatoriosReportService.getInstance();
       } catch (error) {
         throw error;

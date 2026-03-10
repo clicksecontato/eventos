@@ -415,6 +415,7 @@ export interface DashboardEventoResumo {
   id: string;
   clienteNome: string;
   local?: string;
+  chegadaNoLocal?: string;
   tipoEvento: string;
   status: string;
   dataEvento: Date;

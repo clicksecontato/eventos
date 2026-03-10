@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { Suspense, useState, useMemo, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,7 +33,7 @@ import ServicosBadges from '@/components/ServicosBadges';
 import EventoStatusSelect from '@/components/EventoStatusSelect';
 import PreCadastrosSection from '@/components/PreCadastrosSection';
 
-export default function EventosPage() {
+function EventosPageContent() {
   const ITENS_POR_PAGINA_PADRAO = 10;
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1137,5 +1137,13 @@ export default function EventosPage() {
       </div>
       </PlanOverlay>
     </Layout>
+  );
+}
+
+export default function EventosPage() {
+  return (
+    <Suspense fallback={null}>
+      <EventosPageContent />
+    </Suspense>
   );
 }

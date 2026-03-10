@@ -115,7 +115,7 @@ export default function EventosPage() {
     
     return eventosLista.filter(evento => {
       const matchesSearch = evento.cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           evento.local.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (evento.local ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                            (evento.nomeEvento && evento.nomeEvento.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesStatus = filterStatus === 'todos' || evento.status === filterStatus;
       const matchesTipo = filterTipo === 'todos' || evento.tipoEvento === filterTipo;

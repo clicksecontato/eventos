@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import {
   ArrowLeftIcon
 } from '@heroicons/react/24/outline';
 
-export default function NovoEventoPage() {
+function NovoEventoPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const clienteInicialId = searchParams.get('clienteId') || undefined;
@@ -70,5 +70,13 @@ export default function NovoEventoPage() {
         </PlanoBloqueio>
       </div>
     </Layout>
+  );
+}
+
+export default function NovoEventoPage() {
+  return (
+    <Suspense fallback={null}>
+      <NovoEventoPageContent />
+    </Suspense>
   );
 }
