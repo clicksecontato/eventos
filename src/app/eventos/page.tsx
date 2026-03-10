@@ -945,6 +945,25 @@ function EventosPageContent() {
                       <TooltipProvider delayDuration={200}>
                         <Tooltip>
                           <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/agendamento?eventoId=${evento.id}`);
+                              }}
+                            >
+                              <ClockIcon className="h-5 w-5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="font-medium">
+                            <p>Gerenciar agendamento</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <TooltipProvider delayDuration={200}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
                             <Button 
                               variant="action-view" 
                               size="icon"

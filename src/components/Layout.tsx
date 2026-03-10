@@ -44,6 +44,7 @@ const navigation = [
   { name: 'Eventos', href: '/eventos', icon: CalendarIcon },
   { name: 'Clientes', href: '/clientes', icon: UserIcon },
   { name: 'Profissionais', href: '/profissionais', icon: UserGroupIcon },
+  { name: 'Agendamento', href: '/agendamento', icon: CalendarDaysIcon },
   { name: 'Relatórios', href: '/relatorios', icon: ChartBarIcon },
   { name: 'Contratos', href: '/contratos', icon: DocumentTextIcon },
   { name: 'Pagamentos', href: '/pagamentos', icon: BanknotesIcon },

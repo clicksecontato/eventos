@@ -388,6 +388,19 @@ function ProfissionaisPageContent() {
         <div className="flex items-center gap-2">
           <UserGroupIcon className="h-6 w-6 text-text-primary" />
           <h1 className="text-2xl font-bold text-text-primary">Profissionais</h1>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const params = new URLSearchParams();
+              if (profissionalSelecionadoId) params.set('profissionalId', profissionalSelecionadoId);
+              if (periodoInicio) params.set('inicio', periodoInicio);
+              if (periodoFim) params.set('fim', periodoFim);
+              router.push(`/agendamento${params.toString() ? `?${params.toString()}` : ''}`);
+            }}
+          >
+            Abrir agenda completa
+          </Button>
         </div>
 
         {loading && (
@@ -498,6 +511,19 @@ function ProfissionaisPageContent() {
                             }}
                           >
                             Ver agenda
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const params = new URLSearchParams();
+                              params.set('profissionalId', profissional.id);
+                              if (periodoInicio) params.set('inicio', periodoInicio);
+                              if (periodoFim) params.set('fim', periodoFim);
+                              router.push(`/agendamento?${params.toString()}`);
+                            }}
+                          >
+                            Agenda completa
                           </Button>
                           <Button
                             variant="outline"

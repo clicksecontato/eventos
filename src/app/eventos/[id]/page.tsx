@@ -27,7 +27,7 @@ import { useAnexos } from '@/hooks/useAnexos';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { usePlano } from '@/lib/hooks/usePlano';
 import { dataService } from '@/lib/data-service';
-import { AnexoEvento, Evento, StatusEvento, Contrato } from '@/types';
+import { AgendamentoAlocacao, AnexoEvento, Evento, StatusEvento, Contrato } from '@/types';
 import EventoStatusSelect from '@/components/EventoStatusSelect';
 import PagamentoHistorico from '@/components/PagamentoHistorico';
 import CustosEvento from '@/components/CustosEvento';
@@ -54,8 +54,8 @@ export default function EventoViewPage() {
   const [temAcessoCopiar, setTemAcessoCopiar] = useState<boolean | null>(null);
   const [temAcessoContrato, setTemAcessoContrato] = useState<boolean | null>(null);
   const [eventoLocal, setEventoLocal] = useState<Evento | null>(null);
-  const [nomeProfissionalAgendamento, setNomeProfissionalAgendamento] = useState<string | null>(null);
-  const [statusAgendamento, setStatusAgendamento] = useState<string | null>(null);
+  const [alocacoesEvento, setAlocacoesEvento] = useState<AgendamentoAlocacao[]>([]);
+  const [profissionaisAlocacao, setProfissionaisAlocacao] = useState<Map<string, string>>(new Map());
   
   const { data: evento, loading: loadingEvento, error: errorEvento, refetch: refetchEvento } = useEvento(params.id as string);
   const { data: pagamentos, loading: loadingPagamentos, refetch: refetchPagamentos } = usePagamentosPorEvento(params.id as string);
@@ -102,20 +102,11 @@ export default function EventoViewPage() {
           dataService.getAgendamentoAlocacoesPorEvento(userId, evento.id),
           dataService.getAgendamentoProfissionaisAtivos(userId)
         ]);
-
-        const alocacaoAtiva = alocacoes.find((item) => item.status !== 'cancelado');
-        if (!alocacaoAtiva) {
-          setNomeProfissionalAgendamento(null);
-          setStatusAgendamento(null);
-          return;
-        }
-
-        const profissional = profissionais.find((item) => item.id === alocacaoAtiva.profissionalId);
-        setNomeProfissionalAgendamento(profissional?.nome || 'Profissional');
-        setStatusAgendamento(alocacaoAtiva.status);
+        setAlocacoesEvento(alocacoes);
+        setProfissionaisAlocacao(new Map(profissionais.map((item) => [item.id, item.nome])));
       } catch (error) {
-        setNomeProfissionalAgendamento(null);
-        setStatusAgendamento(null);
+        setAlocacoesEvento([]);
+        setProfissionaisAlocacao(new Map());
       }
     };
 
@@ -234,8 +225,15 @@ export default function EventoViewPage() {
     if ((evento as any).horarioFim || (evento as any).horarioDesmontagem) {
       text += `Horário fim: ${(evento as any).horarioFim || (evento as any).horarioDesmontagem}\n`;
     }
-    if (nomeProfissionalAgendamento) {
-      text += `Profissional: ${nomeProfissionalAgendamento}${statusAgendamento ? ` (${statusAgendamento})` : ''}\n`;
+    const alocacoesAtivas = alocacoesEvento.filter((item) => item.status !== 'cancelado');
+    if (alocacoesAtivas.length > 0) {
+      text += 'Profissionais alocados:\n';
+      alocacoesAtivas.forEach((item) => {
+        const nomeProfissional = profissionaisAlocacao.get(item.profissionalId) || 'Profissional';
+        const inicio = item.inicioTs.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const fim = item.fimTs.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        text += `- ${nomeProfissional}: ${inicio} às ${fim} (${item.status})\n`;
+      });
     }
 
     text += '\n────────────────────────\n\n';
@@ -315,6 +313,19 @@ export default function EventoViewPage() {
       case 'Concluído':
         return 'bg-surface text-text-secondary';
       case 'Cancelado':
+        return 'bg-error-bg text-error-text';
+      default:
+        return 'bg-surface text-text-secondary';
+    }
+  };
+
+  const getAgendamentoStatusColor = (status: string) => {
+    switch (status) {
+      case 'agendado':
+        return 'bg-info-bg text-info-text';
+      case 'confirmado':
+        return 'bg-success-bg text-success-text';
+      case 'cancelado':
         return 'bg-error-bg text-error-text';
       default:
         return 'bg-surface text-text-secondary';
@@ -759,7 +770,16 @@ export default function EventoViewPage() {
           {/* Agendamento */}
           <Card>
             <CardHeader>
-              <CardTitle>Agendamento</CardTitle>
+              <div className="flex items-center justify-between gap-3">
+                <CardTitle>Agendamento</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => router.push(`/agendamento?eventoId=${evento.id}`)}
+                >
+                  Gerenciar
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -772,15 +792,38 @@ export default function EventoViewPage() {
                   <div className="text-text-secondary">{evento.horarioFim || evento.horarioDesmontagem}</div>
                 </div>
               </div>
-              {nomeProfissionalAgendamento && (
-                <div className="text-sm">
-                  <span className="font-medium text-text-primary">Profissional responsável:</span>
-                  <div className="text-text-secondary">
-                    {nomeProfissionalAgendamento}
-                    {statusAgendamento ? ` (${statusAgendamento})` : ''}
+              <div className="space-y-2">
+                <span className="text-sm font-medium text-text-primary">Alocações do evento</span>
+                {alocacoesEvento.length === 0 ? (
+                  <p className="text-sm text-text-secondary">Nenhuma alocação cadastrada.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {[...alocacoesEvento]
+                      .sort((a, b) => a.inicioTs.getTime() - b.inicioTs.getTime())
+                      .map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2"
+                      >
+                        <div className="text-sm text-text-secondary">
+                          <span className="font-medium text-text-primary">
+                            {profissionaisAlocacao.get(item.profissionalId) || 'Profissional'}
+                          </span>
+                          {' - '}
+                          {item.inicioTs.toLocaleDateString('pt-BR')}
+                          {' '}
+                          {item.inicioTs.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          {' às '}
+                          {item.fimTs.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${getAgendamentoStatusColor(item.status)}`}>
+                          {item.status}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </CardContent>
           </Card>
 
