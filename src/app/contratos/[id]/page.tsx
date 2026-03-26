@@ -14,10 +14,12 @@ import {
   PencilIcon,
   EyeIcon,
   PencilSquareIcon,
+  LinkIcon,
 } from '@heroicons/react/24/outline';
 import ContractPreview from '@/components/ContractPreview';
 import TemplateEditor, { TemplateEditorRef } from '@/components/TemplateEditor';
 import { AssinaturaContratoDialog } from '@/components/contratos/AssinaturaContratoDialog';
+import { GerarLinkAssinaturaClienteDialog } from '@/components/contratos/GerarLinkAssinaturaClienteDialog';
 
 type AbaAtiva = 'visualizar' | 'editar';
 
@@ -36,6 +38,7 @@ export default function ContratoViewPage() {
   const [salvando, setSalvando] = useState(false);
   const [temAlteracoes, setTemAlteracoes] = useState(false);
   const [dialogAssinaturaAberto, setDialogAssinaturaAberto] = useState(false);
+  const [dialogLinkClienteAberto, setDialogLinkClienteAberto] = useState(false);
   const editorRef = useRef<TemplateEditorRef>(null);
 
   const carregarHtmlParaPreview = useCallback(async () => {
@@ -285,6 +288,12 @@ export default function ContratoViewPage() {
                 Assinar PDF
               </Button>
             )}
+            {contrato.status === 'gerado' && contrato.pdfPath && (
+              <Button variant="outline" onClick={() => setDialogLinkClienteAberto(true)}>
+                <LinkIcon className="h-5 w-5 mr-2" />
+                Gerar link para cliente
+              </Button>
+            )}
             {contrato.pdfUrl && (
               <Button variant="outline" onClick={() => window.open(contrato.pdfUrl, '_blank')}>
                 <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
@@ -479,6 +488,26 @@ export default function ContratoViewPage() {
           onAssinaturaConcluida={async () => {
             showToast('Contrato assinado. PDF atualizado.', 'success');
             await loadContrato();
+          }}
+          onErro={(msg) => showToast(msg, 'error')}
+        />
+        <GerarLinkAssinaturaClienteDialog
+          open={dialogLinkClienteAberto}
+          onOpenChange={setDialogLinkClienteAberto}
+          contratoId={contrato.id}
+          onSucesso={async (link, emailEnviado, erroEmail) => {
+            if (link && navigator?.clipboard?.writeText) {
+              await navigator.clipboard.writeText(link);
+              showToast('Link de assinatura gerado e copiado para a área de transferência', 'success');
+            } else if (link) {
+              showToast('Link gerado com sucesso', 'success');
+              window.open(link, '_blank');
+            }
+            if (!emailEnviado && erroEmail) {
+              showToast(`Link gerado, mas o e-mail não foi enviado: ${erroEmail}`, 'error');
+            } else if (emailEnviado) {
+              showToast('E-mail de assinatura enviado ao cliente', 'success');
+            }
           }}
           onErro={(msg) => showToast(msg, 'error')}
         />
