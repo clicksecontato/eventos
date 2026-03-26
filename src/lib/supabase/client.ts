@@ -1,6 +1,21 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from './types';
 
+/**
+ * WSL2 / alguns ambientes Node retornam IPv6 primeiro; o `fetch` ao Supabase falha com
+ * `TypeError: fetch failed`. Priorizar IPv4 evita o erro (desative com SUPABASE_DNS_IPV4_FIRST=false).
+ */
+if (typeof window === 'undefined') {
+  try {
+    if (process.env.SUPABASE_DNS_IPV4_FIRST !== 'false' && process.env.SUPABASE_DNS_IPV4_FIRST !== '0') {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require('node:dns').setDefaultResultOrder('ipv4first');
+    }
+  } catch {
+    /* Edge ou ambiente sem node:dns */
+  }
+}
+
 // Validação das variáveis de ambiente
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

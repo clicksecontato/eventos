@@ -280,6 +280,18 @@ export interface ConfiguracaoContrato {
   dataAtualizacao: Date;
 }
 
+/** Registro de auditoria da assinatura interna (PDF + manuscrita). */
+export interface AssinaturaAuditoriaContrato {
+  hashPdfAntesAssinatura: string;
+  hashPdfDepoisAssinatura: string;
+  assinadoEm: string;
+  signatarioUserId: string;
+  signatarioEmail?: string;
+  signatarioNome?: string;
+  ip?: string;
+  userAgent?: string;
+}
+
 export interface Contrato {
   id: string;
   userId: string;
@@ -293,6 +305,10 @@ export interface Contrato {
   status: 'rascunho' | 'gerado' | 'assinado' | 'cancelado';
   pdfUrl?: string;
   pdfPath?: string;
+  /** S3 key do PDF sem a página de assinatura (cópia do que estava em pdf_path antes de assinar). */
+  pdfPathOriginal?: string;
+  /** Metadados e hashes do processo de assinatura interna. */
+  assinaturaAuditoria?: AssinaturaAuditoriaContrato;
   numeroContrato?: string;
   dataGeracao: Date;
   dataAssinatura?: Date;

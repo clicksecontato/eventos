@@ -565,6 +565,9 @@ CREATE INDEX IF NOT EXISTS idx_contratos_user_id ON contratos(user_id);
 CREATE INDEX IF NOT EXISTS idx_contratos_evento_id ON contratos(evento_id);
 CREATE INDEX IF NOT EXISTS idx_contratos_status ON contratos(user_id, status);
 
+ALTER TABLE contratos ADD COLUMN IF NOT EXISTS pdf_path_original VARCHAR(500);
+ALTER TABLE contratos ADD COLUMN IF NOT EXISTS assinatura_auditoria JSONB;
+
 -- ============================================
 -- TABELAS DE RELATÓRIOS E CACHE
 -- ============================================

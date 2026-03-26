@@ -4,6 +4,32 @@ import { Contrato } from '@/types';
 import { generateUUID } from '@/lib/utils/uuid';
 import { getEmpresaIdPadrao } from '@/lib/tenant-config';
 
+/** Colunas que podem não existir em bancos antigos; PostgREST acusa "schema cache" se faltarem. */
+const COLUNAS_CONTRATOS_OPCIONAIS_SCHEMA = new Set([
+  'assinatura_auditoria',
+  'pdf_path_original',
+  'conteudo_html',
+]);
+
+function colunaContratosAusenteNoSchemaCache(mensagem: string): string | null {
+  const m = /Could not find the '([^']+)' column of 'contratos'/i.exec(mensagem);
+  return m?.[1] ?? null;
+}
+
+function removerColunaOpcionalDoPayload(
+  payload: Record<string, unknown>,
+  colunaDb: string
+): boolean {
+  if (!COLUNAS_CONTRATOS_OPCIONAIS_SCHEMA.has(colunaDb)) {
+    return false;
+  }
+  if (!(colunaDb in payload)) {
+    return false;
+  }
+  delete payload[colunaDb];
+  return true;
+}
+
 export class ContratoSupabaseRepository extends BaseSupabaseRepository<Contrato> {
   constructor() {
     super('contratos', undefined, true); // Usar service role para bypassar RLS
@@ -28,6 +54,8 @@ export class ContratoSupabaseRepository extends BaseSupabaseRepository<Contrato>
       status: row.status as Contrato['status'],
       pdfUrl: row.pdf_url || undefined,
       pdfPath: row.pdf_path || undefined,
+      pdfPathOriginal: row.pdf_path_original || undefined,
+      assinaturaAuditoria: row.assinatura_auditoria || undefined,
       numeroContrato: row.numero_contrato || undefined,
       dataGeracao: row.data_geracao ? parseDate(row.data_geracao) : new Date(),
       dataAssinatura: row.data_assinatura ? parseDate(row.data_assinatura) : undefined,
@@ -46,10 +74,20 @@ export class ContratoSupabaseRepository extends BaseSupabaseRepository<Contrato>
     if (entity.eventoId !== undefined) data.evento_id = entity.eventoId || null;
     if (entity.modeloContratoId !== undefined) data.modelo_contrato_id = entity.modeloContratoId;
     if (entity.dadosPreenchidos !== undefined) data.dados_preenchidos = entity.dadosPreenchidos || {};
-    if (entity.conteudoHtml !== undefined) data.conteudo_html = entity.conteudoHtml || null;
+    // Importante: não enviar a coluna quando vier undefined.
+    // Se o schema do Supabase ainda não tiver a coluna (ou cache estiver desatualizado),
+    // enviar `conteudo_html: null` causa erro "Could not find the 'conteudo_html' column".
+    if (typeof entity.conteudoHtml === 'string') {
+      const v = entity.conteudoHtml.trim();
+      data.conteudo_html = v ? v : null;
+    }
     if (entity.status !== undefined) data.status = entity.status;
     if (entity.pdfUrl !== undefined) data.pdf_url = entity.pdfUrl || null;
     if (entity.pdfPath !== undefined) data.pdf_path = entity.pdfPath || null;
+    if (typeof entity.pdfPathOriginal === 'string') data.pdf_path_original = entity.pdfPathOriginal || null;
+    if (entity.assinaturaAuditoria !== undefined && entity.assinaturaAuditoria !== null) {
+      data.assinatura_auditoria = entity.assinaturaAuditoria;
+    }
     if (entity.numeroContrato !== undefined) data.numero_contrato = entity.numeroContrato || null;
     if (entity.dataGeracao !== undefined) data.data_geracao = entity.dataGeracao instanceof Date ? entity.dataGeracao.toISOString() : entity.dataGeracao;
     if (entity.dataAssinatura !== undefined) data.data_assinatura = entity.dataAssinatura instanceof Date ? entity.dataAssinatura.toISOString() : entity.dataAssinatura || null;
@@ -81,17 +119,32 @@ export class ContratoSupabaseRepository extends BaseSupabaseRepository<Contrato>
     supabaseData.id = id; // Assign generated ID
     supabaseData.empresa_id = getEmpresaIdPadrao();
 
-    const { data, error } = await this.supabase
-      .from(this.tableName)
-      .insert(supabaseData)
-      .select()
-      .single();
+    let payloadInsert: Record<string, unknown> = supabaseData;
+    const maxTentativas = 6;
+    for (let t = 0; t < maxTentativas; t++) {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .insert(payloadInsert)
+        .select()
+        .single();
 
-    if (error) {
+      if (!error) {
+        return this.convertFromSupabase(data);
+      }
+
+      const col = colunaContratosAusenteNoSchemaCache(error.message);
+      if (col && removerColunaOpcionalDoPayload(payloadInsert, col)) {
+        console.warn(
+          `[ContratoSupabaseRepository] insert: coluna '${col}' ausente no schema/cache; repetindo sem ela. ` +
+            'Aplique as migrations em supabase/migrations e execute NOTIFY pgrst, \'reload schema\'; no SQL editor.'
+        );
+        continue;
+      }
+
       throw new Error(`Erro ao criar contrato: ${error.message}`);
     }
 
-    return this.convertFromSupabase(data);
+    throw new Error('Erro ao criar contrato: excedeu tentativas ao contornar colunas opcionais.');
   }
 
   async findAll(userId?: string): Promise<Contrato[]> {
@@ -200,24 +253,38 @@ export class ContratoSupabaseRepository extends BaseSupabaseRepository<Contrato>
       throw new Error('userId é obrigatório para atualizar contrato');
     }
 
-    const supabaseData = this.convertToSupabase(contrato);
+    let supabaseData: Record<string, unknown> = this.convertToSupabase(contrato);
     // Sempre atualizar data_atualizacao
     supabaseData.data_atualizacao = new Date().toISOString();
 
     const empresaId = getEmpresaIdPadrao();
-    const { data, error } = await this.supabase
-      .from(this.tableName)
-      .update(supabaseData)
-      .eq('id', id)
-      .eq('empresa_id', empresaId)
-      .select()
-      .single();
+    const maxTentativas = 6;
+    for (let t = 0; t < maxTentativas; t++) {
+      const { data, error } = await this.supabase
+        .from(this.tableName)
+        .update(supabaseData)
+        .eq('id', id)
+        .eq('empresa_id', empresaId)
+        .select()
+        .single();
 
-    if (error) {
+      if (!error) {
+        return this.convertFromSupabase(data);
+      }
+
+      const col = colunaContratosAusenteNoSchemaCache(error.message);
+      if (col && removerColunaOpcionalDoPayload(supabaseData, col)) {
+        console.warn(
+          `[ContratoSupabaseRepository] update: coluna '${col}' ausente no schema/cache; repetindo sem ela. ` +
+            'Aplique supabase/migrations (ex.: assinatura interna + conteudo_html) e NOTIFY pgrst, \'reload schema\';'
+        );
+        continue;
+      }
+
       throw new Error(`Erro ao atualizar contrato: ${error.message}`);
     }
 
-    return this.convertFromSupabase(data);
+    throw new Error('Erro ao atualizar contrato: excedeu tentativas ao contornar colunas opcionais.');
   }
 
   async findById(id: string, userId?: string): Promise<Contrato | null> {

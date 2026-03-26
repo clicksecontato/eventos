@@ -75,8 +75,14 @@ export class PuppeteerPdfEngineAdapter implements PdfEnginePort {
         throw new Error(`Puppeteer não está instalado. Execute: npx puppeteer browsers install chrome. Detalhes: ${msg}`);
       }
 
+      const caminhoChrome =
+        process.env.PUPPETEER_EXECUTABLE_PATH?.trim() ||
+        process.env.CHROME_PATH?.trim() ||
+        undefined;
+
       launchOptions = {
         headless: true,
+        ...(caminhoChrome ? { executablePath: caminhoChrome } : {}),
         args: [
           '--no-sandbox',
           '--disable-setuid-sandbox',

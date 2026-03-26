@@ -27,7 +27,17 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
       horarioFim: row.horario_fim || row.horario_desmontagem || '',
       observacoes: row.observacoes,
       status: row.status as Evento['status'],
-      modoValorTotal: row.modo_valor_total || 'manual',
+      // Normaliza para respeitar o constraint do banco:
+      // CHECK (modo_valor_total IN ('automatico', 'manual'))
+      modoValorTotal: (() => {
+        const raw = typeof row.modo_valor_total === 'string' ? row.modo_valor_total.trim().toLowerCase() : '';
+        if (raw === 'automatico' || raw === 'manual') return raw as Evento['modoValorTotal'];
+        // Fallback seguro para não quebrar atualizações
+        if (raw) {
+          console.error(`[EventoSupabaseRepository] modo_valor_total inválido encontrado: "${row.modo_valor_total}". Usando "manual".`);
+        }
+        return 'manual';
+      })(),
       valorTotalServicosCalculado: row.valor_total_servicos_calculado !== null && row.valor_total_servicos_calculado !== undefined
         ? parseFloat(row.valor_total_servicos_calculado)
         : undefined,
@@ -92,7 +102,21 @@ export class EventoSupabaseRepository extends BaseSupabaseRepository<Evento> {
       }
     }
     if (entity.valorTotal !== undefined) data.valor_total = entity.valorTotal;
-    if (entity.modoValorTotal !== undefined) data.modo_valor_total = entity.modoValorTotal;
+    if (entity.modoValorTotal !== undefined) {
+      const raw =
+        typeof entity.modoValorTotal === 'string'
+          ? entity.modoValorTotal.trim().toLowerCase()
+          : String(entity.modoValorTotal).trim().toLowerCase();
+
+      if (raw === 'automatico' || raw === 'manual') {
+        data.modo_valor_total = raw;
+      } else {
+        console.error(
+          `[EventoSupabaseRepository] modoValorTotal inválido recebido: "${String(entity.modoValorTotal)}". Usando "manual".`
+        );
+        data.modo_valor_total = 'manual';
+      }
+    }
     if (entity.valorTotalServicosCalculado !== undefined) data.valor_total_servicos_calculado = entity.valorTotalServicosCalculado;
     if (entity.motivoAjusteValorTotal !== undefined) data.motivo_ajuste_valor_total = entity.motivoAjusteValorTotal || null;
     if (entity.valorTotalAjustadoPor !== undefined) data.valor_total_ajustado_por = entity.valorTotalAjustadoPor || null;

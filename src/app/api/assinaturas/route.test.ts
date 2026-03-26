@@ -27,7 +27,7 @@ describe('API /api/assinaturas', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(isFirebaseAdminInitialized).mockReturnValue(true);
-    vi.mocked(getFirebaseAdminInitializationError).mockReturnValue(undefined);
+    vi.mocked(getFirebaseAdminInitializationError).mockReturnValue(null);
     vi.mocked(createContextoAssinaturaServidor).mockResolvedValue({
       assinaturaRepo: {
         findByUserId: findByUserIdMock,

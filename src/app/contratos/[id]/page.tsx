@@ -7,9 +7,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/toast';
 import { Contrato } from '@/types';
-import { ArrowLeftIcon, DocumentTextIcon, ArrowDownTrayIcon, PencilIcon, EyeIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowLeftIcon,
+  DocumentTextIcon,
+  ArrowDownTrayIcon,
+  PencilIcon,
+  EyeIcon,
+  PencilSquareIcon,
+} from '@heroicons/react/24/outline';
 import ContractPreview from '@/components/ContractPreview';
 import TemplateEditor, { TemplateEditorRef } from '@/components/TemplateEditor';
+import { AssinaturaContratoDialog } from '@/components/contratos/AssinaturaContratoDialog';
 
 type AbaAtiva = 'visualizar' | 'editar';
 
@@ -27,6 +35,7 @@ export default function ContratoViewPage() {
   const [carregandoHtml, setCarregandoHtml] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [temAlteracoes, setTemAlteracoes] = useState(false);
+  const [dialogAssinaturaAberto, setDialogAssinaturaAberto] = useState(false);
   const editorRef = useRef<TemplateEditorRef>(null);
 
   const carregarHtmlParaPreview = useCallback(async () => {
@@ -270,6 +279,12 @@ export default function ContratoViewPage() {
                 {gerandoPDF ? 'Gerando...' : 'Gerar PDF'}
               </Button>
             )}
+            {contrato.status === 'gerado' && contrato.pdfPath && (
+              <Button variant="default" onClick={() => setDialogAssinaturaAberto(true)}>
+                <PencilSquareIcon className="h-5 w-5 mr-2" />
+                Assinar PDF
+              </Button>
+            )}
             {contrato.pdfUrl && (
               <Button variant="outline" onClick={() => window.open(contrato.pdfUrl, '_blank')}>
                 <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
@@ -391,6 +406,19 @@ export default function ContratoViewPage() {
                         : new Date(contrato.dataGeracao).toLocaleDateString('pt-BR')
                     }</p>
                   )}
+                  {contrato.status === 'assinado' && contrato.dataAssinatura && (
+                    <p><strong>Data de assinatura:</strong> {
+                      contrato.dataAssinatura instanceof Date
+                        ? contrato.dataAssinatura.toLocaleString('pt-BR')
+                        : new Date(contrato.dataAssinatura).toLocaleString('pt-BR')
+                    }</p>
+                  )}
+                  {contrato.assinaturaAuditoria?.hashPdfDepoisAssinatura && (
+                    <p className="text-xs text-text-secondary break-all">
+                      <strong>SHA-256 (PDF assinado):</strong>{' '}
+                      {contrato.assinaturaAuditoria.hashPdfDepoisAssinatura}
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -443,6 +471,17 @@ export default function ContratoViewPage() {
             </CardContent>
           </Card>
         )}
+
+        <AssinaturaContratoDialog
+          open={dialogAssinaturaAberto}
+          onOpenChange={setDialogAssinaturaAberto}
+          contratoId={contrato.id}
+          onAssinaturaConcluida={async () => {
+            showToast('Contrato assinado. PDF atualizado.', 'success');
+            await loadContrato();
+          }}
+          onErro={(msg) => showToast(msg, 'error')}
+        />
       </div>
     </Layout>
   );

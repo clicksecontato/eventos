@@ -1,8 +1,14 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
+const regiaoAws =
+  process.env.AWS_REGION ||
+  process.env.AWS_DEFAULT_REGION ||
+  process.env.AWS_CUSTOM_REGION ||
+  'us-east-1';
+
 const s3Client = new S3Client({
-  region: process.env.AWS_REGION || 'us-east-1',
+  region: regiaoAws,
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
@@ -184,6 +190,23 @@ export class S3Service {
         error: errorMessage,
       };
     }
+  }
+
+  async downloadBuffer(s3Key: string): Promise<Buffer> {
+    const command = new GetObjectCommand({
+      Bucket: BUCKET_NAME,
+      Key: s3Key,
+    });
+    const response = await s3Client.send(command);
+    const body = response.Body;
+    if (!body) {
+      throw new Error('Objeto S3 sem corpo');
+    }
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of body as AsyncIterable<Uint8Array>) {
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks);
   }
 
   async getSignedUrl(s3Key: string, expiresIn: number = 3600): Promise<string> {
