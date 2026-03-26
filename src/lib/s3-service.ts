@@ -1,10 +1,15 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
+/**
+ * Em ambientes como Vercel, AWS_REGION pode vir da infraestrutura e não do seu bucket S3.
+ * Priorizar uma variável dedicada evita PermanentRedirect por endpoint/região incorretos.
+ */
 const regiaoAws =
+  process.env.AWS_S3_REGION ||
+  process.env.AWS_CUSTOM_REGION ||
   process.env.AWS_REGION ||
   process.env.AWS_DEFAULT_REGION ||
-  process.env.AWS_CUSTOM_REGION ||
   'us-east-1';
 
 const s3Client = new S3Client({
