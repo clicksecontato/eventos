@@ -15,6 +15,7 @@ import {
   EyeIcon,
   PencilSquareIcon,
   LinkIcon,
+  NoSymbolIcon,
 } from '@heroicons/react/24/outline';
 import ContractPreview from '@/components/ContractPreview';
 import TemplateEditor, { TemplateEditorRef } from '@/components/TemplateEditor';
@@ -39,6 +40,7 @@ export default function ContratoViewPage() {
   const [temAlteracoes, setTemAlteracoes] = useState(false);
   const [dialogAssinaturaAberto, setDialogAssinaturaAberto] = useState(false);
   const [dialogLinkClienteAberto, setDialogLinkClienteAberto] = useState(false);
+  const [revogandoLinks, setRevogandoLinks] = useState(false);
   const editorRef = useRef<TemplateEditorRef>(null);
 
   const carregarHtmlParaPreview = useCallback(async () => {
@@ -294,6 +296,46 @@ export default function ContratoViewPage() {
                 Gerar link para cliente
               </Button>
             )}
+            {contrato.status === 'gerado' && contrato.pdfPath && (
+              <Button
+                variant="outline"
+                disabled={revogandoLinks}
+                onClick={async () => {
+                  if (
+                    !confirm(
+                      'Revogar todos os links de assinatura pendentes deste contrato? Quem tiver o link antigo não poderá mais assinar.'
+                    )
+                  ) {
+                    return;
+                  }
+                  try {
+                    setRevogandoLinks(true);
+                    const res = await fetch(`/api/contratos/${contrato.id}/revogar-convite-assinatura`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({}),
+                    });
+                    const json = await res.json().catch(() => ({}));
+                    if (!res.ok) {
+                      showToast(json.error || 'Não foi possível revogar os links.', 'error');
+                      return;
+                    }
+                    const rev = json.data?.revogados ?? json.revogados;
+                    showToast(
+                      rev > 0 ? `${rev} link(ns) revogado(s).` : 'Nenhum link ativo para revogar.',
+                      rev > 0 ? 'success' : 'info'
+                    );
+                  } catch {
+                    showToast('Erro de rede ao revogar links.', 'error');
+                  } finally {
+                    setRevogandoLinks(false);
+                  }
+                }}
+              >
+                <NoSymbolIcon className="h-5 w-5 mr-2" />
+                {revogandoLinks ? 'Revogando...' : 'Revogar links pendentes'}
+              </Button>
+            )}
             {contrato.pdfUrl && (
               <Button variant="outline" onClick={() => window.open(contrato.pdfUrl, '_blank')}>
                 <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
@@ -495,7 +537,7 @@ export default function ContratoViewPage() {
           open={dialogLinkClienteAberto}
           onOpenChange={setDialogLinkClienteAberto}
           contratoId={contrato.id}
-          onSucesso={async (link, emailEnviado, erroEmail) => {
+          onSucesso={async (link, emailEnviado, erroEmail, resendMock) => {
             if (link && navigator?.clipboard?.writeText) {
               await navigator.clipboard.writeText(link);
               showToast('Link de assinatura gerado e copiado para a área de transferência', 'success');
@@ -503,7 +545,9 @@ export default function ContratoViewPage() {
               showToast('Link gerado com sucesso', 'success');
               window.open(link, '_blank');
             }
-            if (!emailEnviado && erroEmail) {
+            if (resendMock) {
+              showToast('RESEND_MOCK ativo: nenhum e-mail enviado. Use o link copiado ou o log do servidor.', 'info');
+            } else if (!emailEnviado && erroEmail) {
               showToast(`Link gerado, mas o e-mail não foi enviado: ${erroEmail}`, 'error');
             } else if (emailEnviado) {
               showToast('E-mail de assinatura enviado ao cliente', 'success');

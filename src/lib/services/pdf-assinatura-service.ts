@@ -41,14 +41,23 @@ export async function incorporarAssinaturaNoPdf(
   let y = height - 48;
   const margem = 48;
 
-  page.drawText('Assinatura eletrônica (Lei nº 14.063/2020)', {
+  page.drawText('Assinatura eletrônica avançada (Lei nº 14.063/2020)', {
     x: margem,
     y,
     size: 13,
     font,
     color: rgb(0.08, 0.08, 0.1),
   });
-  y -= 26;
+  y -= 18;
+
+  page.drawText('Não constitui assinatura qualificada ICP-Brasil / certificado digital.', {
+    x: margem,
+    y,
+    size: 9,
+    font,
+    color: rgb(0.35, 0.35, 0.38),
+  });
+  y -= 22;
 
   page.drawText(`Signatário: ${params.nomeSignatario}`, {
     x: margem,

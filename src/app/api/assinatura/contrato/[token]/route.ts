@@ -1,8 +1,19 @@
 import { NextRequest } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { s3Service } from '@/lib/s3-service';
-import { hashTokenAssinaturaCliente } from '@/lib/services/assinatura-cliente-link-service';
+import {
+  calcularHashReferenciaContratoParaConvite,
+  hashTokenAssinaturaCliente,
+  mascararEmail,
+} from '@/lib/services/assinatura-cliente-link-service';
 import { createApiResponse, createErrorResponse, handleApiError, getRouteParams } from '@/lib/api/route-helpers';
+
+function parseDataAtualizacaoContrato(val: unknown): Date | undefined {
+  if (val == null) return undefined;
+  if (val instanceof Date) return val;
+  const d = new Date(String(val));
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
 
 export async function GET(
   request: NextRequest,
@@ -42,7 +53,7 @@ export async function GET(
 
     const { data: contrato, error: contratoError } = await supabase
       .from('contratos')
-      .select('id, numero_contrato, status, pdf_path')
+      .select('id, numero_contrato, status, pdf_path, data_atualizacao')
       .eq('id', convite.contrato_id)
       .eq('user_id', convite.user_id)
       .limit(1)
@@ -55,11 +66,47 @@ export async function GET(
       return createErrorResponse('Contrato indisponível para assinatura.', 404);
     }
 
+    const hashAtual = calcularHashReferenciaContratoParaConvite({
+      id: contrato.id,
+      pdfPath: contrato.pdf_path,
+      dataAtualizacao: parseDataAtualizacaoContrato(contrato.data_atualizacao),
+    });
+
+    if (convite.contrato_ref_hash && hashAtual !== convite.contrato_ref_hash) {
+      return createErrorResponse(
+        'O contrato foi alterado após o envio deste link. Solicite um novo convite ao responsável.',
+        409
+      );
+    }
+
+    const acessos = Number(convite.acessos_contador ?? 0) + 1;
+    const agoraIso = new Date().toISOString();
+
+    const updateConvite: Record<string, unknown> = {
+      acessos_contador: acessos,
+      data_atualizacao: agoraIso,
+    };
     if (convite.status === 'pendente') {
-      await supabase
-        .from('contratos_assinatura_convites')
-        .update({ status: 'acessado', acessado_em: new Date().toISOString() })
-        .eq('id', convite.id);
+      updateConvite.status = 'acessado';
+      updateConvite.acessado_em = agoraIso;
+    }
+
+    await supabase.from('contratos_assinatura_convites').update(updateConvite).eq('id', convite.id);
+
+    const emailDest = convite.email_destinatario?.trim();
+    const precisaOtp = Boolean(emailDest) && !convite.otp_verificado_em;
+
+    if (precisaOtp) {
+      return createApiResponse({
+        contratoId: contrato.id,
+        numeroContrato: contrato.numero_contrato,
+        statusContrato: contrato.status,
+        requiresOtp: true,
+        nomeCliente: convite.nome_destinatario || undefined,
+        emailClienteOculto: mascararEmail(emailDest!),
+        expiraEm: convite.expira_em,
+        conviteId: convite.id,
+      });
     }
 
     const pdfUrl = await s3Service.getSignedUrl(contrato.pdf_path, 3600);
@@ -71,9 +118,10 @@ export async function GET(
       nomeCliente: convite.nome_destinatario || undefined,
       emailCliente: convite.email_destinatario || undefined,
       expiraEm: convite.expira_em,
+      requiresOtp: false,
+      conviteId: convite.id,
     });
   } catch (error) {
     return handleApiError(error);
   }
 }
-

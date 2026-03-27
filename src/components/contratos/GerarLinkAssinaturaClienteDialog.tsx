@@ -15,7 +15,7 @@ export interface GerarLinkAssinaturaClienteDialogProps {
   open: boolean;
   onOpenChange: (aberto: boolean) => void;
   contratoId: string;
-  onSucesso?: (link: string, emailEnviado: boolean, erroEmail?: string) => void;
+  onSucesso?: (link: string, emailEnviado: boolean, erroEmail?: string, resendMock?: boolean) => void;
   onErro?: (mensagem: string) => void;
 }
 
@@ -33,8 +33,13 @@ export function GerarLinkAssinaturaClienteDialog({
   const handleGerar = async () => {
     if (gerando) return;
     const email = emailCliente.trim();
-    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      onErro?.('Informe um e-mail válido ou deixe o campo em branco.');
+    const nome = nomeCliente.trim();
+    if (nome.length < 2) {
+      onErro?.('Informe o nome do cliente (mínimo 2 caracteres).');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      onErro?.('Informe um e-mail válido. O cliente receberá o link e o código de confirmação.');
       return;
     }
 
@@ -44,8 +49,8 @@ export function GerarLinkAssinaturaClienteDialog({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          emailCliente: email || undefined,
-          nomeCliente: nomeCliente.trim() || undefined,
+          emailCliente: email,
+          nomeCliente: nome,
         }),
       });
       const result = await response.json().catch(() => ({}));
@@ -58,8 +63,9 @@ export function GerarLinkAssinaturaClienteDialog({
       const link = String(data.link || '');
       const emailEnviado = Boolean(data.emailEnviado);
       const erroEmail = data.erroEmail ? String(data.erroEmail) : undefined;
+      const resendMock = Boolean(data.resendMock);
 
-      onSucesso?.(link, emailEnviado, erroEmail);
+      onSucesso?.(link, emailEnviado, erroEmail, resendMock);
       onOpenChange(false);
       setEmailCliente('');
       setNomeCliente('');
@@ -76,13 +82,14 @@ export function GerarLinkAssinaturaClienteDialog({
         <DialogHeader>
           <DialogTitle>Gerar link para cliente assinar</DialogTitle>
           <DialogDescription>
-            Gere um link público para o cliente visualizar e assinar o contrato.
+            Gere um link público para o cliente visualizar e assinar o contrato. Será obrigatório confirmar o e-mail com
+            um código antes de exibir o PDF.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
           <div className="space-y-1">
-            <label className="text-sm font-medium text-text-primary">Nome do cliente (opcional)</label>
+            <label className="text-sm font-medium text-text-primary">Nome do cliente</label>
             <input
               value={nomeCliente}
               onChange={(e) => setNomeCliente(e.target.value)}
@@ -91,7 +98,7 @@ export function GerarLinkAssinaturaClienteDialog({
             />
           </div>
           <div className="space-y-1">
-            <label className="text-sm font-medium text-text-primary">E-mail do cliente (opcional)</label>
+            <label className="text-sm font-medium text-text-primary">E-mail do cliente</label>
             <input
               type="email"
               value={emailCliente}
@@ -100,7 +107,7 @@ export function GerarLinkAssinaturaClienteDialog({
               placeholder="cliente@email.com"
             />
             <p className="text-xs text-muted-foreground">
-              Se informado, tentaremos enviar o link automaticamente por e-mail.
+              Enviaremos o link e, na página de assinatura, um código de verificação para este e-mail.
             </p>
           </div>
         </div>
@@ -117,4 +124,3 @@ export function GerarLinkAssinaturaClienteDialog({
     </Dialog>
   );
 }
-

@@ -22,6 +22,15 @@ export interface SendEmailOptions {
 }
 
 /**
+ * Quando `RESEND_MOCK=true`, nenhum e-mail é enviado ao Resend (útil em dev sem domínio verificado).
+ * O fluxo da aplicação segue como sucesso; use logs ou campos `*Desenvolvimento` nas APIs de assinatura.
+ */
+export function isResendMockEnabled(): boolean {
+  const v = process.env.RESEND_MOCK?.trim().toLowerCase();
+  return v === 'true' || v === '1' || v === 'yes';
+}
+
+/**
  * Enviar email usando Resend
  */
 export async function sendEmail({
@@ -30,6 +39,14 @@ export async function sendEmail({
   html,
   from = 'Clicksehub <noreply@clicksehub.com>'
 }: SendEmailOptions): Promise<{ success: boolean; error?: string }> {
+  if (isResendMockEnabled()) {
+    console.log('[resend-email-service][MOCK] Envio simulado (RESEND_MOCK). Nenhuma chamada ao Resend.');
+    console.log('[resend-email-service][MOCK] to:', to);
+    console.log('[resend-email-service][MOCK] subject:', subject);
+    console.log('[resend-email-service][MOCK] from:', from);
+    return { success: true };
+  }
+
   // Verificar se provedor está configurado
   if (!emailProvider.isConfigured()) {
     return {
@@ -63,6 +80,7 @@ export async function sendEmail({
  * Verificar se o serviço de email está configurado
  */
 export function isEmailServiceConfigured(): boolean {
+  if (isResendMockEnabled()) return true;
   return emailProvider.isConfigured();
 }
 

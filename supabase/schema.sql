@@ -591,6 +591,16 @@ CREATE INDEX IF NOT EXISTS idx_contratos_assinatura_convites_user_id ON contrato
 CREATE INDEX IF NOT EXISTS idx_contratos_assinatura_convites_contrato_id ON contratos_assinatura_convites(contrato_id);
 CREATE INDEX IF NOT EXISTS idx_contratos_assinatura_convites_status_expira ON contratos_assinatura_convites(status, expira_em);
 
+ALTER TABLE contratos_assinatura_convites ADD COLUMN IF NOT EXISTS acessos_contador INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE contratos_assinatura_convites ADD COLUMN IF NOT EXISTS contrato_ref_hash VARCHAR(64);
+ALTER TABLE contratos_assinatura_convites ADD COLUMN IF NOT EXISTS otp_codigo_hash VARCHAR(64);
+ALTER TABLE contratos_assinatura_convites ADD COLUMN IF NOT EXISTS otp_expira_em TIMESTAMPTZ;
+ALTER TABLE contratos_assinatura_convites ADD COLUMN IF NOT EXISTS otp_tentativas INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE contratos_assinatura_convites ADD COLUMN IF NOT EXISTS otp_verificado_em TIMESTAMPTZ;
+ALTER TABLE contratos_assinatura_convites ADD COLUMN IF NOT EXISTS otp_total_envios INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE contratos_assinatura_convites ADD COLUMN IF NOT EXISTS otp_ultimo_envio_em TIMESTAMPTZ;
+ALTER TABLE contratos_assinatura_convites ADD COLUMN IF NOT EXISTS otp_bloqueado_ate TIMESTAMPTZ;
+
 -- ============================================
 -- TABELAS DE RELATÓRIOS E CACHE
 -- ============================================

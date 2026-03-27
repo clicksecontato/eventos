@@ -290,6 +290,12 @@ export interface AssinaturaAuditoriaContrato {
   signatarioNome?: string;
   ip?: string;
   userAgent?: string;
+  /** Convite de link público, quando aplicável. */
+  conviteAssinaturaId?: string;
+  modalidadeEletronica?: 'interna' | 'link_publico';
+  cienciaDeclarada?: boolean;
+  referenciaDocumentoHash?: string;
+  otpVerificadoEm?: string;
 }
 
 export interface Contrato {

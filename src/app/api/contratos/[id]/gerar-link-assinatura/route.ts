@@ -1,9 +1,10 @@
 import { NextRequest } from 'next/server';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { getSupabaseClient } from '@/lib/supabase/client';
-import { sendEmail } from '@/lib/services/resend-email-service';
+import { isResendMockEnabled, sendEmail } from '@/lib/services/resend-email-service';
 import {
   calcularExpiracaoHoras,
+  calcularHashReferenciaContratoParaConvite,
   gerarTokenAssinaturaCliente,
   hashTokenAssinaturaCliente,
   montarLinkAssinaturaCliente,
@@ -41,6 +42,21 @@ export async function POST(
       return createErrorResponse('Gere o PDF do contrato antes de criar o link de assinatura.', 400);
     }
 
+    const nomeCliente = body.nomeCliente?.trim() || '';
+    const emailCliente = body.emailCliente?.trim() || '';
+    if (nomeCliente.length < 2) {
+      return createErrorResponse('Informe o nome do cliente (mínimo 2 caracteres).', 400);
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailCliente)) {
+      return createErrorResponse('Informe um e-mail válido do signatário. Ele receberá o código de confirmação.', 400);
+    }
+
+    const contratoRefHash = calcularHashReferenciaContratoParaConvite({
+      id: contrato.id,
+      pdfPath: contrato.pdfPath,
+      dataAtualizacao: contrato.dataAtualizacao,
+    });
+
     const token = gerarTokenAssinaturaCliente();
     const tokenHash = hashTokenAssinaturaCliente(token);
     const expiraEm = calcularExpiracaoHoras(body.validadeHoras);
@@ -56,8 +72,9 @@ export async function POST(
         token_hash: tokenHash,
         status: 'pendente',
         expira_em: expiraEm.toISOString(),
-        email_destinatario: body.emailCliente?.trim() || null,
-        nome_destinatario: body.nomeCliente?.trim() || null,
+        email_destinatario: emailCliente,
+        nome_destinatario: nomeCliente,
+        contrato_ref_hash: contratoRefHash,
       })
       .select('*')
       .single();
@@ -68,20 +85,24 @@ export async function POST(
 
     let emailEnviado = false;
     let erroEmail: string | undefined;
-    if (body.emailCliente?.trim()) {
-      const html = templateEmailAssinaturaCliente({
-        nomeCliente: body.nomeCliente,
-        numeroContrato: contrato.numeroContrato,
-        link,
-        expiraEm,
-      });
-      const envio = await sendEmail({
-        to: body.emailCliente.trim(),
-        subject: `Assinar contrato ${contrato.numeroContrato || ''}`.trim(),
-        html,
-      });
-      emailEnviado = envio.success;
-      erroEmail = envio.error;
+    const html = templateEmailAssinaturaCliente({
+      nomeCliente: nomeCliente,
+      numeroContrato: contrato.numeroContrato,
+      link,
+      expiraEm,
+    });
+    const envio = await sendEmail({
+      to: emailCliente,
+      subject: `Assinar contrato ${contrato.numeroContrato || ''}`.trim(),
+      html,
+    });
+    emailEnviado = envio.success && !isResendMockEnabled();
+    erroEmail = envio.error;
+    if (isResendMockEnabled() && envio.success) {
+      console.log('\n┌──────────────────────────────────────────────────');
+      console.log('│ [MOCK] Link de assinatura (e-mail não enviado):');
+      console.log('│', link);
+      console.log('└──────────────────────────────────────────────────\n');
     }
 
     return createApiResponse({
@@ -90,6 +111,7 @@ export async function POST(
       expiraEm: expiraEm.toISOString(),
       emailEnviado,
       erroEmail,
+      resendMock: isResendMockEnabled(),
     });
   } catch (error) {
     return handleApiError(error);
