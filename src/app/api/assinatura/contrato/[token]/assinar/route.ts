@@ -14,6 +14,7 @@ import {
 } from '@/lib/services/assinatura-cliente-link-service';
 import type { AssinaturaAuditoriaContrato } from '@/types';
 import { createApiResponse, createErrorResponse, getRouteParams, handleApiError } from '@/lib/api/route-helpers';
+import { registrarEventoAuditoriaContrato } from '@/lib/services/contrato-auditoria-service';
 
 const LIMITE_BYTES_PNG = 500 * 1024;
 const MIN_BYTES_ASSINATURA = 400;
@@ -190,6 +191,32 @@ export async function POST(
         email_signatario: emailSignatario || null,
       })
       .eq('id', convite.id);
+
+    if (convite.signatario_id) {
+      try {
+        const parteRepo = repositoryFactory.getContratoParteRepository();
+        await parteRepo.atualizarSignatario(String(convite.signatario_id), convite.user_id, {
+          status: 'assinado',
+        });
+      } catch (e) {
+        console.warn('[assinatura-link] atualizar status do signatário:', e);
+      }
+    }
+
+    await registrarEventoAuditoriaContrato({
+      contratoId: contrato.id,
+      userId: convite.user_id,
+      actorUserId: null,
+      tipo: 'assinado_link_publico',
+      payload: {
+        conviteId: convite.id,
+        nomeSignatario,
+        emailSignatario,
+        hashPdfAntesAssinatura: hashAntes,
+        hashPdfDepoisAssinatura: hashDepois,
+        ip: ipCliente ?? null,
+      },
+    });
 
     return createApiResponse({
       contratoId: atualizado.id,

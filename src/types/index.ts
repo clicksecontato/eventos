@@ -280,6 +280,78 @@ export interface ConfiguracaoContrato {
   dataAtualizacao: Date;
 }
 
+/** Tipos de evento imutável na linha do tempo do contrato (auditoria Fase 1). */
+export type TipoEventoContratoAuditoria =
+  | 'contrato_criado'
+  | 'conteudo_alterado'
+  | 'metadados_alterados'
+  | 'status_alterado'
+  | 'pdf_gerado'
+  | 'assinado_interno'
+  | 'assinado_link_publico'
+  | 'convite_link_criado'
+  | 'convites_revogados'
+  | 'parte_criada'
+  | 'parte_atualizada'
+  | 'parte_excluida'
+  | 'signatario_criado'
+  | 'signatario_atualizado'
+  | 'signatario_excluido';
+
+/** Papéis sugeridos para partes (texto livre adicional via `outro` + convenção futura). */
+export type PapelContratoParte =
+  | 'cliente'
+  | 'contratante'
+  | 'contratada'
+  | 'testemunha'
+  | 'representante'
+  | 'outro';
+
+export type StatusContratoParteSignatario =
+  | 'pendente'
+  | 'convite_enviado'
+  | 'assinado'
+  | 'recusado'
+  | 'expirado';
+
+export interface ContratoParte {
+  id: string;
+  contratoId: string;
+  userId: string;
+  papel: PapelContratoParte | string;
+  ordemAssinatura?: number | null;
+  obrigatoria: boolean;
+  dataCadastro: Date;
+  dataAtualizacao: Date;
+}
+
+export interface ContratoParteSignatario {
+  id: string;
+  parteId: string;
+  contratoId: string;
+  userId: string;
+  nome: string;
+  email: string;
+  documento?: string | null;
+  status: StatusContratoParteSignatario;
+  dataCadastro: Date;
+  dataAtualizacao: Date;
+}
+
+export interface ContratoParteComSignatarios extends ContratoParte {
+  signatarios: ContratoParteSignatario[];
+}
+
+export interface ContratoEventoAuditoria {
+  id: string;
+  contratoId: string;
+  userId: string;
+  actorUserId?: string | null;
+  tipoEvento: TipoEventoContratoAuditoria;
+  payload: Record<string, unknown>;
+  criadoEm: Date;
+}
+
 /** Registro de auditoria da assinatura interna (PDF + manuscrita). */
 export interface AssinaturaAuditoriaContrato {
   hashPdfAntesAssinatura: string;

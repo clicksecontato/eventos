@@ -17,11 +17,14 @@ import {
   createErrorResponse,
   getRouteParams,
 } from '@/lib/api/route-helpers';
+import { registrarEventoAuditoriaContrato } from '@/lib/services/contrato-auditoria-service';
 
 type BodyGerarLink = {
   emailCliente?: string;
   nomeCliente?: string;
   validadeHoras?: number;
+  /** Se informado, nome/e-mail vêm do cadastro de signatário (Fase 2). */
+  signatarioId?: string;
 };
 
 export async function POST(
@@ -42,13 +45,27 @@ export async function POST(
       return createErrorResponse('Gere o PDF do contrato antes de criar o link de assinatura.', 400);
     }
 
-    const nomeCliente = body.nomeCliente?.trim() || '';
-    const emailCliente = body.emailCliente?.trim() || '';
-    if (nomeCliente.length < 2) {
-      return createErrorResponse('Informe o nome do cliente (mínimo 2 caracteres).', 400);
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailCliente)) {
-      return createErrorResponse('Informe um e-mail válido do signatário. Ele receberá o código de confirmação.', 400);
+    const parteRepo = repositoryFactory.getContratoParteRepository();
+    let nomeCliente = body.nomeCliente?.trim() || '';
+    let emailCliente = body.emailCliente?.trim() || '';
+    let signatarioIdGravacao: string | null = null;
+
+    const sid = body.signatarioId?.trim();
+    if (sid) {
+      const sig = await parteRepo.buscarSignatario(sid, user.id);
+      if (!sig || sig.contratoId !== contrato.id) {
+        return createErrorResponse('Signatário não encontrado neste contrato.', 404);
+      }
+      nomeCliente = sig.nome;
+      emailCliente = sig.email;
+      signatarioIdGravacao = sig.id;
+    } else {
+      if (nomeCliente.length < 2) {
+        return createErrorResponse('Informe o nome do cliente (mínimo 2 caracteres).', 400);
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailCliente)) {
+        return createErrorResponse('Informe um e-mail válido do signatário. Ele receberá o código de confirmação.', 400);
+      }
     }
 
     const contratoRefHash = calcularHashReferenciaContratoParaConvite({
@@ -63,24 +80,37 @@ export async function POST(
     const link = montarLinkAssinaturaCliente(token, request.url);
 
     const supabase = getSupabaseClient(true) as any;
+    const insertRow: Record<string, unknown> = {
+      id: crypto.randomUUID(),
+      user_id: user.id,
+      contrato_id: contrato.id,
+      token_hash: tokenHash,
+      status: 'pendente',
+      expira_em: expiraEm.toISOString(),
+      email_destinatario: emailCliente,
+      nome_destinatario: nomeCliente,
+      contrato_ref_hash: contratoRefHash,
+    };
+    if (signatarioIdGravacao) {
+      insertRow.signatario_id = signatarioIdGravacao;
+    }
+
     const { data, error } = await supabase
       .from('contratos_assinatura_convites')
-      .insert({
-        id: crypto.randomUUID(),
-        user_id: user.id,
-        contrato_id: contrato.id,
-        token_hash: tokenHash,
-        status: 'pendente',
-        expira_em: expiraEm.toISOString(),
-        email_destinatario: emailCliente,
-        nome_destinatario: nomeCliente,
-        contrato_ref_hash: contratoRefHash,
-      })
+      .insert(insertRow)
       .select('*')
       .single();
 
     if (error) {
       return createErrorResponse(`Erro ao gerar link de assinatura: ${error.message}`, 500);
+    }
+
+    if (signatarioIdGravacao) {
+      try {
+        await parteRepo.atualizarSignatario(signatarioIdGravacao, user.id, { status: 'convite_enviado' });
+      } catch (e) {
+        console.warn('[gerar-link-assinatura] não foi possível atualizar status do signatário:', e);
+      }
     }
 
     let emailEnviado = false;
@@ -104,6 +134,20 @@ export async function POST(
       console.log('│', link);
       console.log('└──────────────────────────────────────────────────\n');
     }
+
+    await registrarEventoAuditoriaContrato({
+      contratoId: contrato.id,
+      userId: user.id,
+      actorUserId: user.id,
+      tipo: 'convite_link_criado',
+      payload: {
+        conviteId: data.id,
+        emailDestinatario: emailCliente,
+        nomeDestinatario: nomeCliente,
+        emailEnviado,
+        signatarioId: signatarioIdGravacao,
+      },
+    });
 
     return createApiResponse({
       conviteId: data.id,

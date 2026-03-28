@@ -14,7 +14,9 @@
     "e2e:headed": "playwright test --headed",
     "e2e:ui": "playwright test --ui",
     "e2e:report": "playwright show-report",
-    "migrate:firebase-to-supabase": "tsx supabase/migrate-firebase-to-supabase.ts"
+    "migrate:firebase-to-supabase": "tsx supabase/migrate-firebase-to-supabase.ts",
+    "supabase:db:push": "npx supabase db push",
+    "supabase:link": "npx supabase link"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.914.0",

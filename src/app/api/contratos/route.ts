@@ -109,6 +109,8 @@ export async function POST(request: NextRequest) {
       numero_contrato: numeroContrato
     };
     
+    const { registrarEventoAuditoriaContrato } = await import('@/lib/services/contrato-auditoria-service');
+
     const contratoRepo = repositoryFactory.getContratoRepository();
     const contrato = await contratoRepo.create({
       userId: user.id,
@@ -122,6 +124,19 @@ export async function POST(request: NextRequest) {
       dataCadastro: new Date(),
       dataAtualizacao: new Date(),
       criadoPor: user.id
+    });
+
+    await registrarEventoAuditoriaContrato({
+      contratoId: contrato.id,
+      userId: user.id,
+      actorUserId: user.id,
+      tipo: 'contrato_criado',
+      payload: {
+        numeroContrato: contrato.numeroContrato,
+        modeloContratoId: contrato.modeloContratoId,
+        eventoId: contrato.eventoId ?? null,
+        status: contrato.status,
+      },
     });
 
     // Popular modeloContrato no retorno

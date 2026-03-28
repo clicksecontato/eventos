@@ -7,6 +7,7 @@ import {
   createErrorResponse,
   getRouteParams
 } from '@/lib/api/route-helpers';
+import { registrarEventoAuditoriaContrato } from '@/lib/services/contrato-auditoria-service';
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Erro desconhecido';
@@ -102,6 +103,16 @@ export async function POST(
       });
       
       console.log(`[PDF] Contrato atualizado com sucesso. Status: ${atualizado.status}`);
+      await registrarEventoAuditoriaContrato({
+        contratoId: id,
+        userId: user.id,
+        actorUserId: user.id,
+        tipo: 'pdf_gerado',
+        payload: {
+          pdfPath: atualizado.pdfPath ?? path,
+          status: atualizado.status,
+        },
+      });
       return createApiResponse(atualizado);
     } catch (error: unknown) {
       console.error('[PDF] Erro ao atualizar contrato após gerar PDF:', error);

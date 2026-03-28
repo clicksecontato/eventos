@@ -43,3 +43,6 @@ yarn-error.log*
 next-env.d.ts
 
 /data
+
+# Supabase CLI (link, cache local)
+/supabase/.temp/

@@ -14,6 +14,7 @@ import {
   incorporarAssinaturaNoPdf,
 } from '@/lib/services/pdf-assinatura-service';
 import type { AssinaturaAuditoriaContrato } from '@/types';
+import { registrarEventoAuditoriaContrato } from '@/lib/services/contrato-auditoria-service';
 
 export const maxDuration = 60;
 
@@ -165,6 +166,19 @@ export async function POST(
       dataAssinatura: new Date(),
       assinadoPor: user.id,
       assinaturaAuditoria: auditoria,
+    });
+
+    await registrarEventoAuditoriaContrato({
+      contratoId: id,
+      userId: user.id,
+      actorUserId: user.id,
+      tipo: 'assinado_interno',
+      payload: {
+        signatarioUserId: user.id,
+        signatarioEmail: user.email ?? null,
+        hashPdfAntesAssinatura: hashAntes,
+        hashPdfDepoisAssinatura: hashDepois,
+      },
     });
 
     return createApiResponse(atualizado);

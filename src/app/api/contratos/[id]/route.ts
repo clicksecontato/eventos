@@ -9,6 +9,7 @@ import {
   getRequestBody,
   getRouteParams
 } from '@/lib/api/route-helpers';
+import { registrarEventoAuditoriaContrato } from '@/lib/services/contrato-auditoria-service';
 
 export async function GET(
   request: NextRequest,
@@ -91,7 +92,38 @@ export async function PUT(
       dataAtualizacao: new Date(),
       userId: user.id
     });
-    
+
+    if (body.status !== undefined && body.status !== contrato.status) {
+      await registrarEventoAuditoriaContrato({
+        contratoId: id,
+        userId: user.id,
+        actorUserId: user.id,
+        tipo: 'status_alterado',
+        payload: { de: contrato.status, para: atualizado.status },
+      });
+    }
+    if (body.conteudoHtml !== undefined) {
+      const tamanho = String(body.conteudoHtml ?? '').length;
+      await registrarEventoAuditoriaContrato({
+        contratoId: id,
+        userId: user.id,
+        actorUserId: user.id,
+        tipo: 'conteudo_alterado',
+        payload: { tamanhoCaracteres: tamanho },
+      });
+    }
+    const chavesMeta = ['dadosPreenchidos', 'observacoes', 'eventoId', 'modeloContratoId'] as const;
+    const chavesAlteradas = chavesMeta.filter((k) => body[k] !== undefined);
+    if (chavesAlteradas.length > 0) {
+      await registrarEventoAuditoriaContrato({
+        contratoId: id,
+        userId: user.id,
+        actorUserId: user.id,
+        tipo: 'metadados_alterados',
+        payload: { campos: chavesAlteradas },
+      });
+    }
+
     // Popular modeloContrato no retorno
     let atualizadoComModelo = atualizado;
     if (atualizado.modeloContratoId) {

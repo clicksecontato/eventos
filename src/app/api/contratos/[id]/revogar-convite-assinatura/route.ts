@@ -7,6 +7,7 @@ import {
   createErrorResponse,
   getRouteParams,
 } from '@/lib/api/route-helpers';
+import { registrarEventoAuditoriaContrato } from '@/lib/services/contrato-auditoria-service';
 
 type BodyRevogar = {
   conviteId?: string;
@@ -47,6 +48,18 @@ export async function POST(
     }
 
     const revogados = Array.isArray(data) ? data.length : 0;
+    if (revogados > 0) {
+      await registrarEventoAuditoriaContrato({
+        contratoId,
+        userId: user.id,
+        actorUserId: user.id,
+        tipo: 'convites_revogados',
+        payload: {
+          quantidade: revogados,
+          conviteIdEspecifico: body.conviteId?.trim() || null,
+        },
+      });
+    }
     return createApiResponse({ revogados, mensagem: revogados > 0 ? 'Links revogados.' : 'Nenhum link ativo para revogar.' });
   } catch (error) {
     return handleApiError(error);

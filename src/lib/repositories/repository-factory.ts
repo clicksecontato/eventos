@@ -26,6 +26,8 @@ import { TipoServicoSupabaseRepository } from './supabase/tipo-servico-supabase-
 import { CustoSupabaseRepository } from './supabase/custo-supabase-repository';
 import { ServicoEventoSupabaseRepository } from './supabase/servico-evento-supabase-repository';
 import { ContratoSupabaseRepository } from './supabase/contrato-supabase-repository';
+import { ContratoEventoAuditoriaSupabaseRepository } from './supabase/contrato-evento-auditoria-supabase-repository';
+import { ContratoParteSupabaseRepository } from './supabase/contrato-parte-supabase-repository';
 import { ModeloContratoSupabaseRepository } from './supabase/modelo-contrato-supabase-repository';
 import { ConfiguracaoContratoSupabaseRepository } from './supabase/configuracao-contrato-supabase-repository';
 import { VariavelContratoSupabaseRepository } from './supabase/variavel-contrato-supabase-repository';
@@ -147,6 +149,8 @@ export class RepositoryFactory {
   private canalEntradaRepository: CanalEntradaSupabaseRepository;
   private tipoEventoRepository: TipoEventoSupabaseRepository;
   private contratoRepository: ContratoSupabaseRepository;
+  private contratoEventoAuditoriaRepository: ContratoEventoAuditoriaSupabaseRepository;
+  private contratoParteRepository: ContratoParteSupabaseRepository;
   private modeloContratoRepository: ModeloContratoSupabaseRepository;
   private configuracaoContratoRepository: ConfiguracaoContratoSupabaseRepository;
   private variavelContratoRepository: VariavelContratoSupabaseRepository;
@@ -200,6 +204,8 @@ export class RepositoryFactory {
     this.canalEntradaRepository = new CanalEntradaSupabaseRepository();
     this.tipoEventoRepository = new TipoEventoSupabaseRepository();
     this.contratoRepository = new ContratoSupabaseRepository();
+    this.contratoEventoAuditoriaRepository = new ContratoEventoAuditoriaSupabaseRepository();
+    this.contratoParteRepository = new ContratoParteSupabaseRepository();
     this.modeloContratoRepository = new ModeloContratoSupabaseRepository();
     this.configuracaoContratoRepository = new ConfiguracaoContratoSupabaseRepository();
     this.variavelContratoRepository = new VariavelContratoSupabaseRepository();
@@ -279,6 +285,14 @@ export class RepositoryFactory {
 
   public getContratoRepository(): ContratoSupabaseRepository {
     return this.contratoRepository;
+  }
+
+  public getContratoEventoAuditoriaRepository(): ContratoEventoAuditoriaSupabaseRepository {
+    return this.contratoEventoAuditoriaRepository;
+  }
+
+  public getContratoParteRepository(): ContratoParteSupabaseRepository {
+    return this.contratoParteRepository;
   }
 
   public getModeloContratoRepository(): ModeloContratoSupabaseRepository {

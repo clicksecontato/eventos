@@ -16,13 +16,42 @@ import {
   PencilSquareIcon,
   LinkIcon,
   NoSymbolIcon,
+  ClockIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
 import ContractPreview from '@/components/ContractPreview';
 import TemplateEditor, { TemplateEditorRef } from '@/components/TemplateEditor';
 import { AssinaturaContratoDialog } from '@/components/contratos/AssinaturaContratoDialog';
 import { GerarLinkAssinaturaClienteDialog } from '@/components/contratos/GerarLinkAssinaturaClienteDialog';
+import { ContratoPartesPanel } from '@/components/contratos/ContratoPartesPanel';
 
-type AbaAtiva = 'visualizar' | 'editar';
+type AbaAtiva = 'visualizar' | 'editar' | 'partes' | 'historico';
+
+type EventoAuditoriaContratoUi = {
+  id: string;
+  tipoEvento: string;
+  payload: Record<string, unknown>;
+  criadoEm: string;
+  actorUserId?: string | null;
+};
+
+const ROTULOS_EVENTO_CONTRATO: Record<string, string> = {
+  contrato_criado: 'Contrato criado',
+  conteudo_alterado: 'Conteúdo (HTML) alterado',
+  metadados_alterados: 'Metadados alterados',
+  status_alterado: 'Status alterado',
+  pdf_gerado: 'PDF gerado',
+  assinado_interno: 'Assinado (usuário logado)',
+  assinado_link_publico: 'Assinado (link público)',
+  convite_link_criado: 'Convite de assinatura criado',
+  convites_revogados: 'Links de assinatura revogados',
+  parte_criada: 'Parte criada',
+  parte_atualizada: 'Parte atualizada',
+  parte_excluida: 'Parte excluída',
+  signatario_criado: 'Signatário adicionado',
+  signatario_atualizado: 'Signatário atualizado',
+  signatario_excluido: 'Signatário removido',
+};
 
 export default function ContratoViewPage() {
   const params = useParams();
@@ -41,6 +70,9 @@ export default function ContratoViewPage() {
   const [dialogAssinaturaAberto, setDialogAssinaturaAberto] = useState(false);
   const [dialogLinkClienteAberto, setDialogLinkClienteAberto] = useState(false);
   const [revogandoLinks, setRevogandoLinks] = useState(false);
+  const [eventosAuditoria, setEventosAuditoria] = useState<EventoAuditoriaContratoUi[]>([]);
+  const [carregandoAuditoria, setCarregandoAuditoria] = useState(false);
+  const [erroAuditoria, setErroAuditoria] = useState<string | null>(null);
   const editorRef = useRef<TemplateEditorRef>(null);
 
   const carregarHtmlParaPreview = useCallback(async () => {
@@ -133,9 +165,46 @@ export default function ContratoViewPage() {
     }
   }, [params.id, showToast]);
 
+  const carregarEventosAuditoria = useCallback(async () => {
+    if (!contrato?.id) return;
+    try {
+      setCarregandoAuditoria(true);
+      setErroAuditoria(null);
+      const res = await fetch(`/api/contratos/${contrato.id}/eventos-auditoria`);
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErroAuditoria(json.error || 'Erro ao carregar histórico');
+        setEventosAuditoria([]);
+        return;
+      }
+      const data = json.data || json;
+      setEventosAuditoria(Array.isArray(data.eventos) ? data.eventos : []);
+    } catch {
+      setErroAuditoria('Erro de rede ao carregar histórico');
+      setEventosAuditoria([]);
+    } finally {
+      setCarregandoAuditoria(false);
+    }
+  }, [contrato?.id]);
+
+  const irParaAba = (destino: AbaAtiva) => {
+    if (temAlteracoes && abaAtiva === 'editar' && destino !== 'editar') {
+      if (!confirm('Você tem alterações não salvas. Deseja realmente sair da edição?')) {
+        return;
+      }
+    }
+    setAbaAtiva(destino);
+  };
+
   useEffect(() => {
     loadContrato();
   }, [loadContrato]);
+
+  useEffect(() => {
+    if (abaAtiva === 'historico' && contrato?.id) {
+      carregarEventosAuditoria();
+    }
+  }, [abaAtiva, contrato?.id, carregarEventosAuditoria]);
 
   // Carregar HTML quando o contrato for carregado
   useEffect(() => {
@@ -349,15 +418,8 @@ export default function ContratoViewPage() {
         <div className="mb-6">
           <div className="flex gap-2 border-b border-border">
             <button
-              onClick={() => {
-                if (temAlteracoes && abaAtiva === 'editar') {
-                  if (confirm('Você tem alterações não salvas. Deseja realmente sair da edição?')) {
-                    setAbaAtiva('visualizar');
-                  }
-                } else {
-                  setAbaAtiva('visualizar');
-                }
-              }}
+              type="button"
+              onClick={() => irParaAba('visualizar')}
               className={`px-4 py-2 font-medium transition-colors border-b-2 ${
                 abaAtiva === 'visualizar'
                   ? 'border-primary text-primary'
@@ -370,11 +432,12 @@ export default function ContratoViewPage() {
               </div>
             </button>
             <button
+              type="button"
               onClick={() => {
                 if (!conteudoHtml && contrato) {
                   carregarHtmlContrato();
                 }
-                setAbaAtiva('editar');
+                irParaAba('editar');
               }}
               className={`px-4 py-2 font-medium transition-colors border-b-2 relative ${
                 abaAtiva === 'editar'
@@ -390,6 +453,34 @@ export default function ContratoViewPage() {
                     Alterações não salvas
                   </span>
                 )}
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => irParaAba('partes')}
+              className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                abaAtiva === 'partes'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <UserGroupIcon className="h-5 w-5" />
+                Partes
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => irParaAba('historico')}
+              className={`px-4 py-2 font-medium transition-colors border-b-2 ${
+                abaAtiva === 'historico'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-text-secondary hover:text-text-primary'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <ClockIcon className="h-5 w-5" />
+                Histórico
               </div>
             </button>
           </div>
@@ -474,6 +565,69 @@ export default function ContratoViewPage() {
               </CardContent>
             </Card>
           </div>
+        )}
+
+        {abaAtiva === 'partes' && contrato && (
+          <ContratoPartesPanel contratoId={contrato.id} somenteLeitura={contrato.status === 'assinado'} />
+        )}
+
+        {abaAtiva === 'historico' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Histórico e auditoria</CardTitle>
+              <CardDescription>
+                Registro cronológico de ações neste contrato (eventos imutáveis). Aplicável a partir da migração do
+                banco; contratos antigos podem ter histórico vazio.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="mb-4 flex justify-end">
+                <Button type="button" variant="outline" size="sm" onClick={() => carregarEventosAuditoria()}>
+                  Atualizar
+                </Button>
+              </div>
+              {carregandoAuditoria && (
+                <div className="flex justify-center py-10">
+                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent" />
+                </div>
+              )}
+              {!carregandoAuditoria && erroAuditoria && (
+                <p className="text-sm text-red-600">{erroAuditoria}</p>
+              )}
+              {!carregandoAuditoria && !erroAuditoria && eventosAuditoria.length === 0 && (
+                <p className="text-sm text-text-secondary">Nenhum evento registrado ainda.</p>
+              )}
+              {!carregandoAuditoria && !erroAuditoria && eventosAuditoria.length > 0 && (
+                <ul className="space-y-4">
+                  {eventosAuditoria.map((ev) => {
+                    const dataFmt = ev.criadoEm
+                      ? new Date(ev.criadoEm).toLocaleString('pt-BR')
+                      : '—';
+                    const titulo = ROTULOS_EVENTO_CONTRATO[ev.tipoEvento] || ev.tipoEvento;
+                    return (
+                      <li
+                        key={ev.id}
+                        className="rounded-lg border border-border bg-card p-4 text-sm"
+                      >
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <span className="font-medium text-text-primary">{titulo}</span>
+                          <time className="text-xs text-text-secondary">{dataFmt}</time>
+                        </div>
+                        {ev.actorUserId && (
+                          <p className="mt-1 text-xs text-text-secondary">Ator (user id): {ev.actorUserId}</p>
+                        )}
+                        {Object.keys(ev.payload || {}).length > 0 && (
+                          <pre className="mt-2 max-h-40 overflow-auto rounded bg-muted/50 p-2 text-xs text-text-secondary">
+                            {JSON.stringify(ev.payload, null, 2)}
+                          </pre>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
         )}
 
         {abaAtiva === 'editar' && (
