@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-config';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
+import {
+  devBypassLiberaRotasAdmin,
+  isDevAuthBypassAtivo,
+  obterUsuarioBypassDesenvolvimento
+} from '@/lib/utils/dev-auth-bypass';
 import { AuthenticatedUser, ApiError, ApiResponse } from './types';
 
 /**
@@ -9,6 +14,10 @@ import { AuthenticatedUser, ApiError, ApiResponse } from './types';
  * @throws {ApiError} Se o usuário não estiver autenticado
  */
 export async function getAuthenticatedUser(): Promise<AuthenticatedUser> {
+  if (isDevAuthBypassAtivo()) {
+    return obterUsuarioBypassDesenvolvimento();
+  }
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
     throw new ApiError('Não autenticado', 401);
@@ -39,6 +48,9 @@ export async function getAuthenticatedUserOptional(): Promise<AuthenticatedUser 
  */
 export async function requireAdmin(): Promise<AuthenticatedUser> {
   const user = await getAuthenticatedUser();
+  if (devBypassLiberaRotasAdmin()) {
+    return user;
+  }
   if (user.role !== 'admin') {
     throw new ApiError('Acesso negado. Apenas administradores podem acessar este recurso.', 403);
   }
@@ -51,6 +63,10 @@ export async function requireAdmin(): Promise<AuthenticatedUser> {
  */
 export async function requireAdminOrPremium(): Promise<AuthenticatedUser> {
   const user = await getAuthenticatedUser();
+
+  if (isDevAuthBypassAtivo()) {
+    return user;
+  }
 
   if (user.role === 'admin') {
     return user;

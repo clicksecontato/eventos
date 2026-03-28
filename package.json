@@ -16,7 +16,8 @@
     "e2e:report": "playwright show-report",
     "migrate:firebase-to-supabase": "tsx supabase/migrate-firebase-to-supabase.ts",
     "supabase:db:push": "npx supabase db push",
-    "supabase:link": "npx supabase link"
+    "supabase:link": "npx supabase link",
+    "firebase:list-users": "tsx scripts/listar-usuarios-firebase-auth.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.914.0",

@@ -34,7 +34,7 @@ Modelar **papéis** (partes) e **pessoas** que devem assinar, com API autenticad
 
 ## Fluxo de link
 
-- `POST .../gerar-link-assinatura` aceita `signatarioId` opcional; nome/e-mail vêm do cadastro; convite grava `signatario_id`; status do signatário → `convite_enviado`.
+- `POST .../gerar-link-assinatura`: se existir signatário cadastrado no contrato, **`signatarioId` obrigatório** (sem link genérico). Com `signatarioId`, nome/e-mail vêm do cadastro; convite grava `signatario_id`; status → `convite_enviado`. Não gera link para signatário já `assinado`.
 - Sem partes/signatários, o fluxo **manual** (nome + e-mail no modal) permanece.
 
 ## Assinatura pública

@@ -40,35 +40,47 @@ export function GerarLinkAssinaturaClienteDialog({
   const [emailCliente, setEmailCliente] = useState('');
   const [nomeCliente, setNomeCliente] = useState('');
   const [gerando, setGerando] = useState(false);
-  const [signatariosCadastrados, setSignatariosCadastrados] = useState<OpcaoSignatario[]>([]);
+  /** Signatários que ainda podem assinar (exclui já assinados). */
+  const [signatariosElegiveis, setSignatariosElegiveis] = useState<OpcaoSignatario[]>([]);
+  /** Há pelo menos um signatário cadastrado no contrato (inclui já assinados). */
+  const [exigeSignatarioCadastrado, setExigeSignatarioCadastrado] = useState(false);
   const [signatarioId, setSignatarioId] = useState('');
-  const [modo, setModo] = useState<'manual' | 'cadastrado'>('manual');
 
   useEffect(() => {
     if (!open) return;
     setEmailCliente('');
     setNomeCliente('');
     setSignatarioId('');
-    setModo('manual');
+    setExigeSignatarioCadastrado(false);
+    setSignatariosElegiveis([]);
+
     fetch(`/api/contratos/${contratoId}/partes`)
       .then((r) => r.json())
       .then((j) => {
         const data = j.data || j;
         const partes = Array.isArray(data.partes) ? data.partes : [];
-        const flat: OpcaoSignatario[] = [];
+        let totalCadastrados = 0;
+        const elegiveis: OpcaoSignatario[] = [];
         for (const p of partes) {
           const papel = ROTULO_PAPEL[String(p.papel)] || String(p.papel);
           const sigs = Array.isArray(p.signatarios) ? p.signatarios : [];
           for (const s of sigs) {
-            flat.push({
-              id: String(s.id),
-              label: `${s.nome} (${papel}) · ${s.email}`,
-            });
+            totalCadastrados += 1;
+            if (String(s.status) !== 'assinado') {
+              elegiveis.push({
+                id: String(s.id),
+                label: `${s.nome} (${papel}) · ${s.email}`,
+              });
+            }
           }
         }
-        setSignatariosCadastrados(flat);
+        setExigeSignatarioCadastrado(totalCadastrados > 0);
+        setSignatariosElegiveis(elegiveis);
       })
-      .catch(() => setSignatariosCadastrados([]));
+      .catch(() => {
+        setExigeSignatarioCadastrado(false);
+        setSignatariosElegiveis([]);
+      });
   }, [open, contratoId]);
 
   const handleGerar = async () => {
@@ -76,7 +88,15 @@ export function GerarLinkAssinaturaClienteDialog({
 
     let body: Record<string, string>;
 
-    if (modo === 'cadastrado' && signatarioId) {
+    if (exigeSignatarioCadastrado) {
+      if (signatariosElegiveis.length === 0) {
+        onErro?.('Todos os signatários cadastrados já assinaram. Inclua outro signatário nas partes para gerar um novo link.');
+        return;
+      }
+      if (!signatarioId) {
+        onErro?.('Selecione o signatário que receberá o link.');
+        return;
+      }
       body = { signatarioId };
     } else {
       const email = emailCliente.trim();
@@ -123,57 +143,51 @@ export function GerarLinkAssinaturaClienteDialog({
     }
   };
 
+  const podeGerar =
+    !gerando &&
+    (exigeSignatarioCadastrado
+      ? signatariosElegiveis.length > 0 && Boolean(signatarioId)
+      : true);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Gerar link para cliente assinar</DialogTitle>
+          <DialogTitle>Gerar link para assinar</DialogTitle>
           <DialogDescription>
-            Gere um link público para o cliente visualizar e assinar o contrato. Será obrigatório confirmar o e-mail com
-            um código antes de exibir o PDF.
+            {exigeSignatarioCadastrado
+              ? 'Este contrato tem signatários nas partes: o link deve ser gerado para uma pessoa cadastrada, com vínculo ao PDF e à ordem de assinatura corretas.'
+              : 'Gere um link público para visualizar e assinar o contrato. Será obrigatório confirmar o e-mail com um código antes de exibir o PDF.'}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
-          {signatariosCadastrados.length > 0 && (
+          {exigeSignatarioCadastrado && (
             <div className="space-y-2 rounded-md border border-border p-3">
               <p className="text-sm font-medium text-text-primary">Signatário</p>
-              <label className="flex cursor-pointer items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="modoLink"
-                  checked={modo === 'cadastrado'}
-                  onChange={() => setModo('cadastrado')}
-                />
-                Usar cadastro de partes
-              </label>
-              {modo === 'cadastrado' && (
+              {signatariosElegiveis.length === 0 ? (
+                <p className="text-sm text-text-secondary">
+                  Todos os signatários cadastrados já concluíram a assinatura. Adicione um novo signatário em Partes se
+                  precisar de outra assinatura.
+                </p>
+              ) : (
                 <select
                   value={signatarioId}
                   onChange={(e) => setSignatarioId(e.target.value)}
-                  className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-border px-3 py-2 text-sm"
                 >
-                  <option value="">Selecione…</option>
-                  {signatariosCadastrados.map((o) => (
+                  <option value="">Selecione quem vai assinar…</option>
+                  {signatariosElegiveis.map((o) => (
                     <option key={o.id} value={o.id}>
                       {o.label}
                     </option>
                   ))}
                 </select>
               )}
-              <label className="flex cursor-pointer items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  name="modoLink"
-                  checked={modo === 'manual'}
-                  onChange={() => setModo('manual')}
-                />
-                Informar nome e e-mail manualmente
-              </label>
             </div>
           )}
 
-          {modo === 'manual' && (
+          {!exigeSignatarioCadastrado && (
             <>
               <div className="space-y-1">
                 <label className="text-sm font-medium text-text-primary">Nome do cliente</label>
@@ -205,11 +219,7 @@ export function GerarLinkAssinaturaClienteDialog({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={gerando}>
             Cancelar
           </Button>
-          <Button
-            type="button"
-            onClick={handleGerar}
-            disabled={gerando || (modo === 'cadastrado' && !signatarioId)}
-          >
+          <Button type="button" onClick={handleGerar} disabled={!podeGerar}>
             {gerando ? 'Gerando...' : 'Gerar link'}
           </Button>
         </DialogFooter>

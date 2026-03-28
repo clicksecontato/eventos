@@ -1,4 +1,8 @@
 import { repositoryFactory } from '../repositories/repository-factory';
+import {
+  isDevAuthBypassAtivo,
+  usuarioEhBypassDesenvolvimento
+} from '@/lib/utils/dev-auth-bypass';
 import { Assinatura, StatusAssinatura, Plano } from '@/types/funcionalidades';
 import { User, UserAssinatura } from '@/types';
 
@@ -68,6 +72,10 @@ export class AssinaturaService {
    * Verifica se usuário tem assinatura ativa
    */
   async verificarAssinaturaAtiva(userId: string): Promise<boolean> {
+    if (isDevAuthBypassAtivo() && usuarioEhBypassDesenvolvimento(userId)) {
+      return true;
+    }
+
     // Admin sempre tem acesso
     const user = await this.userRepo.findById(userId);
     if (user?.role === 'admin') {
@@ -86,6 +94,10 @@ export class AssinaturaService {
    * Verifica se pagamento está em dia
    */
   async validarStatusPagamento(userId: string): Promise<boolean> {
+    if (isDevAuthBypassAtivo() && usuarioEhBypassDesenvolvimento(userId)) {
+      return true;
+    }
+
     // Admin sempre tem pagamento em dia
     const user = await this.userRepo.findById(userId);
     if (user?.role === 'admin') {
@@ -117,6 +129,27 @@ export class AssinaturaService {
    * Obtém status completo do plano do usuário
    */
   async obterStatusPlanoUsuario(userId: string): Promise<PlanoStatus> {
+    if (isDevAuthBypassAtivo() && usuarioEhBypassDesenvolvimento(userId)) {
+      let planoPremium: Plano | null = null;
+      try {
+        planoPremium = await this.planoRepo.findByCodigoHotmart('PREMIUM_MENSAL');
+      } catch {
+        planoPremium = null;
+      }
+      if (!planoPremium) {
+        const planos = await this.planoRepo.findAtivos();
+        planoPremium = planos.length > 0 ? planos[0] : null;
+      }
+      return {
+        plano: planoPremium,
+        assinatura: null,
+        status: 'active',
+        pagamentoEmDia: true,
+        ativo: true,
+        mensagem: 'Desenvolvimento: bypass (PREMIUM_MENSAL)'
+      };
+    }
+
     // Admin sempre tem acesso total
     const user = await this.userRepo.findById(userId);
     if (user?.role === 'admin') {

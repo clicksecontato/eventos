@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import ConfirmationDialog from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/components/ui/toast';
 import { Contrato } from '@/types';
 import {
@@ -26,6 +27,11 @@ import { GerarLinkAssinaturaClienteDialog } from '@/components/contratos/GerarLi
 import { ContratoPartesPanel } from '@/components/contratos/ContratoPartesPanel';
 
 type AbaAtiva = 'visualizar' | 'editar' | 'partes' | 'historico';
+
+type DialogEdicaoPendente =
+  | null
+  | { modo: 'mudar_aba'; destino: AbaAtiva }
+  | { modo: 'cancelar' };
 
 type EventoAuditoriaContratoUi = {
   id: string;
@@ -73,6 +79,8 @@ export default function ContratoViewPage() {
   const [eventosAuditoria, setEventosAuditoria] = useState<EventoAuditoriaContratoUi[]>([]);
   const [carregandoAuditoria, setCarregandoAuditoria] = useState(false);
   const [erroAuditoria, setErroAuditoria] = useState<string | null>(null);
+  const [dialogEdicaoPendente, setDialogEdicaoPendente] = useState<DialogEdicaoPendente>(null);
+  const [dialogRevogarLinksAberto, setDialogRevogarLinksAberto] = useState(false);
   const editorRef = useRef<TemplateEditorRef>(null);
 
   const carregarHtmlParaPreview = useCallback(async () => {
@@ -189,9 +197,8 @@ export default function ContratoViewPage() {
 
   const irParaAba = (destino: AbaAtiva) => {
     if (temAlteracoes && abaAtiva === 'editar' && destino !== 'editar') {
-      if (!confirm('Você tem alterações não salvas. Deseja realmente sair da edição?')) {
-        return;
-      }
+      setDialogEdicaoPendente({ modo: 'mudar_aba', destino });
+      return;
     }
     setAbaAtiva(destino);
   };
@@ -277,13 +284,35 @@ export default function ContratoViewPage() {
 
   const handleCancelarEdicao = () => {
     if (temAlteracoes) {
-      if (confirm('Você tem alterações não salvas. Deseja realmente cancelar?')) {
-        setConteudoEditado(conteudoHtml);
-        setTemAlteracoes(false);
-        setAbaAtiva('visualizar');
+      setDialogEdicaoPendente({ modo: 'cancelar' });
+      return;
+    }
+    setAbaAtiva('visualizar');
+  };
+
+  const executarRevogacaoLinks = async () => {
+    if (!contrato) return;
+    try {
+      setRevogandoLinks(true);
+      const res = await fetch(`/api/contratos/${contrato.id}/revogar-convite-assinatura`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        showToast(json.error || 'Não foi possível revogar os links.', 'error');
+        return;
       }
-    } else {
-      setAbaAtiva('visualizar');
+      const rev = json.data?.revogados ?? json.revogados;
+      showToast(
+        rev > 0 ? `${rev} link(ns) revogado(s).` : 'Nenhum link ativo para revogar.',
+        rev > 0 ? 'success' : 'info'
+      );
+    } catch {
+      showToast('Erro de rede ao revogar links.', 'error');
+    } finally {
+      setRevogandoLinks(false);
     }
   };
 
@@ -369,37 +398,7 @@ export default function ContratoViewPage() {
               <Button
                 variant="outline"
                 disabled={revogandoLinks}
-                onClick={async () => {
-                  if (
-                    !confirm(
-                      'Revogar todos os links de assinatura pendentes deste contrato? Quem tiver o link antigo não poderá mais assinar.'
-                    )
-                  ) {
-                    return;
-                  }
-                  try {
-                    setRevogandoLinks(true);
-                    const res = await fetch(`/api/contratos/${contrato.id}/revogar-convite-assinatura`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({}),
-                    });
-                    const json = await res.json().catch(() => ({}));
-                    if (!res.ok) {
-                      showToast(json.error || 'Não foi possível revogar os links.', 'error');
-                      return;
-                    }
-                    const rev = json.data?.revogados ?? json.revogados;
-                    showToast(
-                      rev > 0 ? `${rev} link(ns) revogado(s).` : 'Nenhum link ativo para revogar.',
-                      rev > 0 ? 'success' : 'info'
-                    );
-                  } catch {
-                    showToast('Erro de rede ao revogar links.', 'error');
-                  } finally {
-                    setRevogandoLinks(false);
-                  }
-                }}
+                onClick={() => setDialogRevogarLinksAberto(true)}
               >
                 <NoSymbolIcon className="h-5 w-5 mr-2" />
                 {revogandoLinks ? 'Revogando...' : 'Revogar links pendentes'}
@@ -687,6 +686,48 @@ export default function ContratoViewPage() {
           }}
           onErro={(msg) => showToast(msg, 'error')}
         />
+        <ConfirmationDialog
+          open={dialogEdicaoPendente !== null}
+          onOpenChange={(aberto) => {
+            if (!aberto) setDialogEdicaoPendente(null);
+          }}
+          title={
+            dialogEdicaoPendente?.modo === 'cancelar'
+              ? 'Descartar alterações?'
+              : 'Alterações não salvas'
+          }
+          description={
+            dialogEdicaoPendente?.modo === 'cancelar'
+              ? 'O texto voltará ao último conteúdo salvo no servidor.'
+              : 'Você editou o contrato e ainda não salvou. Ao mudar de aba, o rascunho permanece até você voltar em Editar e salvar ou descartar.'
+          }
+          confirmText={dialogEdicaoPendente?.modo === 'cancelar' ? 'Descartar' : 'Mudar de aba'}
+          cancelText="Voltar"
+          onConfirm={() => {
+            if (!dialogEdicaoPendente) return;
+            if (dialogEdicaoPendente.modo === 'cancelar') {
+              setConteudoEditado(conteudoHtml);
+              setTemAlteracoes(false);
+              setAbaAtiva('visualizar');
+            } else {
+              setAbaAtiva(dialogEdicaoPendente.destino);
+            }
+          }}
+        />
+
+        <ConfirmationDialog
+          open={dialogRevogarLinksAberto}
+          onOpenChange={setDialogRevogarLinksAberto}
+          title="Revogar links de assinatura?"
+          description="Todos os links de assinatura pendentes deste contrato serão cancelados. Quem tiver um link antigo não poderá mais assinar por ele."
+          variant="destructive"
+          confirmText="Revogar links"
+          cancelText="Cancelar"
+          onConfirm={() => {
+            void executarRevogacaoLinks();
+          }}
+        />
+
         <GerarLinkAssinaturaClienteDialog
           open={dialogLinkClienteAberto}
           onOpenChange={setDialogLinkClienteAberto}

@@ -46,15 +46,34 @@ export async function POST(
     }
 
     const parteRepo = repositoryFactory.getContratoParteRepository();
+    const arvorePartes = await parteRepo.listarArvorePorContrato(contrato.id, user.id);
+    const totalSignatariosCadastrados = arvorePartes.reduce(
+      (acc, p) => acc + (p.signatarios?.length ?? 0),
+      0
+    );
+
+    const sid = body.signatarioId?.trim();
+    if (totalSignatariosCadastrados > 0 && !sid) {
+      return createErrorResponse(
+        'Este contrato possui signatários cadastrados nas partes. Gere o link escolhendo um signatário (não é permitido link genérico por nome/e-mail).',
+        400
+      );
+    }
+
     let nomeCliente = body.nomeCliente?.trim() || '';
     let emailCliente = body.emailCliente?.trim() || '';
     let signatarioIdGravacao: string | null = null;
 
-    const sid = body.signatarioId?.trim();
     if (sid) {
       const sig = await parteRepo.buscarSignatario(sid, user.id);
       if (!sig || sig.contratoId !== contrato.id) {
         return createErrorResponse('Signatário não encontrado neste contrato.', 404);
+      }
+      if (sig.status === 'assinado') {
+        return createErrorResponse(
+          'Este signatário já assinou o contrato. Não é possível gerar novo link de assinatura para a mesma pessoa.',
+          400
+        );
       }
       nomeCliente = sig.nome;
       emailCliente = sig.email;

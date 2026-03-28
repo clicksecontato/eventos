@@ -1,7 +1,11 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from './firebase';
+import {
+  isDevAuthBypassAtivo,
+  obterUsuarioBypassDesenvolvimento,
+  senhaBypassCredentialsEfetiva
+} from './utils/dev-auth-bypass';
+import { firebaseSignInWithPasswordRest } from './utils/firebase-sign-in-password-rest';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -16,45 +20,79 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        if (isDevAuthBypassAtivo()) {
+          const senhaOk =
+            credentials.password === senhaBypassCredentialsEfetiva();
+          const alvo = obterUsuarioBypassDesenvolvimento();
+          const emailOk =
+            credentials.email.trim().toLowerCase() ===
+            (alvo.email || '').toLowerCase();
+          if (senhaOk && emailOk) {
+            return {
+              id: alvo.id,
+              email: alvo.email,
+              name: alvo.name,
+              role: (alvo.role === 'admin' ? 'admin' : 'user') as 'admin' | 'user'
+            };
+          }
+        }
+
         // Verificar se o Firebase está configurado
         const isFirebaseConfigured = process.env.NEXT_PUBLIC_FIREBASE_API_KEY && 
                                      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
         if (isFirebaseConfigured) {
           try {
-            // Tentar autenticar com Firebase Auth
-            const userCredential = await signInWithEmailAndPassword(
-              auth,
+            // REST Identity Toolkit no servidor (o SDK web no Node costuma falhar com credencial inválida genérica)
+            const sessao = await firebaseSignInWithPasswordRest(
               credentials.email,
               credentials.password
             );
-            
-            const user = userCredential.user;
-            
-            // Buscar dados do usuário no Firestore
-            const { db } = await import('./firebase');
-            const { doc, getDoc } = await import('firebase/firestore');
-            
-            const userDoc = await getDoc(doc(db, 'controle_users', user.uid));
-            const userData = userDoc.data();
-            
-            const nome = userData?.nome || user.displayName || 'Usuário';
-            const role = (userData?.role || 'user') as 'admin' | 'user';
-            
-            // Sincronizar usuário com Supabase se estiver configurado
+
+            let nome = sessao.displayName || 'Usuário';
+            let role: 'admin' | 'user' = 'user';
+
+            const firebaseAdmin = await import('./firebase-admin');
+            const adminDb = firebaseAdmin.adminDb;
+            if (firebaseAdmin.isFirebaseAdminInitialized() && adminDb) {
+              const snap = await adminDb
+                .collection('controle_users')
+                .doc(sessao.localId)
+                .get();
+              const userData = snap.data();
+              if (userData) {
+                nome = (userData.nome as string) || nome;
+                role = userData.role === 'admin' ? 'admin' : 'user';
+              }
+            } else {
+              const { db } = await import('./firebase');
+              const { doc, getDoc } = await import('firebase/firestore');
+              const userDoc = await getDoc(doc(db, 'controle_users', sessao.localId));
+              const userData = userDoc.data();
+              if (userData) {
+                nome = (userData.nome as string) || nome;
+                role = (userData.role === 'admin' ? 'admin' : 'user') as 'admin' | 'user';
+              }
+            }
+
             try {
               const { syncFirebaseUserToSupabase } = await import('./utils/sync-firebase-user-to-supabase');
-              await syncFirebaseUserToSupabase(user.uid, user.email!, nome, role);
-            } catch (error) {
+              await syncFirebaseUserToSupabase(sessao.localId, sessao.email, nome, role);
+            } catch {
+              // sync opcional
             }
-            
+
             return {
-              id: user.uid,
-              email: user.email!,
+              id: sessao.localId,
+              email: sessao.email,
               name: nome,
               role: role
             };
           } catch (error) {
+            const code = (error as Error & { firebaseCode?: string })?.firebaseCode ?? (error as Error)?.message;
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('[next-auth][authorize] Firebase:', code);
+            }
             return null;
           }
         } else {

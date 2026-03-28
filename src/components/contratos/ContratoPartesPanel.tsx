@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import ConfirmationDialog from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/components/ui/toast';
 
 type SignatarioUi = {
@@ -51,6 +52,9 @@ export function ContratoPartesPanel({ contratoId, somenteLeitura }: ContratoPart
   const [novoPapel, setNovoPapel] = useState('cliente');
   const [salvandoParte, setSalvandoParte] = useState(false);
   const [formSig, setFormSig] = useState<Record<string, { nome: string; email: string; documento: string }>>({});
+  const [excluirPendente, setExcluirPendente] = useState<
+    null | { tipo: 'parte'; id: string } | { tipo: 'signatario'; id: string }
+  >(null);
 
   const carregar = useCallback(async () => {
     try {
@@ -107,8 +111,7 @@ export function ContratoPartesPanel({ contratoId, somenteLeitura }: ContratoPart
     }
   };
 
-  const excluirParte = async (parteId: string) => {
-    if (somenteLeitura || !confirm('Excluir esta parte e todos os signatários vinculados?')) return;
+  const executarExcluirParte = async (parteId: string) => {
     try {
       const res = await fetch(`/api/contratos/${contratoId}/partes/${parteId}`, { method: 'DELETE' });
       const json = await res.json().catch(() => ({}));
@@ -121,6 +124,11 @@ export function ContratoPartesPanel({ contratoId, somenteLeitura }: ContratoPart
     } catch {
       showToast('Erro de rede', 'error');
     }
+  };
+
+  const solicitarExcluirParte = (parteId: string) => {
+    if (somenteLeitura) return;
+    setExcluirPendente({ tipo: 'parte', id: parteId });
   };
 
   const adicionarSignatario = async (parteId: string) => {
@@ -157,8 +165,7 @@ export function ContratoPartesPanel({ contratoId, somenteLeitura }: ContratoPart
     }
   };
 
-  const excluirSignatario = async (signatarioId: string) => {
-    if (somenteLeitura || !confirm('Remover este signatário?')) return;
+  const executarExcluirSignatario = async (signatarioId: string) => {
     try {
       const res = await fetch(`/api/contratos/${contratoId}/signatarios/${signatarioId}`, {
         method: 'DELETE',
@@ -173,6 +180,11 @@ export function ContratoPartesPanel({ contratoId, somenteLeitura }: ContratoPart
     } catch {
       showToast('Erro de rede', 'error');
     }
+  };
+
+  const solicitarExcluirSignatario = (signatarioId: string) => {
+    if (somenteLeitura) return;
+    setExcluirPendente({ tipo: 'signatario', id: signatarioId });
   };
 
   const rotuloPapel = (p: string) => PAPEIS_OPCOES.find((x) => x.value === p)?.label || p;
@@ -235,7 +247,7 @@ export function ContratoPartesPanel({ contratoId, somenteLeitura }: ContratoPart
                   )}
                 </div>
                 {!somenteLeitura && (
-                  <Button type="button" variant="outline" size="sm" onClick={() => excluirParte(parte.id)}>
+                  <Button type="button" variant="outline" size="sm" onClick={() => solicitarExcluirParte(parte.id)}>
                     Excluir parte
                   </Button>
                 )}
@@ -261,7 +273,7 @@ export function ContratoPartesPanel({ contratoId, somenteLeitura }: ContratoPart
                       </span>
                     </div>
                     {!somenteLeitura && (
-                      <Button type="button" variant="ghost" size="sm" onClick={() => excluirSignatario(s.id)}>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => solicitarExcluirSignatario(s.id)}>
                         Remover
                       </Button>
                     )}
@@ -302,6 +314,30 @@ export function ContratoPartesPanel({ contratoId, somenteLeitura }: ContratoPart
           ))}
         </CardContent>
       </Card>
+
+      <ConfirmationDialog
+        open={excluirPendente !== null}
+        onOpenChange={(aberto) => {
+          if (!aberto) setExcluirPendente(null);
+        }}
+        title={excluirPendente?.tipo === 'parte' ? 'Excluir parte?' : 'Remover signatário?'}
+        description={
+          excluirPendente?.tipo === 'parte'
+            ? 'Esta parte e todos os signatários vinculados serão removidos. Esta ação não pode ser desfeita.'
+            : 'O signatário será removido desta parte.'
+        }
+        variant="destructive"
+        confirmText={excluirPendente?.tipo === 'parte' ? 'Excluir parte' : 'Remover'}
+        cancelText="Cancelar"
+        onConfirm={() => {
+          if (!excluirPendente) return;
+          if (excluirPendente.tipo === 'parte') {
+            void executarExcluirParte(excluirPendente.id);
+          } else {
+            void executarExcluirSignatario(excluirPendente.id);
+          }
+        }}
+      />
     </div>
   );
 }

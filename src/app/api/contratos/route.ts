@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { repositoryFactory } from '@/lib/repositories/repository-factory';
 import { s3Service } from '@/lib/s3-service';
+import type { ContratoSignatarioListagem } from '@/types';
 import { 
   getAuthenticatedUser,
   handleApiError,
@@ -32,9 +33,10 @@ export async function GET(request: NextRequest) {
       contratos = contratos.filter(c => c.status === status);
     }
 
-    // Popular modeloContrato, evento e regenerar URLs de PDF para cada contrato
+    // Popular modeloContrato, evento, signatários (partes) e regenerar URLs de PDF para cada contrato
     const modeloRepo = repositoryFactory.getModeloContratoRepository();
     const eventoRepo = repositoryFactory.getEventoRepository();
+    const parteRepo = repositoryFactory.getContratoParteRepository();
     const contratosComModelo = await Promise.all(
       contratos.map(async (contrato) => {
         // Regenerar URL pré-assinada do PDF se o arquivo existir no S3
@@ -67,6 +69,22 @@ export async function GET(request: NextRequest) {
           } catch (error) {
             console.error(`Erro ao buscar evento ${contrato.eventoId}:`, error);
           }
+        }
+
+        try {
+          const arvore = await parteRepo.listarArvorePorContrato(contrato.id, user.id);
+          const signatariosListagem: ContratoSignatarioListagem[] = arvore.flatMap((parte) =>
+            parte.signatarios.map((s) => ({
+              id: s.id,
+              nome: s.nome,
+              email: s.email,
+              status: s.status,
+              papelParte: parte.papel,
+            }))
+          );
+          contrato = { ...contrato, signatariosListagem };
+        } catch (error) {
+          console.error(`Erro ao listar signatários do contrato ${contrato.id}:`, error);
         }
 
         return contrato;

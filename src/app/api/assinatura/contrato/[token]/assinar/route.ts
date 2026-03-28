@@ -121,7 +121,23 @@ export async function POST(
         409
       );
     }
-    if (contrato.status === 'assinado') return createErrorResponse('Contrato já assinado.', 409);
+
+    const parteRepo = repositoryFactory.getContratoParteRepository();
+    if (convite.signatario_id) {
+      const signatario = await parteRepo.buscarSignatario(String(convite.signatario_id), convite.user_id);
+      if (!signatario || signatario.contratoId !== contrato.id) {
+        return createErrorResponse('Signatário inválido para este convite.', 400);
+      }
+      if (signatario.status === 'assinado') {
+        return createErrorResponse('Este signatário já concluiu a assinatura.', 409);
+      }
+    } else if (contrato.status === 'assinado') {
+      return createErrorResponse(
+        'Contrato já assinado. Gere um novo link vinculado a um signatário cadastrado para assinaturas adicionais.',
+        409
+      );
+    }
+
     if (!contrato.pdfPath) return createErrorResponse('Contrato sem PDF disponível.', 400);
 
     const pdfBuffer = await s3Service.downloadBuffer(contrato.pdfPath);
@@ -167,6 +183,9 @@ export async function POST(
       cienciaDeclarada: true,
       referenciaDocumentoHash: convite.contrato_ref_hash || undefined,
       otpVerificadoEm: convite.otp_verificado_em || undefined,
+      ...(contrato.assinaturaAuditoria
+        ? { anterior: contrato.assinaturaAuditoria }
+        : {}),
     };
 
     const atualizado = await contratoRepo.update(contrato.id, {
@@ -194,7 +213,6 @@ export async function POST(
 
     if (convite.signatario_id) {
       try {
-        const parteRepo = repositoryFactory.getContratoParteRepository();
         await parteRepo.atualizarSignatario(String(convite.signatario_id), convite.user_id, {
           status: 'assinado',
         });

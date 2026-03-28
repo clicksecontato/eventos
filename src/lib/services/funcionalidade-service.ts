@@ -1,4 +1,8 @@
 import { repositoryFactory } from '../repositories/repository-factory';
+import {
+  isDevAuthBypassAtivo,
+  usuarioEhBypassDesenvolvimento
+} from '@/lib/utils/dev-auth-bypass';
 import { Assinatura, Funcionalidade, LimitesUsuario, Plano } from '@/types/funcionalidades';
 import { Evento, User } from '@/types';
 import { AssinaturaService, PlanoStatus } from './assinatura-service';
@@ -58,6 +62,10 @@ export class FuncionalidadeService {
 
   async verificarPermissao(userId: string, codigoFuncionalidade: string): Promise<boolean> {
     try {
+      if (isDevAuthBypassAtivo() && usuarioEhBypassDesenvolvimento(userId)) {
+        return true;
+      }
+
       // Admin sempre tem todas as permissões
       const user = await this.userRepo.findById(userId);
       if (user?.role === 'admin') {
@@ -116,6 +124,18 @@ export class FuncionalidadeService {
 
   async obterLimitesUsuario(userId: string): Promise<LimitesUsuario> {
     try {
+      if (isDevAuthBypassAtivo() && usuarioEhBypassDesenvolvimento(userId)) {
+        return {
+          eventosMesAtual: 0,
+          eventosLimiteMes: 9999,
+          clientesTotal: 0,
+          clientesLimite: 9999,
+          usuariosConta: 1,
+          usuariosLimite: 99,
+          armazenamentoUsado: 0
+        };
+      }
+
       const assinatura = await this.assinaturaRepo.findByUserId(userId);
       
       if (!assinatura) {

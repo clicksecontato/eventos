@@ -368,6 +368,18 @@ export interface AssinaturaAuditoriaContrato {
   cienciaDeclarada?: boolean;
   referenciaDocumentoHash?: string;
   otpVerificadoEm?: string;
+  /** Assinatura imediatamente anterior no mesmo contrato (múltiplos signatários por link). */
+  anterior?: AssinaturaAuditoriaContrato;
+}
+
+/** Signatário de contrato para listagem (GET /api/contratos). */
+export interface ContratoSignatarioListagem {
+  id: string;
+  nome: string;
+  email: string;
+  status: StatusContratoParteSignatario;
+  /** Papel da parte à qual o signatário está vinculado. */
+  papelParte: string;
 }
 
 export interface Contrato {
@@ -381,6 +393,8 @@ export interface Contrato {
   /** HTML editado pelo usuário antes de salvar. Usado no PDF quando preenchido. */
   conteudoHtml?: string;
   status: 'rascunho' | 'gerado' | 'assinado' | 'cancelado';
+  /** Preenchido na listagem de contratos para exibir status por signatário. */
+  signatariosListagem?: ContratoSignatarioListagem[];
   pdfUrl?: string;
   pdfPath?: string;
   /** S3 key do PDF sem a página de assinatura (cópia do que estava em pdf_path antes de assinar). */

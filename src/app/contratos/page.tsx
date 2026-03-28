@@ -10,6 +10,12 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog';
 import { Contrato } from '@/types';
+import {
+  contratoPassaFiltroStatusLista,
+  obterExibicaoStatusContratoNaLista,
+  obterRotuloStatusSignatarioListagem,
+  rotuloPapelParteParaListagem,
+} from '@/lib/utils/contrato-listagem-assinaturas';
 import { PlusIcon, DocumentTextIcon, ArrowDownTrayIcon, PencilIcon, TrashIcon, Cog6ToothIcon, EyeIcon, XMarkIcon, CalendarDaysIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, addDays, isWithinInterval } from 'date-fns';
@@ -27,6 +33,44 @@ const QUICK_FILTERS = [
 interface DateRange {
   startDate: Date | null;
   endDate: Date | null;
+}
+
+function classeBadgeStatusContratoLista(contrato: Contrato): string {
+  const ex = obterExibicaoStatusContratoNaLista(contrato);
+  if (ex.tipo === 'colhendo') {
+    return 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-100';
+  }
+  if (ex.tipo === 'assinado_todos_signatarios') {
+    return 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-100';
+  }
+  switch (ex.statusDb) {
+    case 'gerado':
+      return 'bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-100';
+    case 'assinado':
+      return 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-100';
+    case 'cancelado':
+      return 'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-100';
+    default:
+      return 'bg-gray-100 text-gray-800 dark:bg-muted dark:text-foreground';
+  }
+}
+
+function textoBadgeStatusContratoLista(contrato: Contrato): string {
+  const ex = obterExibicaoStatusContratoNaLista(contrato);
+  if (ex.tipo === 'colhendo') {
+    return `${ex.rotulo} (${ex.assinados}/${ex.total})`;
+  }
+  return ex.rotulo;
+}
+
+function classeChipStatusSignatarioLista(status: string): string {
+  if (status === 'assinado') {
+    return 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100';
+  }
+  if (status === 'recusado') {
+    return 'bg-red-100 text-red-900 dark:bg-red-950/40 dark:text-red-100';
+  }
+  return 'bg-muted/80 text-text-secondary';
 }
 
 function getQuickFilterRange(filterKey: string): DateRange {
@@ -138,7 +182,7 @@ export default function ContratosPage() {
 
   const contratosFiltrados = useMemo(() => {
     return contratos.filter((contrato) => {
-      if (filtroStatus && contrato.status !== filtroStatus) return false;
+      if (filtroStatus && !contratoPassaFiltroStatusLista(contrato, filtroStatus)) return false;
 
       if (searchTerm) {
         const termo = searchTerm.toLowerCase();
@@ -356,7 +400,8 @@ export default function ContratosPage() {
                   <option value="">Todos os status</option>
                   <option value="rascunho">Rascunho</option>
                   <option value="gerado">Gerado</option>
-                  <option value="assinado">Assinado</option>
+                  <option value="colhendo_assinaturas">Colhendo assinaturas</option>
+                  <option value="assinado">Assinado (todos)</option>
                   <option value="cancelado">Cancelado</option>
                 </select>
               </div>
@@ -379,7 +424,12 @@ export default function ContratosPage() {
                     )}
                     {filtroStatus && (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-accent-bg text-accent-text capitalize">
-                        Status: {filtroStatus}
+                        Status:{' '}
+                        {filtroStatus === 'colhendo_assinaturas'
+                          ? 'colhendo assinaturas'
+                          : filtroStatus === 'assinado'
+                            ? 'assinado (todos)'
+                            : filtroStatus}
                       </span>
                     )}
                     {temFiltroPeriodo && (
@@ -461,14 +511,33 @@ export default function ContratosPage() {
                               : new Date(contrato.dataCadastro).toLocaleDateString('pt-BR'))
                           : 'N/A'}
                       </p>
-                      <span className={`inline-block px-2 py-1 rounded text-xs mt-2 ${
-                        contrato.status === 'gerado' ? 'bg-green-100 text-green-800' :
-                        contrato.status === 'assinado' ? 'bg-blue-100 text-blue-800' :
-                        contrato.status === 'cancelado' ? 'bg-red-100 text-red-800' :
-                        'bg-gray-100 text-gray-800'
-                      }`}>
-                        {contrato.status}
+                      <span
+                        className={`inline-block px-2 py-1 rounded text-xs mt-2 font-medium ${classeBadgeStatusContratoLista(contrato)}`}
+                      >
+                        {textoBadgeStatusContratoLista(contrato)}
                       </span>
+                      {contrato.signatariosListagem && contrato.signatariosListagem.length > 0 && (
+                        <ul className="mt-3 space-y-1.5 rounded-md border border-border bg-muted/20 px-3 py-2 text-xs">
+                          <li className="font-medium text-text-secondary mb-1">Signatários</li>
+                          {contrato.signatariosListagem.map((s) => (
+                            <li
+                              key={s.id}
+                              className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-border/60 pb-1.5 last:border-0 last:pb-0"
+                            >
+                              <span className="font-medium text-text-primary">{s.nome}</span>
+                              <span className="text-text-secondary">{s.email}</span>
+                              <span className="text-muted-foreground">
+                                · {rotuloPapelParteParaListagem(s.papelParte)}
+                              </span>
+                              <span
+                                className={`ml-auto shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${classeChipStatusSignatarioLista(s.status)}`}
+                              >
+                                {obterRotuloStatusSignatarioListagem(s.status)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                     <div className="flex gap-2">
                       <TooltipProvider>
@@ -487,7 +556,7 @@ export default function ContratosPage() {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      {contrato.status === 'gerado' && contrato.pdfUrl && (
+                      {(contrato.status === 'gerado' || contrato.status === 'assinado') && contrato.pdfUrl && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>

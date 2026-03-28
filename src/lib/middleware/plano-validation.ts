@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-config';
+import {
+  getAuthenticatedUser,
+  handleApiError
+} from '@/lib/api/route-helpers';
 import { FuncionalidadeService } from '../services/funcionalidade-service';
 
 /**
@@ -60,16 +62,14 @@ export async function withPlanoValidation(
   }
 ): Promise<NextResponse> {
   try {
-    // Obter usuário autenticado
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user?.id) {
-      return NextResponse.json(
-        { error: 'Não autorizado' },
-        { status: 401 }
-      );
+    let userId: string;
+    try {
+      const user = await getAuthenticatedUser();
+      userId = user.id;
+    } catch (err) {
+      return handleApiError(err);
     }
 
-    const userId = session.user.id;
     const funcionalidadeService = new FuncionalidadeService();
 
     // Validar funcionalidade se especificada
