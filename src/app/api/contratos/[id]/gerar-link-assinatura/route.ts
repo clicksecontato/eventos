@@ -93,12 +93,27 @@ export async function POST(
       dataAtualizacao: contrato.dataAtualizacao,
     });
 
+    const supabase = getSupabaseClient(true) as any;
+
+    if (signatarioIdGravacao) {
+      const agoraIso = new Date().toISOString();
+      const { error: revErr } = await supabase
+        .from('contratos_assinatura_convites')
+        .update({ status: 'cancelado', data_atualizacao: agoraIso })
+        .eq('user_id', user.id)
+        .eq('contrato_id', contrato.id)
+        .eq('signatario_id', signatarioIdGravacao)
+        .in('status', ['pendente', 'acessado']);
+      if (revErr) {
+        console.warn('[gerar-link-assinatura] revogar convites anteriores do signatário:', revErr.message);
+      }
+    }
+
     const token = gerarTokenAssinaturaCliente();
     const tokenHash = hashTokenAssinaturaCliente(token);
     const expiraEm = calcularExpiracaoHoras(body.validadeHoras);
     const link = montarLinkAssinaturaCliente(token, request.url);
 
-    const supabase = getSupabaseClient(true) as any;
     const insertRow: Record<string, unknown> = {
       id: crypto.randomUUID(),
       user_id: user.id,

@@ -567,7 +567,12 @@ export default function ContratoViewPage() {
         )}
 
         {abaAtiva === 'partes' && contrato && (
-          <ContratoPartesPanel contratoId={contrato.id} somenteLeitura={contrato.status === 'assinado'} />
+          <ContratoPartesPanel
+            contratoId={contrato.id}
+            somenteLeitura={contrato.status === 'assinado'}
+            contratoStatus={contrato.status}
+            contratoPdfPath={contrato.pdfPath}
+          />
         )}
 
         {abaAtiva === 'historico' && (

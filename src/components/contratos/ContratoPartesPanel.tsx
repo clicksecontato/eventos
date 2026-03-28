@@ -4,7 +4,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toast';
+import { ClipboardDocumentIcon, LinkIcon } from '@heroicons/react/24/outline';
+import {
+  podeGerarLinkAssinaturaContrato,
+  solicitarLinkAssinaturaSignatario,
+} from '@/lib/utils/contrato-link-signatario-client';
 
 type SignatarioUi = {
   id: string;
@@ -43,12 +49,21 @@ const ROTULO_STATUS: Record<string, string> = {
 export interface ContratoPartesPanelProps {
   contratoId: string;
   somenteLeitura?: boolean;
+  /** Para habilitar Gerar/Copiar link (mesmas regras da lista /contratos). */
+  contratoStatus: string;
+  contratoPdfPath?: string | null;
 }
 
-export function ContratoPartesPanel({ contratoId, somenteLeitura }: ContratoPartesPanelProps) {
+export function ContratoPartesPanel({
+  contratoId,
+  somenteLeitura,
+  contratoStatus,
+  contratoPdfPath,
+}: ContratoPartesPanelProps) {
   const { showToast } = useToast();
   const [partes, setPartes] = useState<ParteUi[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [linkAssinaturaSignatarioId, setLinkAssinaturaSignatarioId] = useState<string | null>(null);
   const [novoPapel, setNovoPapel] = useState('cliente');
   const [salvandoParte, setSalvandoParte] = useState(false);
   const [formSig, setFormSig] = useState<Record<string, { nome: string; email: string; documento: string }>>({});
@@ -187,7 +202,27 @@ export function ContratoPartesPanel({ contratoId, somenteLeitura }: ContratoPart
     setExcluirPendente({ tipo: 'signatario', id: signatarioId });
   };
 
+  const solicitarLinkSignatario = async (signatarioId: string, modo: 'gerar' | 'copiar') => {
+    if (!podeGerarLinkAssinaturaContrato(contratoStatus, contratoPdfPath)) {
+      showToast('Gere o PDF do contrato antes de criar o link de assinatura.', 'error');
+      return;
+    }
+    setLinkAssinaturaSignatarioId(signatarioId);
+    try {
+      await solicitarLinkAssinaturaSignatario({
+        contratoId,
+        signatarioId,
+        modo,
+        showToast,
+        aoConcluirComSucesso: carregar,
+      });
+    } finally {
+      setLinkAssinaturaSignatarioId(null);
+    }
+  };
+
   const rotuloPapel = (p: string) => PAPEIS_OPCOES.find((x) => x.value === p)?.label || p;
+  const podeLinkAssinatura = podeGerarLinkAssinaturaContrato(contratoStatus, contratoPdfPath);
 
   if (carregando) {
     return (
@@ -198,6 +233,7 @@ export function ContratoPartesPanel({ contratoId, somenteLeitura }: ContratoPart
   }
 
   return (
+    <TooltipProvider>
     <div className="space-y-6">
       <Card>
         <CardHeader>
@@ -257,28 +293,77 @@ export function ContratoPartesPanel({ contratoId, somenteLeitura }: ContratoPart
                 {parte.signatarios.length === 0 && (
                   <li className="text-sm text-text-secondary">Nenhum signatário nesta parte.</li>
                 )}
-                {parte.signatarios.map((s) => (
-                  <li
-                    key={s.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/30 px-3 py-2 text-sm"
-                  >
-                    <div>
-                      <span className="font-medium">{s.nome}</span>
-                      <span className="text-text-secondary"> — {s.email}</span>
-                      {s.documento ? (
-                        <span className="block text-xs text-text-secondary">Doc.: {s.documento}</span>
-                      ) : null}
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {ROTULO_STATUS[s.status] || s.status}
-                      </span>
-                    </div>
-                    {!somenteLeitura && (
-                      <Button type="button" variant="ghost" size="sm" onClick={() => solicitarExcluirSignatario(s.id)}>
-                        Remover
-                      </Button>
-                    )}
-                  </li>
-                ))}
+                {parte.signatarios.map((s) => {
+                  const carregandoLink = linkAssinaturaSignatarioId === s.id;
+                  const mostrarGerar =
+                    podeLinkAssinatura &&
+                    (s.status === 'pendente' || s.status === 'expirado' || s.status === 'recusado');
+                  const mostrarCopiar = podeLinkAssinatura && s.status === 'convite_enviado';
+                  return (
+                    <li
+                      key={s.id}
+                      className="flex flex-wrap items-start justify-between gap-2 rounded-md bg-muted/30 px-3 py-2 text-sm"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <span className="font-medium">{s.nome}</span>
+                        <span className="text-text-secondary"> — {s.email}</span>
+                        {s.documento ? (
+                          <span className="block text-xs text-text-secondary">Doc.: {s.documento}</span>
+                        ) : null}
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {ROTULO_STATUS[s.status] || s.status}
+                        </span>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap items-center gap-1">
+                        {mostrarGerar && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                className="h-8 text-xs"
+                                disabled={carregandoLink}
+                                onClick={() => void solicitarLinkSignatario(s.id, 'gerar')}
+                              >
+                                <LinkIcon className="mr-1 h-3.5 w-3.5" />
+                                {carregandoLink ? '...' : 'Gerar link'}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Criar link de assinatura e enviar por e-mail</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {mostrarCopiar && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs"
+                                disabled={carregandoLink}
+                                onClick={() => void solicitarLinkSignatario(s.id, 'copiar')}
+                              >
+                                <ClipboardDocumentIcon className="mr-1 h-3.5 w-3.5" />
+                                {carregandoLink ? '...' : 'Copiar link'}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Gera um novo link, copia e invalida o convite anterior</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        {!somenteLeitura && (
+                          <Button type="button" variant="ghost" size="sm" onClick={() => solicitarExcluirSignatario(s.id)}>
+                            Remover
+                          </Button>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
 
               {!somenteLeitura && (
@@ -339,5 +424,6 @@ export function ContratoPartesPanel({ contratoId, somenteLeitura }: ContratoPart
         }}
       />
     </div>
+    </TooltipProvider>
   );
 }
