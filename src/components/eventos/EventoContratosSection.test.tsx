@@ -16,11 +16,11 @@ describe('EventoContratosSection', () => {
         contratos={[]}
         loadingContratos={false}
         temAcessoContrato={true}
-        linkAssinaturaChave={null}
+        dialogGerarLinkContratoId={null}
         onNovoContrato={onNovo}
         onEditarContrato={vi.fn()}
         onGerarPdf={vi.fn()}
-        onSolicitarLinkSignatario={vi.fn()}
+        onAbrirDialogGerarLink={vi.fn()}
       />
     );
     expect(screen.getByText('Contratos')).toBeInTheDocument();
@@ -35,11 +35,11 @@ describe('EventoContratosSection', () => {
         contratos={[]}
         loadingContratos={false}
         temAcessoContrato={false}
-        linkAssinaturaChave={null}
+        dialogGerarLinkContratoId={null}
         onNovoContrato={vi.fn()}
         onEditarContrato={vi.fn()}
         onGerarPdf={vi.fn()}
-        onSolicitarLinkSignatario={vi.fn()}
+        onAbrirDialogGerarLink={vi.fn()}
       />
     );
     expect(screen.getByText(/apenas no plano Premium/i)).toBeInTheDocument();

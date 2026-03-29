@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,12 +19,22 @@ import {
   NoSymbolIcon,
   ClockIcon,
   UserGroupIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline';
 import ContractPreview from '@/components/ContractPreview';
 import TemplateEditor, { TemplateEditorRef } from '@/components/TemplateEditor';
 import { AssinaturaContratoDialog } from '@/components/contratos/AssinaturaContratoDialog';
 import { GerarLinkAssinaturaClienteDialog } from '@/components/contratos/GerarLinkAssinaturaClienteDialog';
 import { ContratoPartesPanel } from '@/components/contratos/ContratoPartesPanel';
+import { ContratoJornadaAssinaturaBanner } from '@/components/contratos/ContratoJornadaAssinaturaBanner';
+import { LinkGeradoSucessoDialog } from '@/components/contratos/LinkGeradoSucessoDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { tentarCopiarParaAreaTransferencia } from '@/lib/utils/contrato-link-signatario-client';
 
 type AbaAtiva = 'visualizar' | 'editar' | 'partes' | 'historico';
 
@@ -59,9 +69,25 @@ const ROTULOS_EVENTO_CONTRATO: Record<string, string> = {
   signatario_excluido: 'Signatário removido',
 };
 
+type FiltroHistoricoContrato = 'todos' | 'assinatura' | 'convites' | 'partes';
+
+const TIPOS_HISTORICO_ASSINATURA = new Set(['assinado_interno', 'assinado_link_publico']);
+const TIPOS_HISTORICO_CONVITES = new Set(['convite_link_criado', 'convites_revogados']);
+const TIPOS_HISTORICO_PARTES = new Set([
+  'parte_criada',
+  'parte_atualizada',
+  'parte_excluida',
+  'signatario_criado',
+  'signatario_atualizado',
+  'signatario_excluido',
+]);
+
+const ABAS_CONTRATO_URL: AbaAtiva[] = ['visualizar', 'editar', 'partes', 'historico'];
+
 export default function ContratoViewPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { showToast } = useToast();
   const [contrato, setContrato] = useState<Contrato | null>(null);
   const [loading, setLoading] = useState(true);
@@ -75,13 +101,17 @@ export default function ContratoViewPage() {
   const [temAlteracoes, setTemAlteracoes] = useState(false);
   const [dialogAssinaturaAberto, setDialogAssinaturaAberto] = useState(false);
   const [dialogLinkClienteAberto, setDialogLinkClienteAberto] = useState(false);
-  const [revogandoLinks, setRevogandoLinks] = useState(false);
   const [eventosAuditoria, setEventosAuditoria] = useState<EventoAuditoriaContratoUi[]>([]);
   const [carregandoAuditoria, setCarregandoAuditoria] = useState(false);
   const [erroAuditoria, setErroAuditoria] = useState<string | null>(null);
   const [dialogEdicaoPendente, setDialogEdicaoPendente] = useState<DialogEdicaoPendente>(null);
   const [dialogRevogarLinksAberto, setDialogRevogarLinksAberto] = useState(false);
+  const [signatarioIdPreGerarLink, setSignatarioIdPreGerarLink] = useState<string | null>(null);
+  const [avisoRenovarGerarLink, setAvisoRenovarGerarLink] = useState(false);
+  const [linkGeradoSucessoUrl, setLinkGeradoSucessoUrl] = useState<string | null>(null);
+  const [filtroHistorico, setFiltroHistorico] = useState<FiltroHistoricoContrato>('todos');
   const editorRef = useRef<TemplateEditorRef>(null);
+  const abaUrlInicialAplicada = useRef(false);
 
   const carregarHtmlParaPreview = useCallback(async () => {
     if (!contrato || !contrato.modeloContratoId) return;
@@ -208,6 +238,15 @@ export default function ContratoViewPage() {
   }, [loadContrato]);
 
   useEffect(() => {
+    if (!contrato || abaUrlInicialAplicada.current) return;
+    const raw = searchParams.get('aba');
+    if (raw && ABAS_CONTRATO_URL.includes(raw as AbaAtiva)) {
+      setAbaAtiva(raw as AbaAtiva);
+      abaUrlInicialAplicada.current = true;
+    }
+  }, [contrato, searchParams]);
+
+  useEffect(() => {
     if (abaAtiva === 'historico' && contrato?.id) {
       carregarEventosAuditoria();
     }
@@ -293,7 +332,6 @@ export default function ContratoViewPage() {
   const executarRevogacaoLinks = async () => {
     if (!contrato) return;
     try {
-      setRevogandoLinks(true);
       const res = await fetch(`/api/contratos/${contrato.id}/revogar-convite-assinatura`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -309,10 +347,9 @@ export default function ContratoViewPage() {
         rev > 0 ? `${rev} link(ns) revogado(s).` : 'Nenhum link ativo para revogar.',
         rev > 0 ? 'success' : 'info'
       );
+      if (rev > 0) await loadContrato();
     } catch {
       showToast('Erro de rede ao revogar links.', 'error');
-    } finally {
-      setRevogandoLinks(false);
     }
   };
 
@@ -341,6 +378,21 @@ export default function ContratoViewPage() {
     }
   };
 
+  const eventosHistoricoFiltrados = useMemo(() => {
+    if (filtroHistorico === 'todos') return eventosAuditoria;
+    if (filtroHistorico === 'assinatura') {
+      return eventosAuditoria.filter((e) => TIPOS_HISTORICO_ASSINATURA.has(e.tipoEvento));
+    }
+    if (filtroHistorico === 'convites') {
+      return eventosAuditoria.filter((e) => TIPOS_HISTORICO_CONVITES.has(e.tipoEvento));
+    }
+    return eventosAuditoria.filter((e) => TIPOS_HISTORICO_PARTES.has(e.tipoEvento));
+  }, [eventosAuditoria, filtroHistorico]);
+
+  const resumoHistoricoRecente = useMemo(
+    () => eventosHistoricoFiltrados.slice(0, 5),
+    [eventosHistoricoFiltrados]
+  );
 
   if (loading) {
     return (
@@ -375,7 +427,7 @@ export default function ContratoViewPage() {
             <h1 className="text-3xl font-bold text-text-primary">{contrato.numeroContrato || 'Contrato'}</h1>
             <p className="text-text-secondary">{contrato.modeloContrato?.nome}</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {contrato.status === 'rascunho' && (
               <Button onClick={handleGerarPDF} disabled={gerandoPDF}>
                 <DocumentTextIcon className="h-5 w-5 mr-2" />
@@ -383,35 +435,62 @@ export default function ContratoViewPage() {
               </Button>
             )}
             {contrato.status === 'gerado' && contrato.pdfPath && (
-              <Button variant="default" onClick={() => setDialogAssinaturaAberto(true)}>
-                <PencilSquareIcon className="h-5 w-5 mr-2" />
-                Assinar PDF
-              </Button>
-            )}
-            {contrato.status === 'gerado' && contrato.pdfPath && (
-              <Button variant="outline" onClick={() => setDialogLinkClienteAberto(true)}>
-                <LinkIcon className="h-5 w-5 mr-2" />
-                Gerar link para cliente
-              </Button>
-            )}
-            {contrato.status === 'gerado' && contrato.pdfPath && (
-              <Button
-                variant="outline"
-                disabled={revogandoLinks}
-                onClick={() => setDialogRevogarLinksAberto(true)}
-              >
-                <NoSymbolIcon className="h-5 w-5 mr-2" />
-                {revogandoLinks ? 'Revogando...' : 'Revogar links pendentes'}
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="gap-2">
+                    Assinatura
+                    <ChevronDownIcon className="h-4 w-4 opacity-70" aria-hidden />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-[14rem]">
+                  <DropdownMenuItem
+                    onClick={() => setDialogAssinaturaAberto(true)}
+                    className="cursor-pointer gap-2"
+                  >
+                    <PencilSquareIcon className="h-4 w-4" />
+                    Assinar PDF (interno)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setSignatarioIdPreGerarLink(null);
+                      setAvisoRenovarGerarLink(false);
+                      setDialogLinkClienteAberto(true);
+                    }}
+                    className="cursor-pointer gap-2"
+                  >
+                    <LinkIcon className="h-4 w-4" />
+                    Gerar link para cliente
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setDialogRevogarLinksAberto(true)}
+                    className="cursor-pointer gap-2"
+                  >
+                    <NoSymbolIcon className="h-4 w-4" />
+                    Revogar links pendentes
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             {contrato.pdfUrl && (
-              <Button variant="outline" onClick={() => window.open(contrato.pdfUrl, '_blank')}>
+              <Button variant="default" onClick={() => window.open(contrato.pdfUrl, '_blank')}>
                 <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
                 Baixar PDF
               </Button>
             )}
           </div>
         </div>
+
+        <ContratoJornadaAssinaturaBanner
+          contrato={contrato}
+          onIrParaPartes={() => irParaAba('partes')}
+          onGerarPdf={handleGerarPDF}
+          onAbrirGerarLink={() => {
+            setSignatarioIdPreGerarLink(null);
+            setAvisoRenovarGerarLink(false);
+            setDialogLinkClienteAberto(true);
+          }}
+          gerandoPdf={gerandoPDF}
+        />
 
         {/* Sistema de Abas */}
         <div className="mb-6">
@@ -526,6 +605,28 @@ export default function ContratoViewPage() {
               </CardContent>
             </Card>
 
+            {contrato.status === 'rascunho' && !contrato.pdfPath?.trim() && (
+              <Card className="border-amber-500/35 bg-amber-500/5">
+                <CardHeader>
+                  <CardTitle className="text-base">Próximo passo: gerar o PDF</CardTitle>
+                  <CardDescription>
+                    Com o contrato em rascunho e sem PDF gerado, o link de assinatura ainda não fica disponível. Gere o
+                    PDF quando o texto estiver pronto; em seguida você pode usar a aba Partes para signatários.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex flex-wrap gap-2">
+                  <Button type="button" onClick={handleGerarPDF} disabled={gerandoPDF}>
+                    <DocumentTextIcon className="mr-2 h-4 w-4" />
+                    {gerandoPDF ? 'Gerando…' : 'Gerar PDF agora'}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => irParaAba('partes')}>
+                    <UserGroupIcon className="mr-2 h-4 w-4" />
+                    Ir para Partes
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
                 <CardTitle>Informações do Contrato</CardTitle>
@@ -572,6 +673,12 @@ export default function ContratoViewPage() {
             somenteLeitura={contrato.status === 'assinado'}
             contratoStatus={contrato.status}
             contratoPdfPath={contrato.pdfPath}
+            bloquearBotoesLink={dialogLinkClienteAberto}
+            onPedidoAbrirGerarLink={({ signatarioId, modo }) => {
+              setSignatarioIdPreGerarLink(signatarioId ?? null);
+              setAvisoRenovarGerarLink(modo === 'copiar');
+              setDialogLinkClienteAberto(true);
+            }}
           />
         )}
 
@@ -585,7 +692,28 @@ export default function ContratoViewPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="mb-4 flex justify-end">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap gap-2">
+                  {(
+                    [
+                      { id: 'todos' as const, label: 'Todos' },
+                      { id: 'assinatura' as const, label: 'Assinatura' },
+                      { id: 'convites' as const, label: 'Convites' },
+                      { id: 'partes' as const, label: 'Partes' },
+                    ] as const
+                  ).map((chip) => (
+                    <Button
+                      key={chip.id}
+                      type="button"
+                      size="sm"
+                      variant={filtroHistorico === chip.id ? 'default' : 'outline'}
+                      className="h-8 text-xs"
+                      onClick={() => setFiltroHistorico(chip.id)}
+                    >
+                      {chip.label}
+                    </Button>
+                  ))}
+                </div>
                 <Button type="button" variant="outline" size="sm" onClick={() => carregarEventosAuditoria()}>
                   Atualizar
                 </Button>
@@ -601,9 +729,38 @@ export default function ContratoViewPage() {
               {!carregandoAuditoria && !erroAuditoria && eventosAuditoria.length === 0 && (
                 <p className="text-sm text-text-secondary">Nenhum evento registrado ainda.</p>
               )}
-              {!carregandoAuditoria && !erroAuditoria && eventosAuditoria.length > 0 && (
+              {!carregandoAuditoria && !erroAuditoria && eventosAuditoria.length > 0 && resumoHistoricoRecente.length > 0 && (
+                <div className="mb-6 rounded-lg border border-border bg-muted/30 px-3 py-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                    Resumo recente ({filtroHistorico === 'todos' ? 'geral' : filtroHistorico})
+                  </p>
+                  <ul className="space-y-1.5 text-sm text-text-primary">
+                    {resumoHistoricoRecente.map((ev) => {
+                      const dataFmt = ev.criadoEm
+                        ? new Date(ev.criadoEm).toLocaleString('pt-BR')
+                        : '—';
+                      const titulo = ROTULOS_EVENTO_CONTRATO[ev.tipoEvento] || ev.tipoEvento;
+                      return (
+                        <li key={`resumo-${ev.id}`} className="flex flex-wrap justify-between gap-2 border-b border-border/50 pb-1.5 last:border-0">
+                          <span>{titulo}</span>
+                          <time className="text-xs text-text-secondary">{dataFmt}</time>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+              {!carregandoAuditoria &&
+                !erroAuditoria &&
+                eventosAuditoria.length > 0 &&
+                eventosHistoricoFiltrados.length === 0 && (
+                  <p className="mb-4 text-sm text-text-secondary">
+                    Nenhum evento nesta categoria. Escolha outro filtro ou &quot;Todos&quot;.
+                  </p>
+                )}
+              {!carregandoAuditoria && !erroAuditoria && eventosHistoricoFiltrados.length > 0 && (
                 <ul className="space-y-4">
-                  {eventosAuditoria.map((ev) => {
+                  {eventosHistoricoFiltrados.map((ev) => {
                     const dataFmt = ev.criadoEm
                       ? new Date(ev.criadoEm).toLocaleString('pt-BR')
                       : '—';
@@ -735,25 +892,43 @@ export default function ContratoViewPage() {
 
         <GerarLinkAssinaturaClienteDialog
           open={dialogLinkClienteAberto}
-          onOpenChange={setDialogLinkClienteAberto}
+          onOpenChange={(aberto) => {
+            setDialogLinkClienteAberto(aberto);
+            if (!aberto) {
+              setSignatarioIdPreGerarLink(null);
+              setAvisoRenovarGerarLink(false);
+            }
+          }}
           contratoId={contrato.id}
+          signatarioIdInicial={signatarioIdPreGerarLink}
+          avisoRenovarConviteAnterior={avisoRenovarGerarLink}
           onSucesso={async (link, emailEnviado, erroEmail, resendMock) => {
-            if (link && navigator?.clipboard?.writeText) {
-              await navigator.clipboard.writeText(link);
-              showToast('Link de assinatura gerado e copiado para a área de transferência', 'success');
-            } else if (link) {
-              showToast('Link gerado com sucesso', 'success');
-              window.open(link, '_blank');
+            if (link) {
+              const copiou = await tentarCopiarParaAreaTransferencia(link);
+              if (copiou) {
+                showToast('Link gerado e copiado para a área de transferência.', 'success');
+              } else {
+                showToast('Link gerado. Use o diálogo para copiar ou abrir em nova aba.', 'info');
+              }
+              setLinkGeradoSucessoUrl(link);
             }
             if (resendMock) {
               showToast('RESEND_MOCK ativo: nenhum e-mail enviado. Use o link copiado ou o log do servidor.', 'info');
             } else if (!emailEnviado && erroEmail) {
               showToast(`Link gerado, mas o e-mail não foi enviado: ${erroEmail}`, 'error');
             } else if (emailEnviado) {
-              showToast('E-mail de assinatura enviado ao cliente', 'success');
+              showToast('E-mail de assinatura enviado ao signatário.', 'success');
             }
+            await loadContrato();
           }}
           onErro={(msg) => showToast(msg, 'error')}
+        />
+        <LinkGeradoSucessoDialog
+          open={linkGeradoSucessoUrl !== null}
+          onOpenChange={(aberto) => {
+            if (!aberto) setLinkGeradoSucessoUrl(null);
+          }}
+          link={linkGeradoSucessoUrl ?? ''}
         />
       </div>
     </Layout>

@@ -88,6 +88,14 @@ vi.mock('@/components/contratos/ContratoSignatariosLinksLista', () => ({
   ContratoSignatariosLinksLista: () => null,
 }));
 
+vi.mock('@/components/contratos/GerarLinkAssinaturaClienteDialog', () => ({
+  GerarLinkAssinaturaClienteDialog: () => null,
+}));
+
+vi.mock('@/components/contratos/LinkGeradoSucessoDialog', () => ({
+  LinkGeradoSucessoDialog: () => null,
+}));
+
 vi.mock('@/components/EventoStatusSelect', () => ({
   default: ({
     eventoId,

@@ -10,15 +10,15 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog';
 import { ContratoSignatariosLinksLista } from '@/components/contratos/ContratoSignatariosLinksLista';
+import { GerarLinkAssinaturaClienteDialog } from '@/components/contratos/GerarLinkAssinaturaClienteDialog';
+import { LinkGeradoSucessoDialog } from '@/components/contratos/LinkGeradoSucessoDialog';
+import { ContratoJornadaAssinaturaCompacta } from '@/components/contratos/ContratoJornadaAssinaturaBanner';
 import { Contrato } from '@/types';
 import {
   contratoPassaFiltroStatusLista,
   obterExibicaoStatusContratoNaLista,
 } from '@/lib/utils/contrato-listagem-assinaturas';
-import {
-  podeGerarLinkAssinaturaContrato,
-  solicitarLinkAssinaturaSignatario,
-} from '@/lib/utils/contrato-link-signatario-client';
+import { podeGerarLinkAssinaturaContrato, tentarCopiarParaAreaTransferencia } from '@/lib/utils/contrato-link-signatario-client';
 import {
   PlusIcon,
   DocumentTextIcon,
@@ -113,7 +113,13 @@ export default function ContratosPage() {
   const [customEndDate, setCustomEndDate] = useState('');
   const [contratoParaExcluir, setContratoParaExcluir] = useState<Contrato | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [linkAssinaturaChave, setLinkAssinaturaChave] = useState<string | null>(null);
+  const [dialogGerarLink, setDialogGerarLink] = useState<{
+    contratoId: string;
+    signatarioIdInicial: string | null;
+    avisoRenovar: boolean;
+  } | null>(null);
+  const [linkSucessoUrl, setLinkSucessoUrl] = useState<string | null>(null);
+  const [gerandoPdfContratoId, setGerandoPdfContratoId] = useState<string | null>(null);
 
   useEffect(() => {
     loadContratos();
@@ -135,30 +141,6 @@ export default function ContratosPage() {
       showToast('Erro ao carregar contratos', 'error');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const solicitarLinkSignatarioNaLista = async (
-    contrato: Contrato,
-    signatarioId: string,
-    modo: 'gerar' | 'copiar'
-  ) => {
-    if (!podeGerarLinkAssinaturaContrato(contrato.status, contrato.pdfPath)) {
-      showToast('Gere o PDF do contrato antes de criar o link de assinatura.', 'error');
-      return;
-    }
-    const chave = `${contrato.id}:${signatarioId}`;
-    setLinkAssinaturaChave(chave);
-    try {
-      await solicitarLinkAssinaturaSignatario({
-        contratoId: contrato.id,
-        signatarioId,
-        modo,
-        showToast,
-        aoConcluirComSucesso: loadContratos,
-      });
-    } finally {
-      setLinkAssinaturaChave(null);
     }
   };
 
@@ -273,6 +255,7 @@ export default function ContratosPage() {
 
   const handleGerarPDF = async (id: string) => {
     try {
+      setGerandoPdfContratoId(id);
       const response = await fetch(`/api/contratos/${id}/gerar-pdf`, { method: 'POST' });
       if (response.ok) {
         const data = await response.json();
@@ -286,6 +269,8 @@ export default function ContratosPage() {
       }
     } catch (error) {
       showToast('Erro ao gerar PDF', 'error');
+    } finally {
+      setGerandoPdfContratoId(null);
     }
   };
 
@@ -524,9 +509,10 @@ export default function ContratosPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
+                                  aria-label={`Ver evento vinculado a este contrato`}
                                   onClick={() => router.push(`/eventos/${contrato.eventoId}`)}
                                 >
-                                  <EyeIcon className="h-4 w-4" />
+                                  <EyeIcon className="h-4 w-4" aria-hidden />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -548,12 +534,37 @@ export default function ContratosPage() {
                       >
                         {textoBadgeStatusContratoLista(contrato)}
                       </span>
+                      <ContratoJornadaAssinaturaCompacta
+                        contrato={contrato}
+                        gerandoPdf={gerandoPdfContratoId === contrato.id}
+                        onGerarPdf={() => void handleGerarPDF(contrato.id)}
+                        onIrParaPartes={() => router.push(`/contratos/${contrato.id}?aba=partes`)}
+                        onGerarLink={() => {
+                          if (!podeGerarLinkAssinaturaContrato(contrato.status, contrato.pdfPath)) {
+                            showToast('Gere o PDF do contrato antes de criar o link de assinatura.', 'error');
+                            return;
+                          }
+                          setDialogGerarLink({
+                            contratoId: contrato.id,
+                            signatarioIdInicial: null,
+                            avisoRenovar: false,
+                          });
+                        }}
+                      />
                       <ContratoSignatariosLinksLista
                         contrato={contrato}
-                        linkAssinaturaChave={linkAssinaturaChave}
-                        onSolicitarLink={(signatarioId, modo) =>
-                          void solicitarLinkSignatarioNaLista(contrato, signatarioId, modo)
-                        }
+                        bloquearAcoes={dialogGerarLink?.contratoId === contrato.id}
+                        onAbrirDialogGerarLink={(signatarioId, modo) => {
+                          if (!podeGerarLinkAssinaturaContrato(contrato.status, contrato.pdfPath)) {
+                            showToast('Gere o PDF do contrato antes de criar o link de assinatura.', 'error');
+                            return;
+                          }
+                          setDialogGerarLink({
+                            contratoId: contrato.id,
+                            signatarioIdInicial: signatarioId,
+                            avisoRenovar: modo === 'copiar',
+                          });
+                        }}
                       />
                     </div>
                     <div className="flex shrink-0 gap-2">
@@ -563,13 +574,14 @@ export default function ContratosPage() {
                             <Button
                               variant="outline"
                               size="sm"
+                              aria-label="Abrir contrato — visualizar, editar e assinatura"
                               onClick={() => router.push(`/contratos/${contrato.id}`)}
                             >
-                              <PencilIcon className="h-4 w-4" />
+                              <PencilIcon className="h-4 w-4" aria-hidden />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Editar Contrato</p>
+                            <p>Abrir contrato</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -580,9 +592,10 @@ export default function ContratosPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
+                                aria-label="Baixar ou abrir PDF do contrato"
                                 onClick={() => window.open(contrato.pdfUrl, '_blank')}
                               >
-                                <ArrowDownTrayIcon className="h-4 w-4" />
+                                <ArrowDownTrayIcon className="h-4 w-4" aria-hidden />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -598,9 +611,10 @@ export default function ContratosPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
+                                aria-label="Gerar PDF deste contrato"
                                 onClick={() => handleGerarPDF(contrato.id)}
                               >
-                                <DocumentTextIcon className="h-4 w-4" />
+                                <DocumentTextIcon className="h-4 w-4" aria-hidden />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -615,10 +629,11 @@ export default function ContratosPage() {
                             <Button
                               variant="outline"
                               size="sm"
+                              aria-label="Excluir contrato"
                               onClick={() => handleExcluirContrato(contrato)}
                               className="text-red-600 hover:text-red-700 hover:bg-red-50"
                             >
-                              <TrashIcon className="h-4 w-4" />
+                              <TrashIcon className="h-4 w-4" aria-hidden />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
@@ -635,6 +650,45 @@ export default function ContratosPage() {
         </Card>
 
         {/* Modal de Confirmação de Exclusão */}
+        {dialogGerarLink !== null && (
+          <GerarLinkAssinaturaClienteDialog
+            open
+            onOpenChange={(aberto) => {
+              if (!aberto) setDialogGerarLink(null);
+            }}
+            contratoId={dialogGerarLink.contratoId}
+            signatarioIdInicial={dialogGerarLink.signatarioIdInicial}
+            avisoRenovarConviteAnterior={dialogGerarLink.avisoRenovar}
+            onSucesso={async (link, emailEnviado, erroEmail, resendMock) => {
+              if (link) {
+                const copiou = await tentarCopiarParaAreaTransferencia(link);
+                if (copiou) {
+                  showToast('Link gerado e copiado para a área de transferência.', 'success');
+                } else {
+                  showToast('Link gerado. Use o diálogo para copiar ou abrir em nova aba.', 'info');
+                }
+                setLinkSucessoUrl(link);
+              }
+              if (resendMock) {
+                showToast('RESEND_MOCK ativo: nenhum e-mail enviado. Use o link copiado ou o log do servidor.', 'info');
+              } else if (!emailEnviado && erroEmail) {
+                showToast(`Link gerado, mas o e-mail não foi enviado: ${erroEmail}`, 'error');
+              } else if (emailEnviado) {
+                showToast('E-mail de assinatura enviado ao signatário.', 'success');
+              }
+              await loadContratos();
+            }}
+            onErro={(msg) => showToast(msg, 'error')}
+          />
+        )}
+        <LinkGeradoSucessoDialog
+          open={linkSucessoUrl !== null}
+          onOpenChange={(aberto) => {
+            if (!aberto) setLinkSucessoUrl(null);
+          }}
+          link={linkSucessoUrl ?? ''}
+        />
+
         <ConfirmationDialog
           open={showDeleteDialog}
           onOpenChange={setShowDeleteDialog}

@@ -15,6 +15,10 @@ export interface GerarLinkAssinaturaClienteDialogProps {
   open: boolean;
   onOpenChange: (aberto: boolean) => void;
   contratoId: string;
+  /** Ao abrir a partir da lista de signatários, pré-seleciona no select. */
+  signatarioIdInicial?: string | null;
+  /** Fluxo "Copiar link": novo link invalida o convite anterior. */
+  avisoRenovarConviteAnterior?: boolean;
   onSucesso?: (link: string, emailEnviado: boolean, erroEmail?: string, resendMock?: boolean) => void;
   onErro?: (mensagem: string) => void;
 }
@@ -34,6 +38,8 @@ export function GerarLinkAssinaturaClienteDialog({
   open,
   onOpenChange,
   contratoId,
+  signatarioIdInicial = null,
+  avisoRenovarConviteAnterior = false,
   onSucesso,
   onErro,
 }: GerarLinkAssinaturaClienteDialogProps) {
@@ -82,6 +88,14 @@ export function GerarLinkAssinaturaClienteDialog({
         setSignatariosElegiveis([]);
       });
   }, [open, contratoId]);
+
+  useEffect(() => {
+    if (!open || !signatarioIdInicial) return;
+    const existe = signatariosElegiveis.some((o) => o.id === signatarioIdInicial);
+    if (existe) {
+      setSignatarioId(signatarioIdInicial);
+    }
+  }, [open, signatarioIdInicial, signatariosElegiveis]);
 
   const handleGerar = async () => {
     if (gerando) return;
@@ -159,6 +173,11 @@ export function GerarLinkAssinaturaClienteDialog({
               ? 'Este contrato tem signatários nas partes: o link deve ser gerado para uma pessoa cadastrada, com vínculo ao PDF e à ordem de assinatura corretas.'
               : 'Gere um link público para visualizar e assinar o contrato. Será obrigatório confirmar o e-mail com um código antes de exibir o PDF.'}
           </DialogDescription>
+          {avisoRenovarConviteAnterior && exigeSignatarioCadastrado && (
+            <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1.5 text-xs text-text-primary">
+              Ao gerar um novo link para este signatário, o convite anterior deixa de valer.
+            </p>
+          )}
         </DialogHeader>
 
         <div className="space-y-3">

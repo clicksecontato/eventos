@@ -18,10 +18,9 @@ import AnexosEvento from '@/components/AnexosEvento';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog';
 import { useToast } from '@/components/ui/toast';
 import LoadingHotmart from '@/components/LoadingHotmart';
-import {
-  podeGerarLinkAssinaturaContrato,
-  solicitarLinkAssinaturaSignatario,
-} from '@/lib/utils/contrato-link-signatario-client';
+import { podeGerarLinkAssinaturaContrato, tentarCopiarParaAreaTransferencia } from '@/lib/utils/contrato-link-signatario-client';
+import { GerarLinkAssinaturaClienteDialog } from '@/components/contratos/GerarLinkAssinaturaClienteDialog';
+import { LinkGeradoSucessoDialog } from '@/components/contratos/LinkGeradoSucessoDialog';
 import { formatarTextoEventoParaCopiar } from './evento-view-copy-text';
 import { EventoBasicoSection } from './EventoBasicoSection';
 import { EventoContratosSection } from './EventoContratosSection';
@@ -43,7 +42,12 @@ export default function EventoViewPage() {
   const [eventoLocal, setEventoLocal] = useState<Evento | null>(null);
   const [alocacoesEvento, setAlocacoesEvento] = useState<AgendamentoAlocacao[]>([]);
   const [profissionaisAlocacao, setProfissionaisAlocacao] = useState<Map<string, string>>(new Map());
-  const [linkAssinaturaChave, setLinkAssinaturaChave] = useState<string | null>(null);
+  const [dialogGerarLink, setDialogGerarLink] = useState<{
+    contratoId: string;
+    signatarioIdInicial: string | null;
+    avisoRenovar: boolean;
+  } | null>(null);
+  const [linkSucessoUrl, setLinkSucessoUrl] = useState<string | null>(null);
 
   const { data: evento, loading: loadingEvento, error: errorEvento, refetch: refetchEvento } = useEvento(
     params.id as string
@@ -175,29 +179,6 @@ export default function EventoViewPage() {
 
   const handleAnexosChange = () => {
     refetchAnexos();
-  };
-
-  const solicitarLinkSignatarioNoEvento = async (
-    contrato: Contrato,
-    signatarioId: string,
-    modo: 'gerar' | 'copiar'
-  ) => {
-    if (!podeGerarLinkAssinaturaContrato(contrato.status, contrato.pdfPath)) {
-      showToast('Gere o PDF do contrato antes de criar o link de assinatura.', 'error');
-      return;
-    }
-    setLinkAssinaturaChave(`${contrato.id}:${signatarioId}`);
-    try {
-      await solicitarLinkAssinaturaSignatario({
-        contratoId: contrato.id,
-        signatarioId,
-        modo,
-        showToast,
-        aoConcluirComSucesso: refetchContratos,
-      });
-    } finally {
-      setLinkAssinaturaChave(null);
-    }
   };
 
   const handleCopyInfo = async () => {
@@ -377,11 +358,60 @@ export default function EventoViewPage() {
           contratos={contratos}
           loadingContratos={loadingContratos}
           temAcessoContrato={temAcessoContrato}
-          linkAssinaturaChave={linkAssinaturaChave}
+          dialogGerarLinkContratoId={dialogGerarLink?.contratoId ?? null}
           onNovoContrato={() => router.push(`/contratos/novo?eventoId=${evento.id}`)}
           onEditarContrato={(contratoId) => router.push(`/contratos/${contratoId}`)}
           onGerarPdf={gerarPdfContrato}
-          onSolicitarLinkSignatario={(c, sid, modo) => void solicitarLinkSignatarioNoEvento(c, sid, modo)}
+          onAbrirDialogGerarLink={(c, signatarioId, modo) => {
+            if (!podeGerarLinkAssinaturaContrato(c.status, c.pdfPath)) {
+              showToast('Gere o PDF do contrato antes de criar o link de assinatura.', 'error');
+              return;
+            }
+            setDialogGerarLink({
+              contratoId: c.id,
+              signatarioIdInicial: signatarioId,
+              avisoRenovar: modo === 'copiar',
+            });
+          }}
+        />
+
+        {dialogGerarLink !== null && (
+          <GerarLinkAssinaturaClienteDialog
+            open
+            onOpenChange={(aberto) => {
+              if (!aberto) setDialogGerarLink(null);
+            }}
+            contratoId={dialogGerarLink.contratoId}
+            signatarioIdInicial={dialogGerarLink.signatarioIdInicial}
+            avisoRenovarConviteAnterior={dialogGerarLink.avisoRenovar}
+            onSucesso={async (link, emailEnviado, erroEmail, resendMock) => {
+              if (link) {
+                const copiou = await tentarCopiarParaAreaTransferencia(link);
+                if (copiou) {
+                  showToast('Link gerado e copiado para a área de transferência.', 'success');
+                } else {
+                  showToast('Link gerado. Use o diálogo para copiar ou abrir em nova aba.', 'info');
+                }
+                setLinkSucessoUrl(link);
+              }
+              if (resendMock) {
+                showToast('RESEND_MOCK ativo: nenhum e-mail enviado. Use o link copiado ou o log do servidor.', 'info');
+              } else if (!emailEnviado && erroEmail) {
+                showToast(`Link gerado, mas o e-mail não foi enviado: ${erroEmail}`, 'error');
+              } else if (emailEnviado) {
+                showToast('E-mail de assinatura enviado ao signatário.', 'success');
+              }
+              await refetchContratos();
+            }}
+            onErro={(msg) => showToast(msg, 'error')}
+          />
+        )}
+        <LinkGeradoSucessoDialog
+          open={linkSucessoUrl !== null}
+          onOpenChange={(aberto) => {
+            if (!aberto) setLinkSucessoUrl(null);
+          }}
+          link={linkSucessoUrl ?? ''}
         />
 
         <ConfirmationDialog

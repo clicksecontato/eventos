@@ -52,6 +52,13 @@ export interface ContratoPartesPanelProps {
   /** Para habilitar Gerar/Copiar link (mesmas regras da lista /contratos). */
   contratoStatus: string;
   contratoPdfPath?: string | null;
+  /**
+   * Abre o modal de gerar link na página pai (fluxo unificado).
+   * Se não for passado, mantém o POST direto na linha do signatário.
+   */
+  onPedidoAbrirGerarLink?: (opcoes: { signatarioId?: string; modo: 'gerar' | 'copiar' }) => void;
+  /** Enquanto o modal de link está aberto (mesmo contrato), desabilita botões duplicados. */
+  bloquearBotoesLink?: boolean;
 }
 
 export function ContratoPartesPanel({
@@ -59,11 +66,13 @@ export function ContratoPartesPanel({
   somenteLeitura,
   contratoStatus,
   contratoPdfPath,
+  onPedidoAbrirGerarLink,
+  bloquearBotoesLink = false,
 }: ContratoPartesPanelProps) {
   const { showToast } = useToast();
   const [partes, setPartes] = useState<ParteUi[]>([]);
   const [carregando, setCarregando] = useState(true);
-  /** Bloqueia todos os botões de link do painel enquanto um POST está em curso (evita corrida com revogação de convites). */
+  /** POST direto (quando não há `onPedidoAbrirGerarLink`). */
   const [linkAssinaturaOperacaoEmAndamento, setLinkAssinaturaOperacaoEmAndamento] = useState(false);
   const [novoPapel, setNovoPapel] = useState('cliente');
   const [salvandoParte, setSalvandoParte] = useState(false);
@@ -203,27 +212,35 @@ export function ContratoPartesPanel({
     setExcluirPendente({ tipo: 'signatario', id: signatarioId });
   };
 
-  const solicitarLinkSignatario = async (signatarioId: string, modo: 'gerar' | 'copiar') => {
+  const acionarLinkSignatario = (signatarioId: string, modo: 'gerar' | 'copiar') => {
     if (!podeGerarLinkAssinaturaContrato(contratoStatus, contratoPdfPath)) {
       showToast('Gere o PDF do contrato antes de criar o link de assinatura.', 'error');
       return;
     }
-    setLinkAssinaturaOperacaoEmAndamento(true);
-    try {
-      await solicitarLinkAssinaturaSignatario({
-        contratoId,
-        signatarioId,
-        modo,
-        showToast,
-        aoConcluirComSucesso: carregar,
-      });
-    } finally {
-      setLinkAssinaturaOperacaoEmAndamento(false);
+    if (onPedidoAbrirGerarLink) {
+      onPedidoAbrirGerarLink({ signatarioId, modo });
+      return;
     }
+    void (async () => {
+      setLinkAssinaturaOperacaoEmAndamento(true);
+      try {
+        await solicitarLinkAssinaturaSignatario({
+          contratoId,
+          signatarioId,
+          modo,
+          showToast,
+          aoConcluirComSucesso: carregar,
+        });
+      } finally {
+        setLinkAssinaturaOperacaoEmAndamento(false);
+      }
+    })();
   };
 
   const rotuloPapel = (p: string) => PAPEIS_OPCOES.find((x) => x.value === p)?.label || p;
   const podeLinkAssinatura = podeGerarLinkAssinaturaContrato(contratoStatus, contratoPdfPath);
+  const totalSignatarios = partes.reduce((n, p) => n + p.signatarios.length, 0);
+  const carregandoLink = bloquearBotoesLink || linkAssinaturaOperacaoEmAndamento;
 
   if (carregando) {
     return (
@@ -295,7 +312,6 @@ export function ContratoPartesPanel({
                   <li className="text-sm text-text-secondary">Nenhum signatário nesta parte.</li>
                 )}
                 {parte.signatarios.map((s) => {
-                  const carregandoLink = linkAssinaturaOperacaoEmAndamento;
                   const mostrarGerar =
                     podeLinkAssinatura &&
                     (s.status === 'pendente' || s.status === 'expirado' || s.status === 'recusado');
@@ -325,7 +341,7 @@ export function ContratoPartesPanel({
                                 size="sm"
                                 className="h-8 text-xs"
                                 disabled={carregandoLink}
-                                onClick={() => void solicitarLinkSignatario(s.id, 'gerar')}
+                                onClick={() => acionarLinkSignatario(s.id, 'gerar')}
                               >
                                 <LinkIcon className="mr-1 h-3.5 w-3.5" />
                                 {carregandoLink ? '...' : 'Gerar link'}
@@ -345,7 +361,7 @@ export function ContratoPartesPanel({
                                 size="sm"
                                 className="h-8 text-xs"
                                 disabled={carregandoLink}
-                                onClick={() => void solicitarLinkSignatario(s.id, 'copiar')}
+                                onClick={() => acionarLinkSignatario(s.id, 'copiar')}
                               >
                                 <ClipboardDocumentIcon className="mr-1 h-3.5 w-3.5" />
                                 {carregandoLink ? '...' : 'Copiar link'}
@@ -398,6 +414,24 @@ export function ContratoPartesPanel({
               )}
             </div>
           ))}
+          {podeLinkAssinatura && !somenteLeitura && onPedidoAbrirGerarLink && totalSignatarios > 0 && (
+            <div className="mt-6 rounded-lg border border-dashed border-primary/35 bg-primary/5 px-4 py-4">
+              <p className="text-sm font-medium text-text-primary">Pronto para enviar ao signatário?</p>
+              <p className="mt-1 text-xs text-text-secondary">
+                Abre o mesmo fluxo do botão superior: escolha quem assina e gere o link com confirmação por e-mail.
+              </p>
+              <Button
+                type="button"
+                className="mt-3"
+                size="sm"
+                disabled={carregandoLink}
+                onClick={() => onPedidoAbrirGerarLink({ modo: 'gerar' })}
+              >
+                <LinkIcon className="mr-2 h-4 w-4" />
+                Gerar link de assinatura
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

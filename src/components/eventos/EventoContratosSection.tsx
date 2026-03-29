@@ -20,22 +20,23 @@ type Props = {
   contratos: Contrato[] | null | undefined;
   loadingContratos: boolean;
   temAcessoContrato: boolean | null;
-  linkAssinaturaChave: string | null;
+  /** Contrato com modal de gerar link aberto — desabilita ações na lista de signatários. */
+  dialogGerarLinkContratoId: string | null;
   onNovoContrato: () => void;
   onEditarContrato: (contratoId: string) => void;
   onGerarPdf: (contrato: Contrato) => Promise<void>;
-  onSolicitarLinkSignatario: (contrato: Contrato, signatarioId: string, modo: 'gerar' | 'copiar') => void;
+  onAbrirDialogGerarLink: (contrato: Contrato, signatarioId: string, modo: 'gerar' | 'copiar') => void;
 };
 
 export function EventoContratosSection({
   contratos,
   loadingContratos,
   temAcessoContrato,
-  linkAssinaturaChave,
+  dialogGerarLinkContratoId,
   onNovoContrato,
   onEditarContrato,
   onGerarPdf,
-  onSolicitarLinkSignatario,
+  onAbrirDialogGerarLink,
 }: Props) {
   return (
     <div id="contratos" className="pt-4">
@@ -92,13 +93,14 @@ export function EventoContratosSection({
                               type="button"
                               variant="outline"
                               size="sm"
+                              aria-label="Abrir contrato — visualizar, editar e assinatura"
                               onClick={() => onEditarContrato(contrato.id)}
                             >
-                              <PencilIcon className="h-4 w-4" />
+                              <PencilIcon className="h-4 w-4" aria-hidden />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>Editar Contrato</p>
+                            <p>Abrir contrato</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -110,9 +112,10 @@ export function EventoContratosSection({
                                 type="button"
                                 variant="outline"
                                 size="sm"
+                                aria-label="Baixar ou abrir PDF do contrato"
                                 onClick={() => window.open(contrato.pdfUrl, '_blank')}
                               >
-                                <ArrowDownTrayIcon className="h-4 w-4" />
+                                <ArrowDownTrayIcon className="h-4 w-4" aria-hidden />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -128,9 +131,10 @@ export function EventoContratosSection({
                                 type="button"
                                 variant="outline"
                                 size="sm"
+                                aria-label="Gerar PDF deste contrato"
                                 onClick={() => void onGerarPdf(contrato)}
                               >
-                                <PrinterIcon className="h-4 w-4" />
+                                <PrinterIcon className="h-4 w-4" aria-hidden />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -143,9 +147,11 @@ export function EventoContratosSection({
                   </div>
                   <ContratoSignatariosLinksLista
                     contrato={contrato}
-                    linkAssinaturaChave={linkAssinaturaChave}
+                    bloquearAcoes={dialogGerarLinkContratoId === contrato.id}
                     classNameUl="space-y-1.5 rounded-md border border-border bg-muted/20 px-3 py-2 text-xs"
-                    onSolicitarLink={(signatarioId, modo) => onSolicitarLinkSignatario(contrato, signatarioId, modo)}
+                    onAbrirDialogGerarLink={(signatarioId, modo) =>
+                      onAbrirDialogGerarLink(contrato, signatarioId, modo)
+                    }
                   />
                 </div>
               ))}
