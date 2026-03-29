@@ -9,12 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/toast';
 import ConfirmationDialog from '@/components/ui/confirmation-dialog';
+import { ContratoSignatariosLinksLista } from '@/components/contratos/ContratoSignatariosLinksLista';
 import { Contrato } from '@/types';
 import {
   contratoPassaFiltroStatusLista,
   obterExibicaoStatusContratoNaLista,
-  obterRotuloStatusSignatarioListagem,
-  rotuloPapelParteParaListagem,
 } from '@/lib/utils/contrato-listagem-assinaturas';
 import {
   podeGerarLinkAssinaturaContrato,
@@ -31,8 +30,6 @@ import {
   XMarkIcon,
   CalendarDaysIcon,
   AdjustmentsHorizontalIcon,
-  LinkIcon,
-  ClipboardDocumentIcon,
 } from '@heroicons/react/24/outline';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, addDays, isWithinInterval } from 'date-fns';
@@ -78,16 +75,6 @@ function textoBadgeStatusContratoLista(contrato: Contrato): string {
     return `${ex.rotulo} (${ex.assinados}/${ex.total})`;
   }
   return ex.rotulo;
-}
-
-function classeChipStatusSignatarioLista(status: string): string {
-  if (status === 'assinado') {
-    return 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100';
-  }
-  if (status === 'recusado') {
-    return 'bg-red-100 text-red-900 dark:bg-red-950/40 dark:text-red-100';
-  }
-  return 'bg-muted/80 text-text-secondary';
 }
 
 function getQuickFilterRange(filterKey: string): DateRange {
@@ -561,91 +548,13 @@ export default function ContratosPage() {
                       >
                         {textoBadgeStatusContratoLista(contrato)}
                       </span>
-                      {contrato.signatariosListagem && contrato.signatariosListagem.length > 0 && (
-                        <ul className="mt-3 space-y-1.5 rounded-md border border-border bg-muted/20 px-3 py-2 text-xs">
-                          <li className="font-medium text-text-secondary mb-1">Signatários</li>
-                          {contrato.signatariosListagem.map((s) => {
-                            const chaveAcao = `${contrato.id}:${s.id}`;
-                            const carregandoLink = linkAssinaturaChave === chaveAcao;
-                            const podeLink = podeGerarLinkAssinaturaContrato(contrato.status, contrato.pdfPath);
-                            const mostrarGerar =
-                              podeLink &&
-                              (s.status === 'pendente' ||
-                                s.status === 'expirado' ||
-                                s.status === 'recusado');
-                            const mostrarCopiar = podeLink && s.status === 'convite_enviado';
-                            return (
-                              <li
-                                key={s.id}
-                                className="flex flex-wrap items-start gap-2 border-b border-border/60 pb-2 last:border-0 last:pb-0"
-                              >
-                                <div className="min-w-0 flex-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                                  <span className="font-medium text-text-primary">{s.nome}</span>
-                                  <span className="text-text-secondary">{s.email}</span>
-                                  <span className="text-muted-foreground">
-                                    · {rotuloPapelParteParaListagem(s.papelParte)}
-                                  </span>
-                                  <span
-                                    className={`shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium ${classeChipStatusSignatarioLista(s.status)}`}
-                                  >
-                                    {obterRotuloStatusSignatarioListagem(s.status)}
-                                  </span>
-                                </div>
-                                <div className="flex shrink-0 flex-wrap gap-1">
-                                  {mostrarGerar && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            type="button"
-                                            variant="secondary"
-                                            size="sm"
-                                            className="h-7 text-xs"
-                                            disabled={carregandoLink}
-                                            onClick={() =>
-                                              void solicitarLinkSignatarioNaLista(contrato, s.id, 'gerar')
-                                            }
-                                          >
-                                            <LinkIcon className="h-3.5 w-3.5 mr-1" />
-                                            {carregandoLink ? '...' : 'Gerar link'}
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Criar link de assinatura e enviar por e-mail</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
-                                  {mostrarCopiar && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            className="h-7 text-xs"
-                                            disabled={carregandoLink}
-                                            onClick={() =>
-                                              void solicitarLinkSignatarioNaLista(contrato, s.id, 'copiar')
-                                            }
-                                          >
-                                            <ClipboardDocumentIcon className="h-3.5 w-3.5 mr-1" />
-                                            {carregandoLink ? '...' : 'Copiar link'}
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Gera um novo link, copia e invalida o convite anterior</p>
-                                        </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
+                      <ContratoSignatariosLinksLista
+                        contrato={contrato}
+                        linkAssinaturaChave={linkAssinaturaChave}
+                        onSolicitarLink={(signatarioId, modo) =>
+                          void solicitarLinkSignatarioNaLista(contrato, signatarioId, modo)
+                        }
+                      />
                     </div>
                     <div className="flex shrink-0 gap-2">
                       <TooltipProvider>

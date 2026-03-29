@@ -63,7 +63,8 @@ export function ContratoPartesPanel({
   const { showToast } = useToast();
   const [partes, setPartes] = useState<ParteUi[]>([]);
   const [carregando, setCarregando] = useState(true);
-  const [linkAssinaturaSignatarioId, setLinkAssinaturaSignatarioId] = useState<string | null>(null);
+  /** Bloqueia todos os botões de link do painel enquanto um POST está em curso (evita corrida com revogação de convites). */
+  const [linkAssinaturaOperacaoEmAndamento, setLinkAssinaturaOperacaoEmAndamento] = useState(false);
   const [novoPapel, setNovoPapel] = useState('cliente');
   const [salvandoParte, setSalvandoParte] = useState(false);
   const [formSig, setFormSig] = useState<Record<string, { nome: string; email: string; documento: string }>>({});
@@ -207,7 +208,7 @@ export function ContratoPartesPanel({
       showToast('Gere o PDF do contrato antes de criar o link de assinatura.', 'error');
       return;
     }
-    setLinkAssinaturaSignatarioId(signatarioId);
+    setLinkAssinaturaOperacaoEmAndamento(true);
     try {
       await solicitarLinkAssinaturaSignatario({
         contratoId,
@@ -217,7 +218,7 @@ export function ContratoPartesPanel({
         aoConcluirComSucesso: carregar,
       });
     } finally {
-      setLinkAssinaturaSignatarioId(null);
+      setLinkAssinaturaOperacaoEmAndamento(false);
     }
   };
 
@@ -294,7 +295,7 @@ export function ContratoPartesPanel({
                   <li className="text-sm text-text-secondary">Nenhum signatário nesta parte.</li>
                 )}
                 {parte.signatarios.map((s) => {
-                  const carregandoLink = linkAssinaturaSignatarioId === s.id;
+                  const carregandoLink = linkAssinaturaOperacaoEmAndamento;
                   const mostrarGerar =
                     podeLinkAssinatura &&
                     (s.status === 'pendente' || s.status === 'expirado' || s.status === 'recusado');

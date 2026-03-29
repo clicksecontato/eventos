@@ -1,5 +1,43 @@
 'use client';
 
+/**
+ * Tenta copiar via Clipboard API; se indisponível ou falhar, usa textarea + execCommand (HTTP / alguns browsers).
+ */
+export async function tentarCopiarParaAreaTransferencia(texto: string): Promise<boolean> {
+  const t = texto.trim();
+  if (!t) return false;
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(t);
+      return true;
+    } catch {
+      /* fallback abaixo */
+    }
+  }
+  if (typeof document === 'undefined') return false;
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = t;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '0';
+    ta.style.left = '0';
+    ta.style.width = '2em';
+    ta.style.height = '2em';
+    ta.style.opacity = '0';
+    ta.style.padding = '0';
+    ta.style.border = 'none';
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 export function podeGerarLinkAssinaturaContrato(status: string, pdfPath?: string | null): boolean {
   if (status !== 'gerado' && status !== 'assinado') return false;
   return Boolean(pdfPath?.trim());
@@ -37,11 +75,13 @@ export async function solicitarLinkAssinaturaSignatario(options: {
     const resendMock = Boolean(data.resendMock);
 
     if (modo === 'copiar') {
-      if (link && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(link);
-        showToast('Link copiado. O convite anterior deixou de valer.', 'success');
-      } else if (link) {
-        showToast(link, 'info');
+      if (link) {
+        const copiou = await tentarCopiarParaAreaTransferencia(link);
+        if (copiou) {
+          showToast('Link copiado. O convite anterior deixou de valer.', 'success');
+        } else {
+          showToast(link, 'info');
+        }
       }
     } else {
       if (emailEnviado) {
@@ -52,9 +92,11 @@ export async function solicitarLinkAssinaturaSignatario(options: {
           erroEmail ? 'error' : 'info'
         );
       }
-      if (!emailEnviado && link && navigator.clipboard?.writeText) {
-        await navigator.clipboard.writeText(link);
-        showToast('Link copiado para a área de transferência.', 'success');
+      if (!emailEnviado && link) {
+        const copiou = await tentarCopiarParaAreaTransferencia(link);
+        if (copiou) {
+          showToast('Link copiado para a área de transferência.', 'success');
+        }
       }
     }
 

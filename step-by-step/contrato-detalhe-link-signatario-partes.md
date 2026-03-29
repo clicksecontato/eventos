@@ -16,11 +16,13 @@ Replicar na página `/contratos/[id]` (aba **Partes**) a mesma lógica da lista 
 | `src/app/contratos/page.tsx` | Passa a importar o util (remove duplicação do corpo do `fetch` / toasts). |
 | `src/components/contratos/ContratoPartesPanel.tsx` | Novas props `contratoStatus`, `contratoPdfPath`; por signatário, botões Gerar/Copiar com tooltips; estado de loading por `signatarioId`; após sucesso chama `carregar()`. |
 | `src/app/contratos/[id]/page.tsx` | Repassa `contrato.status` e `contrato.pdfPath` ao painel. |
+| `src/lib/utils/contrato-link-signatario-client.test.ts` | Vitest: `podeGerarLinkAssinaturaContrato`; `solicitarLinkAssinaturaSignatario` com `fetch` e `navigator.clipboard` mockados (HTTP erro, modos gerar/copiar, `resendMock`, rede, payload com/sem `data`). |
 
 ## Validação
 
 - `npx tsc --noEmit` sem erros.
+- `npx vitest run src/lib/utils/contrato-link-signatario-client.test.ts` — 12 testes passando.
 
 ## Manutenibilidade
 
-Centralizar o fluxo de link no util evita divergência entre lista e detalhe. Próximo passo natural seria testes unitários leves do util (parse de resposta mockada) se a suíte já cobrir utils similares.
+Centralizar o fluxo de link no util evita divergência entre lista e detalhe. Os testes do util protegem o contrato da resposta da API e o comportamento de toasts/clipboard sem precisar renderizar React.

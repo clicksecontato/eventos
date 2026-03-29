@@ -32,6 +32,17 @@ export function obterRotuloStatusSignatarioListagem(status: string): string {
   return ROTULO_STATUS_SIGNATARIO[status] || status;
 }
 
+/** Classes Tailwind para chip de status do signatário (lista /contratos, card em evento). */
+export function classeChipStatusSignatarioListagem(status: string): string {
+  if (status === 'assinado') {
+    return 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100';
+  }
+  if (status === 'recusado') {
+    return 'bg-red-100 text-red-900 dark:bg-red-950/40 dark:text-red-100';
+  }
+  return 'bg-muted/80 text-text-secondary';
+}
+
 export type ExibicaoStatusContratoLista =
   | { tipo: 'simples'; statusDb: Contrato['status']; rotulo: string }
   | {
