@@ -85,7 +85,7 @@ export async function POST(
       return createErrorResponse('Contrato não encontrado', 404);
     }
 
-    if (contrato.status === 'assinado') {
+    if (contrato.status === 'assinado' || contrato.status === 'document_closed') {
       return createErrorResponse('Este contrato já foi assinado.', 409);
     }
 
@@ -162,7 +162,7 @@ export async function POST(
       pdfPathOriginal: contrato.pdfPathOriginal || contrato.pdfPath,
       pdfPath: novoPath,
       pdfUrl: upload.url,
-      status: 'assinado',
+      status: 'document_closed',
       dataAssinatura: new Date(),
       assinadoPor: user.id,
       assinaturaAuditoria: auditoria,

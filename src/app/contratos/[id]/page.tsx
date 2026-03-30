@@ -393,6 +393,13 @@ export default function ContratoViewPage() {
     () => eventosHistoricoFiltrados.slice(0, 5),
     [eventosHistoricoFiltrados]
   );
+  const documentoFechado = contrato?.status === 'document_closed';
+
+  useEffect(() => {
+    if (documentoFechado && abaAtiva === 'editar') {
+      setAbaAtiva('visualizar');
+    }
+  }, [documentoFechado, abaAtiva]);
 
   if (loading) {
     return (
@@ -512,20 +519,27 @@ export default function ContratoViewPage() {
             <button
               type="button"
               onClick={() => {
+                if (documentoFechado) {
+                  showToast('Documento fechado: não é mais possível editar este contrato.', 'info');
+                  return;
+                }
                 if (!conteudoHtml && contrato) {
                   carregarHtmlContrato();
                 }
                 irParaAba('editar');
               }}
+              disabled={documentoFechado}
               className={`px-4 py-2 font-medium transition-colors border-b-2 relative ${
                 abaAtiva === 'editar'
                   ? 'border-primary text-primary'
-                  : 'border-transparent text-text-secondary hover:text-text-primary'
+                  : `border-transparent text-text-secondary hover:text-text-primary ${
+                      documentoFechado ? 'cursor-not-allowed opacity-60 hover:text-text-secondary' : ''
+                    }`
               }`}
             >
               <div className="flex items-center gap-2">
                 <PencilIcon className="h-5 w-5" />
-                Editar
+                {documentoFechado ? 'Editar (bloqueado)' : 'Editar'}
                 {temAlteracoes && (
                   <span className="ml-1 px-2 py-0.5 text-xs bg-warning text-warning-text rounded-full">
                     Alterações não salvas
@@ -592,14 +606,19 @@ export default function ContratoViewPage() {
                   <Button
                     variant="outline"
                     onClick={() => {
+                      if (documentoFechado) {
+                        showToast('Documento fechado: não é mais possível editar este contrato.', 'info');
+                        return;
+                      }
                       if (!conteudoHtml && contrato) {
                         carregarHtmlContrato();
                       }
                       setAbaAtiva('editar');
                     }}
+                    disabled={documentoFechado}
                   >
                     <PencilIcon className="h-4 w-4 mr-2" />
-                    Editar Contrato
+                    {documentoFechado ? 'Edição bloqueada' : 'Editar Contrato'}
                   </Button>
                 </div>
               </CardContent>
@@ -648,7 +667,7 @@ export default function ContratoViewPage() {
                         : new Date(contrato.dataGeracao).toLocaleDateString('pt-BR')
                     }</p>
                   )}
-                  {contrato.status === 'assinado' && contrato.dataAssinatura && (
+                  {(contrato.status === 'assinado' || contrato.status === 'document_closed') && contrato.dataAssinatura && (
                     <p><strong>Data de assinatura:</strong> {
                       contrato.dataAssinatura instanceof Date
                         ? contrato.dataAssinatura.toLocaleString('pt-BR')
@@ -670,7 +689,7 @@ export default function ContratoViewPage() {
         {abaAtiva === 'partes' && contrato && (
           <ContratoPartesPanel
             contratoId={contrato.id}
-            somenteLeitura={contrato.status === 'assinado'}
+            somenteLeitura={contrato.status === 'assinado' || contrato.status === 'document_closed'}
             contratoStatus={contrato.status}
             contratoPdfPath={contrato.pdfPath}
             bloquearBotoesLink={dialogLinkClienteAberto}

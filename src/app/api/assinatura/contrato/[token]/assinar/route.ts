@@ -12,7 +12,7 @@ import {
   emailsCoincidem,
   hashTokenAssinaturaCliente,
 } from '@/lib/services/assinatura-cliente-link-service';
-import type { AssinaturaAuditoriaContrato } from '@/types';
+import type { AssinaturaAuditoriaContrato, Contrato as ContratoTipo } from '@/types';
 import { createApiResponse, createErrorResponse, getRouteParams, handleApiError } from '@/lib/api/route-helpers';
 import { registrarEventoAuditoriaContrato } from '@/lib/services/contrato-auditoria-service';
 
@@ -131,7 +131,7 @@ export async function POST(
       if (signatario.status === 'assinado') {
         return createErrorResponse('Este signatário já concluiu a assinatura.', 409);
       }
-    } else if (contrato.status === 'assinado') {
+    } else if (contrato.status === 'assinado' || contrato.status === 'document_closed') {
       return createErrorResponse(
         'Contrato já assinado. Gere um novo link vinculado a um signatário cadastrado para assinaturas adicionais.',
         409
@@ -188,17 +188,6 @@ export async function POST(
         : {}),
     };
 
-    const atualizado = await contratoRepo.update(contrato.id, {
-      userId: contrato.userId,
-      pdfPathOriginal: contrato.pdfPathOriginal || contrato.pdfPath,
-      pdfPath: novoPath,
-      pdfUrl: upload.url,
-      status: 'assinado',
-      dataAssinatura: new Date(),
-      assinadoPor: convite.user_id,
-      assinaturaAuditoria: auditoria,
-    });
-
     await supabase
       .from('contratos_assinatura_convites')
       .update({
@@ -220,6 +209,34 @@ export async function POST(
         console.warn('[assinatura-link] atualizar status do signatário:', e);
       }
     }
+
+    let statusFinalContrato: ContratoTipo['status'] = 'assinado';
+    if (convite.signatario_id) {
+      try {
+        const arvore = await parteRepo.listarArvorePorContrato(contrato.id, convite.user_id);
+        const signatarios = arvore.flatMap((p) => p.signatarios);
+        const todosAssinaram = signatarios.length > 0 && signatarios.every((s) => s.status === 'assinado');
+        if (todosAssinaram) {
+          statusFinalContrato = 'document_closed';
+        }
+      } catch (e) {
+        console.warn('[assinatura-link] verificar fechamento do documento:', e);
+      }
+    } else {
+      // Fluxo legado sem partes/signatários vinculados: a assinatura encerra o documento.
+      statusFinalContrato = 'document_closed';
+    }
+
+    const atualizado = await contratoRepo.update(contrato.id, {
+      userId: contrato.userId,
+      pdfPathOriginal: contrato.pdfPathOriginal || contrato.pdfPath,
+      pdfPath: novoPath,
+      pdfUrl: upload.url,
+      status: statusFinalContrato,
+      dataAssinatura: new Date(),
+      assinadoPor: convite.user_id,
+      assinaturaAuditoria: auditoria,
+    });
 
     await registrarEventoAuditoriaContrato({
       contratoId: contrato.id,

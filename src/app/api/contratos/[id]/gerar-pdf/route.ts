@@ -33,6 +33,9 @@ export async function POST(
       console.error(`[PDF] Contrato ${id} não encontrado`);
       return createErrorResponse('Contrato não encontrado', 404);
     }
+    if (contrato.status === 'document_closed') {
+      return createErrorResponse('Este contrato está fechado para alterações.', 409);
+    }
 
     const modeloRepo = repositoryFactory.getModeloContratoRepository();
     const modelo = await modeloRepo.findById(contrato.modeloContratoId);

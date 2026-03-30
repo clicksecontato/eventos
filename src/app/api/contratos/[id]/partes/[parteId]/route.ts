@@ -36,6 +36,9 @@ export async function PUT(
     const contratoRepo = repositoryFactory.getContratoRepository();
     const contrato = await contratoRepo.findById(contratoId, user.id);
     if (!contrato) return createErrorResponse('Contrato não encontrado', 404);
+    if (contrato.status === 'document_closed') {
+      return createErrorResponse('Documento fechado: não é possível alterar partes.', 409);
+    }
 
     const parteRepo = repositoryFactory.getContratoParteRepository();
     await parteRepo.assertParteDoContrato(parteId, contratoId, user.id);
@@ -96,6 +99,9 @@ export async function DELETE(
     const contratoRepo = repositoryFactory.getContratoRepository();
     const contrato = await contratoRepo.findById(contratoId, user.id);
     if (!contrato) return createErrorResponse('Contrato não encontrado', 404);
+    if (contrato.status === 'document_closed') {
+      return createErrorResponse('Documento fechado: não é possível alterar partes.', 409);
+    }
 
     const parteRepo = repositoryFactory.getContratoParteRepository();
     await parteRepo.assertParteDoContrato(parteId, contratoId, user.id);

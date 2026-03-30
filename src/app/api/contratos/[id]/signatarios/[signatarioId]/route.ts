@@ -35,6 +35,9 @@ export async function PUT(
     const contratoRepo = repositoryFactory.getContratoRepository();
     const contrato = await contratoRepo.findById(contratoId, user.id);
     if (!contrato) return createErrorResponse('Contrato não encontrado', 404);
+    if (contrato.status === 'document_closed') {
+      return createErrorResponse('Documento fechado: não é possível alterar signatários.', 409);
+    }
 
     const parteRepo = repositoryFactory.getContratoParteRepository();
     const existente = await parteRepo.buscarSignatario(signatarioId, user.id);
@@ -105,6 +108,9 @@ export async function DELETE(
     const contratoRepo = repositoryFactory.getContratoRepository();
     const contrato = await contratoRepo.findById(contratoId, user.id);
     if (!contrato) return createErrorResponse('Contrato não encontrado', 404);
+    if (contrato.status === 'document_closed') {
+      return createErrorResponse('Documento fechado: não é possível alterar signatários.', 409);
+    }
 
     const parteRepo = repositoryFactory.getContratoParteRepository();
     const existente = await parteRepo.buscarSignatario(signatarioId, user.id);

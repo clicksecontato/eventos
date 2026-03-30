@@ -41,6 +41,9 @@ export async function POST(
     if (!contrato) {
       return createErrorResponse('Contrato não encontrado', 404);
     }
+    if (contrato.status === 'document_closed') {
+      return createErrorResponse('Este contrato está fechado e não aceita novos links.', 409);
+    }
     if (!contrato.pdfPath) {
       return createErrorResponse('Gere o PDF do contrato antes de criar o link de assinatura.', 400);
     }

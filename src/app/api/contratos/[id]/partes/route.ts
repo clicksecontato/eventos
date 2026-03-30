@@ -69,6 +69,9 @@ export async function POST(
     const contratoRepo = repositoryFactory.getContratoRepository();
     const contrato = await contratoRepo.findById(contratoId, user.id);
     if (!contrato) return createErrorResponse('Contrato não encontrado', 404);
+    if (contrato.status === 'document_closed') {
+      return createErrorResponse('Documento fechado: não é possível alterar partes.', 409);
+    }
 
     if (!papelValido(papelRaw)) {
       return createErrorResponse(

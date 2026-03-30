@@ -36,14 +36,19 @@ export function LinkGeradoSucessoDialog({ open, onOpenChange, link }: LinkGerado
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-w-[90vw] overflow-hidden">
         <DialogHeader>
           <DialogTitle>Link gerado</DialogTitle>
           <DialogDescription>
             Use copiar ou abrir em nova aba para testar ou enviar manualmente ao signatário.
           </DialogDescription>
         </DialogHeader>
-        <p className="break-all rounded-md bg-muted/50 px-3 py-2 font-mono text-xs text-text-secondary">{link}</p>
+        <p
+          className="w-full max-w-full whitespace-normal break-all break-words overflow-x-auto rounded-md bg-muted/50 px-3 py-2 font-mono text-xs text-text-secondary"
+          style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}
+        >
+          {link}
+        </p>
         <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-end">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Fechar

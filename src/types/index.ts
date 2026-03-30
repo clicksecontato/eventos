@@ -392,7 +392,7 @@ export interface Contrato {
   dadosPreenchidos: Record<string, any>;
   /** HTML editado pelo usuário antes de salvar. Usado no PDF quando preenchido. */
   conteudoHtml?: string;
-  status: 'rascunho' | 'gerado' | 'assinado' | 'cancelado';
+  status: 'rascunho' | 'gerado' | 'assinado' | 'document_closed' | 'cancelado';
   /** Preenchido na listagem de contratos para exibir status por signatário. */
   signatariosListagem?: ContratoSignatarioListagem[];
   pdfUrl?: string;

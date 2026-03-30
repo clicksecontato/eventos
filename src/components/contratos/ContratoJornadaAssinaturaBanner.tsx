@@ -54,7 +54,7 @@ export function ContratoJornadaAssinaturaBanner({
   const totalSig = signatarios.length;
   const assinados = signatarios.filter((s) => s.status === 'assinado').length;
   const todosAssinaramLista = totalSig > 0 && assinados === totalSig;
-  const contratoAssinado = contrato.status === 'assinado';
+  const contratoAssinado = contrato.status === 'assinado' || contrato.status === 'document_closed';
 
   if (contrato.status === 'cancelado') {
     return (
@@ -65,9 +65,35 @@ export function ContratoJornadaAssinaturaBanner({
   }
 
   if (contratoAssinado) {
+    // O backend atual marca o contrato como "assinado" após o primeiro signatário.
+    // Para não mentir na UI, quando há lista de signatários e não está 100%, mostramos "colhendo".
+    if (totalSig > 0 && assinados !== totalSig) {
+      return (
+        <div className="mb-6 rounded-lg border border-amber-500/35 bg-amber-500/5 px-4 py-3">
+          <p className="text-sm font-medium text-text-primary">Colhendo assinaturas</p>
+          <p className="mt-1 text-xs text-text-secondary">
+            {assinados} de {totalSig} signatário(s) concluíram a assinatura.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={onIrParaPartes}>
+              Abrir Partes
+            </Button>
+            {podeLink && !todosAssinaramLista && (
+              <Button type="button" size="sm" onClick={onAbrirGerarLink}>
+                <LinkIcon className="mr-1.5 h-4 w-4" />
+                Gerar link para assinar
+              </Button>
+            )}
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="mb-6 rounded-lg border border-green-600/30 bg-green-500/5 px-4 py-3">
-        <p className="text-sm font-medium text-text-primary">Contrato assinado</p>
+        <p className="text-sm font-medium text-text-primary">
+          {contrato.status === 'document_closed' ? 'Documento fechado' : 'Contrato assinado'}
+        </p>
         {totalSig > 0 ? (
           <p className="mt-1 text-xs text-text-secondary">
             {assinados} de {totalSig} signatário(s) registrados nesta listagem concluíram a assinatura.
@@ -156,7 +182,7 @@ export function ContratoJornadaAssinaturaCompacta({
   const totalSig = signatarios.length;
   const assinados = signatarios.filter((s) => s.status === 'assinado').length;
   const todosAssinaramLista = totalSig > 0 && assinados === totalSig;
-  const contratoAssinado = contrato.status === 'assinado';
+  const contratoAssinado = contrato.status === 'assinado' || contrato.status === 'document_closed';
 
   if (contrato.status === 'cancelado') {
     return (
@@ -167,9 +193,20 @@ export function ContratoJornadaAssinaturaCompacta({
   }
 
   if (contratoAssinado) {
+    if (totalSig > 0 && assinados !== totalSig) {
+      return (
+        <div className="mt-2 rounded-md border border-amber-500/35 bg-amber-500/5 px-2 py-1.5 text-[11px] text-text-primary">
+          <span className="font-medium text-amber-800 dark:text-amber-300">Colhendo</span>
+          <span className="text-text-secondary"> · {assinados}/{totalSig} assinaturas</span>
+        </div>
+      );
+    }
+
     return (
       <div className="mt-2 rounded-md border border-green-600/25 bg-green-500/5 px-2 py-1.5 text-[11px] text-text-primary">
-        <span className="font-medium text-green-700 dark:text-green-400">Assinado</span>
+        <span className="font-medium text-green-700 dark:text-green-400">
+          {contrato.status === 'document_closed' ? 'Documento fechado' : 'Assinado'}
+        </span>
         {totalSig > 0 ? (
           <span className="text-text-secondary"> · {assinados}/{totalSig} na listagem</span>
         ) : null}

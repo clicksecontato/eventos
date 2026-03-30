@@ -62,6 +62,8 @@ function classeBadgeStatusContratoLista(contrato: Contrato): string {
       return 'bg-green-100 text-green-800 dark:bg-green-950/40 dark:text-green-100';
     case 'assinado':
       return 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-100';
+    case 'document_closed':
+      return 'bg-violet-100 text-violet-900 dark:bg-violet-950/45 dark:text-violet-100';
     case 'cancelado':
       return 'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-100';
     default:
@@ -415,6 +417,7 @@ export default function ContratosPage() {
                   <option value="rascunho">Rascunho</option>
                   <option value="gerado">Gerado</option>
                   <option value="colhendo_assinaturas">Colhendo assinaturas</option>
+                  <option value="document_closed">Documento fechado</option>
                   <option value="assinado">Assinado (todos)</option>
                   <option value="cancelado">Cancelado</option>
                 </select>
@@ -441,6 +444,8 @@ export default function ContratosPage() {
                         Status:{' '}
                         {filtroStatus === 'colhendo_assinaturas'
                           ? 'colhendo assinaturas'
+                          : filtroStatus === 'document_closed'
+                            ? 'documento fechado'
                           : filtroStatus === 'assinado'
                             ? 'assinado (todos)'
                             : filtroStatus}
@@ -585,7 +590,7 @@ export default function ContratosPage() {
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      {(contrato.status === 'gerado' || contrato.status === 'assinado') && contrato.pdfUrl && (
+                      {(contrato.status === 'gerado' || contrato.status === 'assinado' || contrato.status === 'document_closed') && contrato.pdfUrl && (
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>

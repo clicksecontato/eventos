@@ -10,6 +10,7 @@ import {
   getRouteParams
 } from '@/lib/api/route-helpers';
 import { registrarEventoAuditoriaContrato } from '@/lib/services/contrato-auditoria-service';
+import type { ContratoSignatarioListagem } from '@/types';
 
 export async function GET(
   request: NextRequest,
@@ -48,6 +49,25 @@ export async function GET(
       }
     }
 
+    // Popular signatários (partes) para exibir contagem/status na UI do detalhe.
+    // Mantém o mesmo padrão da listagem (/api/contratos).
+    try {
+      const parteRepo = repositoryFactory.getContratoParteRepository();
+      const arvore = await parteRepo.listarArvorePorContrato(contrato.id, user.id);
+      const signatariosListagem: ContratoSignatarioListagem[] = arvore.flatMap((parte) =>
+        parte.signatarios.map((s) => ({
+          id: s.id,
+          nome: s.nome,
+          email: s.email,
+          status: s.status,
+          papelParte: parte.papel,
+        }))
+      );
+      contratoComModelo = { ...contratoComModelo, signatariosListagem };
+    } catch (error) {
+      console.error(`Erro ao listar signatários do contrato ${contrato.id}:`, error);
+    }
+
     return createApiResponse(contratoComModelo);
   } catch (error) {
     return handleApiError(error);
@@ -67,6 +87,13 @@ export async function PUT(
     const contrato = await contratoRepo.findById(id, user.id);
     if (!contrato) {
       return createErrorResponse('Contrato não encontrado', 404);
+    }
+
+    if (contrato.status === 'document_closed') {
+      return createErrorResponse(
+        'Este contrato está com documento fechado e não permite alterações.',
+        409
+      );
     }
 
     if (body.dadosPreenchidos && contrato.modeloContratoId) {

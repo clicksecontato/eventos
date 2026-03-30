@@ -548,7 +548,7 @@ CREATE TABLE IF NOT EXISTS contratos (
     evento_id VARCHAR(255) REFERENCES eventos(id) ON DELETE SET NULL,
     modelo_contrato_id VARCHAR(255) NOT NULL REFERENCES modelos_contrato(id) ON DELETE RESTRICT,
     dados_preenchidos JSONB NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'rascunho' CHECK (status IN ('rascunho', 'gerado', 'assinado', 'cancelado')),
+    status VARCHAR(50) NOT NULL DEFAULT 'rascunho' CHECK (status IN ('rascunho', 'gerado', 'assinado', 'document_closed', 'cancelado')),
     pdf_url TEXT,
     pdf_path VARCHAR(500),
     numero_contrato VARCHAR(100),

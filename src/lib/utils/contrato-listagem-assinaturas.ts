@@ -17,6 +17,7 @@ const ROTULO_STATUS_DB: Record<Contrato['status'], string> = {
   rascunho: 'Rascunho',
   gerado: 'Gerado',
   assinado: 'Assinado',
+  document_closed: 'Documento fechado',
   cancelado: 'Cancelado',
 };
 
@@ -92,7 +93,7 @@ export function contratoPassaFiltroStatusLista(contrato: ContratoComListagem, fi
   }
 
   if (filtroStatus === 'assinado') {
-    if (contrato.status !== 'assinado') return false;
+    if (contrato.status !== 'assinado' && contrato.status !== 'document_closed') return false;
     const ex = obterExibicaoStatusContratoNaLista(contrato);
     return ex.tipo !== 'colhendo';
   }
