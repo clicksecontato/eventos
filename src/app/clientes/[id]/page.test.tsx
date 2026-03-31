@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ClienteDetalhePage from './page';
-import { useCliente, useEventos } from '@/hooks/useData';
+import { useCliente, useContratosAgrupadosPorEventos, useEventos } from '@/hooks/useData';
 
 const pushMock = vi.fn();
 
@@ -13,7 +13,8 @@ vi.mock('next/navigation', () => ({
 
 vi.mock('@/hooks/useData', () => ({
   useCliente: vi.fn(),
-  useEventos: vi.fn()
+  useEventos: vi.fn(),
+  useContratosAgrupadosPorEventos: vi.fn()
 }));
 
 vi.mock('@/components/Layout', () => ({
@@ -63,6 +64,27 @@ describe('/clientes/[id] page', () => {
       ],
       loading: false
     } as never);
+    vi.mocked(useContratosAgrupadosPorEventos).mockReturnValue({
+      data: {
+        'ev-1': [
+          {
+            id: 'ct-1',
+            eventoId: 'ev-1',
+            modeloContratoId: 'mod-1',
+            modeloContrato: { nome: 'Contrato Prestação' },
+            dadosPreenchidos: {},
+            status: 'gerado',
+            dataGeracao: new Date('2026-02-01'),
+            dataCadastro: new Date('2026-02-01'),
+            dataAtualizacao: new Date('2026-02-01'),
+            criadoPor: 'u1'
+          }
+        ]
+      },
+      loading: false,
+      error: null,
+      refetch: vi.fn()
+    } as never);
   });
 
   it('renderiza resumo e eventos do cliente', async () => {
@@ -73,6 +95,8 @@ describe('/clientes/[id] page', () => {
     });
     expect(screen.getByText('Eventos do Cliente')).toBeInTheDocument();
     expect(screen.getByText('Evento 1')).toBeInTheDocument();
+    expect(screen.getByText('Contrato Prestação')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Abrir contrato/i })).toBeInTheDocument();
   });
 
   it('navega para evento ao clicar em Ver evento', async () => {

@@ -5,11 +5,13 @@ import { useParams, useRouter } from 'next/navigation';
 import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useCliente, useEventos } from '@/hooks/useData';
+import { useCliente, useContratosAgrupadosPorEventos, useEventos } from '@/hooks/useData';
+import { obterExibicaoStatusContratoNaLista } from '@/lib/utils/contrato-listagem-assinaturas';
 import {
   ArrowLeftIcon,
   CalendarIcon,
   CurrencyDollarIcon,
+  DocumentTextIcon,
   EyeIcon,
   MapPinIcon,
   PhoneIcon,
@@ -92,6 +94,14 @@ export default function ClienteDetalhePage() {
       return dataA - dataB;
     });
   }, [eventosDoCliente]);
+
+  const idsEventosCliente = useMemo(
+    () => eventosOrdenados.map((e) => e.id),
+    [eventosOrdenados]
+  );
+
+  const { data: contratosPorEvento, loading: carregandoContratosEventos } =
+    useContratosAgrupadosPorEventos(idsEventosCliente);
 
   const resumo = useMemo(() => {
     if (!eventosDoCliente.length) {
@@ -315,62 +325,116 @@ export default function ClienteDetalhePage() {
             <CardDescription>Lista de eventos associados a este cliente</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {eventosOrdenados.length > 0 && carregandoContratosEventos && (
+              <p className="text-xs text-text-secondary">Carregando contratos dos eventos…</p>
+            )}
             {eventosOrdenados.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border p-6 text-center text-text-secondary">
                 Nenhum evento cadastrado para este cliente.
               </div>
             ) : (
-              eventosOrdenados.map((evento) => (
-                <div
-                  key={evento.id}
-                  className="flex flex-col gap-4 rounded-lg border border-border bg-surface/40 p-4 md:flex-row md:items-center md:justify-between"
-                >
-                  <div className="space-y-2">
-                    <h3 className="text-base font-semibold text-text-primary">
-                      {evento.nomeEvento || evento.tipoEvento || 'Evento'}
-                    </h3>
-                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-text-secondary">
-                      <div className="flex items-center gap-1">
-                        <CalendarIcon className="h-4 w-4" />
-                        {formatDateLong(evento.dataEvento)}
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <span className="inline-flex items-center rounded-full bg-surface-hover px-2 py-0.5 text-[11px] font-medium text-text-primary">
-                          {evento.status}
-                        </span>
-                      </div>
-                      {evento.local && (
-                        <div className="flex items-center gap-1">
-                          <MapPinIcon className="h-4 w-4" />
-                          {evento.local}
+              eventosOrdenados.map((evento) => {
+                const contratosDoEvento = [...(contratosPorEvento?.[evento.id] ?? [])].sort(
+                  (a, b) => b.dataCadastro.getTime() - a.dataCadastro.getTime()
+                );
+
+                return (
+                  <div
+                    key={evento.id}
+                    className="flex flex-col gap-4 rounded-lg border border-border bg-surface/40 p-4"
+                  >
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                      <div className="space-y-2">
+                        <h3 className="text-base font-semibold text-text-primary">
+                          {evento.nomeEvento || evento.tipoEvento || 'Evento'}
+                        </h3>
+                        <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-text-secondary">
+                          <div className="flex items-center gap-1">
+                            <CalendarIcon className="h-4 w-4" />
+                            {formatDateLong(evento.dataEvento)}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="inline-flex items-center rounded-full bg-surface-hover px-2 py-0.5 text-[11px] font-medium text-text-primary">
+                              {evento.status}
+                            </span>
+                          </div>
+                          {evento.local && (
+                            <div className="flex items-center gap-1">
+                              <MapPinIcon className="h-4 w-4" />
+                              {evento.local}
+                            </div>
+                          )}
+                          {typeof evento.numeroConvidados === 'number' && (
+                            <div>
+                              {evento.numeroConvidados} convidado(s)
+                            </div>
+                          )}
                         </div>
-                      )}
-                      {typeof evento.numeroConvidados === 'number' && (
-                        <div>
-                          {evento.numeroConvidados} convidado(s)
+                      </div>
+                      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
+                        <div className="text-right sm:text-left">
+                          <p className="text-xs text-text-secondary">Valor total</p>
+                          <p className="text-sm font-semibold text-text-primary">
+                            {formatCurrency(evento.valorTotal || 0)}
+                          </p>
                         </div>
-                      )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/eventos/${evento.id}`)}
+                          className="flex items-center gap-2"
+                        >
+                          <EyeIcon className="h-4 w-4" />
+                          Ver evento
+                        </Button>
+                      </div>
                     </div>
+
+                    {!carregandoContratosEventos && contratosDoEvento.length > 0 && (
+                      <div className="border-t border-border pt-3">
+                        <p className="mb-2 text-xs font-medium text-text-secondary">
+                          Contratos deste evento ({contratosDoEvento.length})
+                        </p>
+                        <ul className="m-0 list-none space-y-2 p-0">
+                          {contratosDoEvento.map((c) => {
+                            const exStatus = obterExibicaoStatusContratoNaLista(c);
+                            const titulo =
+                              c.modeloContrato?.nome || c.numeroContrato || 'Contrato sem título';
+
+                            return (
+                              <li
+                                key={c.id}
+                                className="flex flex-col gap-2 rounded-md border border-border/80 bg-muted/20 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                              >
+                                <div className="flex min-w-0 items-start gap-2">
+                                  <DocumentTextIcon className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-medium text-text-primary">
+                                      {titulo}
+                                    </p>
+                                    <span className="mt-0.5 inline-flex rounded-full bg-surface-hover px-2 py-0.5 text-[11px] text-text-secondary">
+                                      {exStatus.rotulo}
+                                    </span>
+                                  </div>
+                                </div>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="shrink-0"
+                                  onClick={() => router.push(`/contratos/${c.id}`)}
+                                >
+                                  Abrir contrato
+                                </Button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
                   </div>
-                  <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-                    <div className="text-right sm:text-left">
-                      <p className="text-xs text-text-secondary">Valor total</p>
-                      <p className="text-sm font-semibold text-text-primary">
-                        {formatCurrency(evento.valorTotal || 0)}
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/eventos/${evento.id}`)}
-                      className="flex items-center gap-2"
-                    >
-                      <EyeIcon className="h-4 w-4" />
-                      Ver evento
-                    </Button>
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </CardContent>
         </Card>

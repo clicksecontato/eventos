@@ -829,6 +829,81 @@ export function useContratosPorEvento(eventoId: string): UseDataResult<Contrato[
   return { data, loading, error, refetch: fetchData };
 }
 
+/** Contratos do usuário filtrados e agrupados por `eventoId` (uma chamada a GET /api/contratos). */
+export function useContratosAgrupadosPorEventos(
+  eventoIds: string[]
+): UseDataResult<Record<string, Contrato[]>> {
+  const [data, setData] = useState<Record<string, Contrato[]> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { userId } = useCurrentUser();
+
+  const fetchData = useCallback(async () => {
+    if (!userId) {
+      setError('Usuário não autenticado');
+      setLoading(false);
+      return;
+    }
+
+    if (eventoIds.length === 0) {
+      setData({});
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/contratos');
+      if (!response.ok) {
+        throw new Error('Erro ao carregar contratos');
+      }
+
+      const result = await response.json();
+      const contratosBrutos = result.data || result || [];
+
+      const idsSet = new Set(eventoIds);
+      const contratosFiltrados = contratosBrutos.filter(
+        (c: { eventoId?: string }) => c.eventoId && idsSet.has(c.eventoId)
+      );
+
+      const contratosConvertidos: Contrato[] = contratosFiltrados.map((c: Record<string, unknown>) => ({
+        ...c,
+        dataGeracao: c.dataGeracao ? new Date(c.dataGeracao as string) : new Date(),
+        dataAssinatura: c.dataAssinatura ? new Date(c.dataAssinatura as string) : undefined,
+        dataCadastro: c.dataCadastro ? new Date(c.dataCadastro as string) : new Date(),
+        dataAtualizacao: c.dataAtualizacao ? new Date(c.dataAtualizacao as string) : new Date(),
+      })) as Contrato[];
+
+      const agrupado: Record<string, Contrato[]> = {};
+      for (const id of eventoIds) {
+        agrupado[id] = [];
+      }
+      for (const c of contratosConvertidos) {
+        const eid = c.eventoId;
+        if (eid && agrupado[eid]) {
+          agrupado[eid].push(c);
+        }
+      }
+
+      setData(agrupado);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao carregar contratos');
+      setData(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId, eventoIds.join(',')]);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
+
+  return { data, loading, error, refetch: fetchData };
+}
+
 // Hook para pré-cadastros de eventos
 export function usePreCadastros(status?: string): UseDataResult<PreCadastroEvento[]> {
   const [data, setData] = useState<PreCadastroEvento[] | null>(null);
